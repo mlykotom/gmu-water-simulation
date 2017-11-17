@@ -20,6 +20,7 @@ MACRO(GMU_Executable _TARGET_NAME)
     SET( GMU_UI "" )
     SET( GMU_RES "" )
     SET( GMU_LIBS "" )
+    SET( GMU_RESOURCES "")
     GMU_START_NEW_TARGET( ${_TARGET_NAME} )
 ENDMACRO( GMU_Executable )
 
@@ -35,6 +36,16 @@ MACRO( GMU_INCLUDE_DIR _DIR )
     list(APPEND GMU_HEADERS ${_TMP})
     include_directories(${PROJECT_NAME} ${_DIR} )
 ENDMACRO( GMU_INCLUDE_DIR )
+
+# Macro for adding additional directory to project
+MACRO( GMU_ADD_INCLUDE_DIR _DIR )
+    list(APPEND GMU_TARGET_INCLUDE_DIRS ${_DIR})
+ENDMACRO( GMU_ADD_INCLUDE_DIR )
+
+# Macro for setting resource directory to project
+MACRO( GMU_SET_RESOURCE_DIR _DIR )
+    SET(GMU_RESOURCES ${_DIR})
+ENDMACRO( GMU_SET_RESOURCE_DIR )
 
 # Macro for adding all ui files in a specified directory to project
 MACRO( GMU_UI_DIR _DIR )
@@ -60,7 +71,6 @@ MACRO( GMU_CONSOLE_APP_BUILD)
     ADD_EXECUTABLE( ${GMU_TARGET_NAME}
                     ${GMU_SOURCES}
                     ${GMU_HEADERS} 
-                    ${RESOURCES}
                     )
 
     SET_TARGET_PROPERTIES( ${GMU_TARGET_NAME}
@@ -68,9 +78,12 @@ MACRO( GMU_CONSOLE_APP_BUILD)
                          #  DEBUG_POSTFIX d
                            )
 
-   message(STATUS "Executable ${GMU_TARGET_NAME}: Additional include dirs: ${GMU_TARGET_INCLUDE_DIRS}")
+   message(STATUS "Executable ${GMU_TARGET_NAME}: Additional include dirs: ${GMU_TARGET_INCLUDE_DIRS}, ${GMU_RESOURCES}")
    target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_TARGET_INCLUDE_DIRS})
 
+   #include resources dirs
+   target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_RESOURCES} )
+   set_target_properties(${GMU_TARGET_NAME} PROPERTIES COMPILE_DEFINITIONS "APP_RESOURCES=\"${GMU_RESOURCES}\"")
 
     message(STATUS "Executable ${GMU_TARGET_NAME}: Linked libraries: ${GMU_TARGET_LIBRARIES}")
     target_link_libraries(${GMU_TARGET_NAME} ${GMU_TARGET_LIBRARIES} )
@@ -94,8 +107,7 @@ MACRO( GMU_WINDOWS_APP_BUILD)
     ADD_EXECUTABLE( ${GMU_TARGET_NAME}
                     ${GMU_SOURCES}
                     ${GMU_HEADERS} 
-                    ${UIS_HDRS}                 
-                    ${RESOURCES}
+                    ${UIS_HDRS}        
                     )
 
     SET_TARGET_PROPERTIES( ${GMU_TARGET_NAME}
@@ -103,8 +115,9 @@ MACRO( GMU_WINDOWS_APP_BUILD)
                          #  DEBUG_POSTFIX d
                            )
 
-   message(STATUS "Executable ${GMU_TARGET_NAME}: Additional include dirs: ${GMU_TARGET_INCLUDE_DIRS}")
+   message(STATUS "Executable ${GMU_TARGET_NAME}: Additional include dirs: ${GMU_TARGET_INCLUDE_DIRS}, ${GMU_RESOURCES}")
    target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_TARGET_INCLUDE_DIRS})
+   target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_RESOURCES} )
 
 
     message(STATUS "Executable ${GMU_TARGET_NAME}: Linked libraries: ${GMU_TARGET_LIBRARIES}")

@@ -45,6 +45,8 @@ private: //methods
     bool initialize();
     void draw();
 
+    const std::string shaderFromFile(std::string fn);
+
 };
 
 #endif // MAINWINDOW_H

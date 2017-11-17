@@ -1,40 +1,12 @@
 #include "mainwindow.h"
 
+//std
+#include <fstream>
+#include <streambuf>
+
 //glm
 #include<glm/glm.hpp>
 
-std::string static const vertexShaderSrc = R".(
-#version 450
-
-struct ObjectData{
-  vec2 position;
-  vec2 size    ;
-  vec4 color   ;
-};
-
-layout(binding=0)buffer Objects{ObjectData objects[];};
-
-layout(location=0)in vec2 position;
-layout(location=1)in int drawId;
-
-out vec4 vColor;
-
-void main() {
-  ObjectData objectData = objects[drawId];
-  vColor = objectData.color;
-  gl_Position = vec4(position*objectData.size + objectData.position,1,1);
-}).";
-
-
-std::string static const fragmentShaderSrc = R".(
-#version 450
-
-in vec4 vColor;
-out vec4 fColor;
-
-void main(){
-  fColor=vColor;
-}).";
 
 MainWindow::MainWindow()
     :m_initialized(false)
@@ -64,10 +36,10 @@ bool MainWindow::initialize()
     ge::gl::setHighDebugMessage();
 
     //create shader program
-    auto vs = std::make_shared<ge::gl::Shader>(GL_VERTEX_SHADER, vertexShaderSrc);
-    auto fs = std::make_shared<ge::gl::Shader>(GL_FRAGMENT_SHADER, fragmentShaderSrc);
+    auto vs = std::make_shared<ge::gl::Shader>(GL_VERTEX_SHADER, shaderFromFile(APP_RESOURCES"/shaders/vert.glsl"));
+    auto fs = std::make_shared<ge::gl::Shader>(GL_FRAGMENT_SHADER, shaderFromFile(APP_RESOURCES"/shaders/frag.glsl"));
     m_program = std::make_shared<ge::gl::Program>(vs, fs);
-
+    
     //buffer data
     std::vector<float>vertices = {
         //triangle vertices
@@ -187,6 +159,15 @@ void MainWindow::draw()
 
     glBindVertexArray(0);
     m_window->swap();
+}
+
+const std::string MainWindow::shaderFromFile(std::string fn)
+{
+    std::ifstream fs(fn);
+    std::string str((std::istreambuf_iterator<char>(fs)),
+        std::istreambuf_iterator<char>());
+
+    return str;
 }
 
 bool MainWindow::show()

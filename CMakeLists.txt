@@ -44,8 +44,12 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 #Declader new target
 GMU_START_NEW_TARGET( WaterSurfaceSimulation )
 
+#include cpp and header files
 GMU_SOURCE_DIR( ${CMAKE_CURRENT_LIST_DIR}/src  )
 GMU_INCLUDE_DIR( ${CMAKE_CURRENT_LIST_DIR}/include )
+
+#include resoureces dir
+GMU_SET_RESOURCE_DIR(${CMAKE_CURRENT_LIST_DIR}/resources)
 
 #Find GPUEngine
 set(GMU_TARGET_LIBRARIES geGL::geGL geUtil::geUtil SDLWindow::SDLWindow)
