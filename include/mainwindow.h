@@ -11,13 +11,24 @@
 #include<geGL/StaticCalls.h>
 #include<geGL/geGL.h>
 
+//camera
+#include<geUtil/FreeLookCamera.h>
+#include<geUtil/PerspectiveCamera.h>
+
+
+#include "CameraManipulator.h"
+
 class MainWindow
 {
 
     typedef std::shared_ptr<ge::ad::SDLMainLoop> tMainLoop;
     typedef std::shared_ptr<ge::ad::SDLWindow> tWindow;
     typedef std::shared_ptr<ge::gl::Program> tProgram;
+    //typedef std::shared_ptr<fsg::OrbitObjectManipulator> tCamera;
+    typedef std::shared_ptr<ge::util::FreeLookCamera> tFreeLookCamera;
+    typedef std::shared_ptr<ge::util::PerspectiveCamera> tPerspectiveCameraCamera;
 
+    
     typedef  struct {
         GLuint  count;
         GLuint  instanceCount;
@@ -38,8 +49,11 @@ private: //attributes
     tProgram m_program;
     GLuint m_vao;
     GLuint m_objectDataBuffer;
+    tFreeLookCamera m_cameraFL;
+    tPerspectiveCameraCamera m_cameraP;
 
     bool m_initialized;
+    bool m_needsToRedraw;
 
 private: //methods
     bool initialize();
