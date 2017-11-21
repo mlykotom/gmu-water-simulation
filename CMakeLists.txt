@@ -71,7 +71,6 @@ find_package( Qt53DInput REQUIRED )
 
 set(QT_LIBRARIES
 	Qt5::Core
-	Qt5::WinMain
 	Qt5::Gui
 	Qt5::Widgets
 	Qt5::OpenGL
@@ -84,8 +83,7 @@ set(QT_LIBRARIES
 
 
 ADD_QT_LIBS(
-	Qt5::Core
-	Qt5::WinMain
+	Qt5::Core	
 	Qt5::Gui
 	Qt5::Widgets
 	Qt5::OpenGL
@@ -93,6 +91,11 @@ ADD_QT_LIBS(
 	Qt5::3DExtras
 	Qt5::3DRender
 	Qt5::3DInput)
+
+if( WIN32 )
+	ADD_QT_LIBS(Qt5::WinMain)
+	LIST(APPEND QT_LIBRARIES Qt5::WinMain)
+endif()
 
 add_definitions( ${QT_DEFINITIONS} )
 include_directories( ${CMAKE_BINARY_DIR} )

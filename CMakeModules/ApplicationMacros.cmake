@@ -97,11 +97,13 @@ MACRO( GMU_CONSOLE_APP_BUILD)
     target_compile_definitions( ${GMU_TARGET_NAME} PRIVATE ${GMU_COMPILE_DEFINITIONS} )
 
 #console application
+if( WIN32 )
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES MINSIZEREL "/SUBSYSTEM:CONSOLE")
+endif()
 
 ENDMACRO( GMU_CONSOLE_APP_BUILD )
 
@@ -135,20 +137,12 @@ MACRO( GMU_WINDOWS_APP_BUILD)
 
     
 #windows application
+if( WIN32 )
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES RELWITHDEBINFO "/SUBSYSTEM:WINDOWS")
     set_target_properties(${GMU_TARGET_NAME} PROPERTIES MINSIZEREL "/SUBSYSTEM:WINDOWS")
+endif()
 
 ENDMACRO( GMU_WINDOWS_APP_BUILD )
-
-
-# drop all "*T.cpp" files from list
-macro (REMOVE_TEMPLATES list)
-  foreach (_file ${${list}})
-    if (_file MATCHES "T.cpp$")
-      list (REMOVE_ITEM ${list} ${_file})
-    endif ()
-  endforeach ()
-endmacro (REMOVE_TEMPLATES)
