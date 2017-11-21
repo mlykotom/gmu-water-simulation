@@ -116,6 +116,7 @@ int main(int argc, char **argv)
     cameraEntity->setPosition(QVector3D(0, 0, 20.0f));
     cameraEntity->setUpVector(QVector3D(0, 1, 0));
     cameraEntity->setViewCenter(QVector3D(0, 0, 0));
+    
 
     Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(rootEntity);
     Qt3DRender::QPointLight *light = new Qt3DRender::QPointLight(lightEntity);
@@ -129,6 +130,7 @@ int main(int argc, char **argv)
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(cameraEntity);
+    camController->setLookSpeed(camController->lookSpeed()*(-1.0f));
 
     // Scenemodifier
     SceneModifier *modifier = new SceneModifier(rootEntity);
