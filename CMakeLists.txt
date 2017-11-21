@@ -17,8 +17,6 @@ set(CMAKE_CONFIGURATION_TYPES Release Debug RelWithDebInfo CACHE TYPE INTERNAL )
 # Main project name
 project( WaterSurfaceSimulation )
 
-include(ExternalProject)
-set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
 
 message(STATUS "  C: '${CMAKE_C_COMPILER}'")
 message(STATUS "  C++: '${CMAKE_CXX_COMPILER}'")
@@ -37,7 +35,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)       #on mac this adds flag -std=c++11 instead of
 
 # adds current source/build directories to module's includes
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
 #set(CMAKE_AUTOUIC ON)
@@ -74,7 +71,6 @@ set(QT_LIBRARIES
 	Qt5::Gui
 	Qt5::Widgets
 	Qt5::OpenGL
-	Qt5::GLWidgets
 	Qt5::3DCore
 	Qt5::3DExtras
 	Qt5::3DRender
@@ -104,7 +100,7 @@ include_directories( ${CMAKE_BINARY_DIR} )
 # using Qt meta-system (precompiler)
 #QT5_ADD_RESOURCES( RESOURCES ${PT_RES} )
 GMU_UI_DIR( ${CMAKE_CURRENT_LIST_DIR}/ui )
-QT5_WRAP_UI( UIS_HDRS ${BooleanOP_UI} )
+QT5_WRAP_UI( UIS_HDRS ${GMU_UI} )
 
 #Build it
 GMU_WINDOWS_APP_BUILD()
