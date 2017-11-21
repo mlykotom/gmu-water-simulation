@@ -51,9 +51,52 @@ GMU_INCLUDE_DIR( ${CMAKE_CURRENT_LIST_DIR}/include )
 #include resoureces dir
 GMU_SET_RESOURCE_DIR(${CMAKE_CURRENT_LIST_DIR}/resources)
 
-#Find GPUEngine
-set(GMU_TARGET_LIBRARIES geGL::geGL geUtil::geUtil SDLWindow::SDLWindow)
-find_package(GPUEngine CONFIG COMPONENTS geGL geUtil SDLWindow REQUIRED)
+#Qt
+# Next lines needed for building all Qt projects
+find_package( Qt5Core REQUIRED )
+find_package( Qt5Gui REQUIRED )
+find_package( Qt5Widgets REQUIRED )
+find_package( Qt5OpenGL REQUIRED )
+
+find_package( Qt53DCore REQUIRED )
+find_package( Qt53DExtras REQUIRED )
+find_package( Qt53DRender REQUIRED )
+find_package( Qt53DInput REQUIRED )
+
+
+set(QT_LIBRARIES
+	Qt5::Core
+	Qt5::WinMain
+	Qt5::Gui
+	Qt5::Widgets
+	Qt5::OpenGL
+	Qt5::GLWidgets
+	Qt5::3DCore
+	Qt5::3DExtras
+	Qt5::3DRender
+	Qt5::3DInput
+	)
+
+
+ADD_QT_LIBS(
+	Qt5::Core
+	Qt5::WinMain
+	Qt5::Gui
+	Qt5::Widgets
+	Qt5::OpenGL
+	Qt5::3DCore
+	Qt5::3DExtras
+	Qt5::3DRender
+	Qt5::3DInput)
+
+add_definitions( ${QT_DEFINITIONS} )
+include_directories( ${CMAKE_BINARY_DIR} )
+
+
+# using Qt meta-system (precompiler)
+#QT5_ADD_RESOURCES( RESOURCES ${PT_RES} )
+GMU_UI_DIR( ${CMAKE_CURRENT_LIST_DIR}/ui )
+QT5_WRAP_UI( UIS_HDRS ${BooleanOP_UI} )
 
 #Build it
-GMU_CONSOLE_APP_BUILD()
+GMU_WINDOWS_APP_BUILD()

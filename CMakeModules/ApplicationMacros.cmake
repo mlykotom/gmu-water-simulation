@@ -18,7 +18,7 @@ MACRO(GMU_Executable _TARGET_NAME)
     SET( GMU_SOURCES "" )
     SET( GMU_HEADERS "" )
     SET( GMU_UI "" )
-    SET( GMU_RES "" )
+    SET( GMU_QT_RES "" )
     SET( GMU_LIBS "" )
     SET( GMU_RESOURCES "")
     GMU_START_NEW_TARGET( ${_TARGET_NAME} )
@@ -54,15 +54,20 @@ MACRO( GMU_UI_DIR _DIR )
 ENDMACRO( GMU_UI_DIR )
 
 # Macro for adding all resource files in a specified directory to project
-MACRO( GMU_RES_DIR _DIR )
+MACRO( GMU_QT_RES_DIR _DIR )
     FILE( GLOB_RECURSE _TMP ${_DIR}/*.qrc)
-    list(APPEND GMU_RES ${_TMP})
-ENDMACRO( GMU_RES_DIR )
+    list(APPEND GMU_QT_RES ${_TMP})
+ENDMACRO( GMU_QT_RES_DIR )
 
 # Macro for adding library to project
 MACRO( GMU_ADD_LIB _LIB )
     list(APPEND GMU_LIBS ${_LIB})
 ENDMACRO( GMU_ADD_LIB )
+
+#Macro for adding Qt libraries
+MACRO(ADD_QT_LIBS)
+    list(APPEND GMU_TARGET_LIBRARIES ${ARGV})
+ENDMACRO(ADD_QT_LIBS)
 
   # Building console app macro
 MACRO( GMU_CONSOLE_APP_BUILD)
@@ -117,8 +122,10 @@ MACRO( GMU_WINDOWS_APP_BUILD)
 
    message(STATUS "Executable ${GMU_TARGET_NAME}: Additional include dirs: ${GMU_TARGET_INCLUDE_DIRS}, ${GMU_RESOURCES}")
    target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_TARGET_INCLUDE_DIRS})
-   target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_RESOURCES} )
 
+   #include resources dirs
+   target_include_directories(${GMU_TARGET_NAME} PRIVATE ${GMU_RESOURCES} )
+   set_target_properties(${GMU_TARGET_NAME} PROPERTIES COMPILE_DEFINITIONS "APP_RESOURCES=\"${GMU_RESOURCES}\"")
 
     message(STATUS "Executable ${GMU_TARGET_NAME}: Linked libraries: ${GMU_TARGET_LIBRARIES}")
     target_link_libraries(${GMU_TARGET_NAME} ${GMU_TARGET_LIBRARIES} )
