@@ -38,6 +38,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)       #on mac this adds flag -std=c++11 instead of
 # adds current source/build directories to module's includes
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+# Instruct CMake to run moc automatically when needed.
+set(CMAKE_AUTOMOC ON)
+#set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
 #-------------------------------------------------------------------------------
 # Create target WaterSurfaceSimulation
 
