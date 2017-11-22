@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "test.h"
 
 // Qt 3D
 #include <Qt3DRender/qcamera.h>
@@ -54,6 +55,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //TODO: Test - delete later
     m_scene->createSphere();
+
+    test();
 
     this->showMaximized();
 }
