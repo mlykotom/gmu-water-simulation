@@ -12,7 +12,6 @@ namespace Qt3DCore
 class CScene : QObject
 {
     Q_OBJECT
-
 public:
 
     CScene();
@@ -22,9 +21,10 @@ public:
     void setRootEntity(Qt3DCore::QEntity *e) { m_rootEntity = e; }
 
     //TODO: Test method - delete later
-    void createSphere();
+    void createScene();
+    void test();
 
-private:
+//private:
     Qt3DCore::QEntity *m_rootEntity;
 };
 

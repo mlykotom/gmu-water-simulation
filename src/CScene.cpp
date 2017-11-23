@@ -14,6 +14,9 @@
 #include <Qt3DExtras/QSphereMesh>
 #include <Qt3DExtras/QPhongMaterial>
 #include <Qt3DCore/qentity.h>
+#include <include/CParticle.h>
+#include <QPlaneMesh>
+#include <QThread>
 
 CScene::CScene()
 {
@@ -29,35 +32,32 @@ CScene::CScene()
     lightTransform->setTranslation(QVector3D(0, 0, 20.0f));
     lightEntity->addComponent(lightTransform);
 
-
-
 }
 
 CScene::~CScene()
 {
 }
 
-void CScene::createSphere()
+void CScene::createScene()
 {
-    // Sphere shape data
-    Qt3DExtras::QSphereMesh *sphereMesh = new Qt3DExtras::QSphereMesh();
-    sphereMesh->setRings(20);
-    sphereMesh->setSlices(20);
-    sphereMesh->setRadius(2);
+    // Plane shape data 
+//    Qt3DExtras::QPlaneMesh *planeMesh = new Qt3DExtras::QPlaneMesh();
+//    planeMesh->setWidth(2);
+//    planeMesh->setHeight(2);
+//
+//     Plane mesh transform
+//    Qt3DCore::QTransform *planeTransform = new Qt3DCore::QTransform();
+//    planeTransform->setScale(1.3f);
+//    planeTransform->setRotation(QQuaternion::fromAxisAndAngle(QVector3D(1.0f, 0.0f, 0.0f), 45.0f));
+//    planeTransform->setTranslation(QVector3D(0.0f, -4.0f, 0.0f));
 
-    // Sphere mesh transform
-    Qt3DCore::QTransform *sphereTransform = new Qt3DCore::QTransform();
+//    Qt3DExtras::QPhongMaterial *planeMaterial = new Qt3DExtras::QPhongMaterial();
+//    planeMaterial->setDiffuse(QColor(QRgb(0xa69929)));
 
-    sphereTransform->setScale(1.3f);
-    sphereTransform->setTranslation(QVector3D(-5.0f, -4.0f, 0.0f));
-
-    Qt3DExtras::QPhongMaterial *sphereMaterial = new Qt3DExtras::QPhongMaterial();
-    sphereMaterial->setDiffuse(QColor(QRgb(0xa69929)));
-
-    // Sphere
-    Qt3DCore::QEntity *sphereEntity = new Qt3DCore::QEntity(m_rootEntity);
-    sphereEntity->addComponent(sphereMesh);
-    sphereEntity->addComponent(sphereMaterial);
-    sphereEntity->addComponent(sphereTransform);
-    sphereEntity->setEnabled(true);
+    // Plane 
+//    Qt3DCore::QEntity *planeEntity = new Qt3DCore::QEntity(m_rootEntity);
+//    planeEntity->addComponent(planeMesh);
+//    planeEntity->addComponent(planeMaterial);
+//    planeEntity->addComponent(planeTransform);
 }
+

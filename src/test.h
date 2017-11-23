@@ -1,11 +1,7 @@
-//
-// Created by Tomáš Mlynarič on 22.11.17.
-//
-
-#include "banana.cpp"
-#include <vector>
 #ifndef WATERSURFACESIMULATION_TEST_H
 #define WATERSURFACESIMULATION_TEST_H
+
+#include <vector>
 
 class Particle
 {
@@ -47,17 +43,14 @@ class test
 {
 
 public:
-    test()
-    {}
     void start();
 };
 
 void test::start()
 {
 //    auto grid = Grid(5, 5);
-    auto banan = FluidCubeCreate(5, 0.1, 0.9544, 0);
-
-    FluidCubeStep(banan);
+//    auto banan = FluidCubeCreate(5, 1, 2, 0);
+//    FluidCubeStep(banan);
 }
 
 #endif //WATERSURFACESIMULATION_TEST_H

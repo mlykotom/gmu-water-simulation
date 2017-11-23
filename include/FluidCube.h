@@ -1,68 +1,14 @@
-#include <math.h>
-#include <cstdlib>
+//
+// Created by Tomáš Mlynarič on 23.11.17.
+//
 
+#ifndef WATERSURFACESIMULATION_FLUIDCUBE_H
+#define WATERSURFACESIMULATION_FLUIDCUBE_H
+
+#include <cmath>
 
 #define IX(x, y, z) ((x) + (y) * N + (z) * N * N)
 
-
-struct FluidCube
-{
-    int size;
-    float dt;
-    float diff;
-    float visc;
-
-    float *s;
-    float *density;
-
-    float *Vx;
-    float *Vy;
-    float *Vz;
-
-    float *Vx0;
-    float *Vy0;
-    float *Vz0;
-};
-
-FluidCube *FluidCubeCreate(int size, int diffusion, int viscosity, float dt)
-{
-    FluidCube *cube = new FluidCube();
-    int N = size;
-
-    cube->size = size;
-    cube->dt = dt;
-    cube->diff = diffusion;
-    cube->visc = viscosity;
-
-    cube->s = new float[N * N * N];
-    cube->density = new float[N * N * N];
-
-    cube->Vx = new float[N * N * N];
-    cube->Vy = new float[N * N * N];
-    cube->Vz = new float[N * N * N];
-
-    cube->Vx0 = new float[N * N * N];
-    cube->Vy0 = new float[N * N * N];
-    cube->Vz0 = new float[N * N * N];
-
-    return cube;
-}
-
-void FluidCubeFree(FluidCube *cube)
-{
-    free(cube->s);
-    free(cube->density);
-
-    free(cube->Vx);
-    free(cube->Vy);
-    free(cube->Vz);
-
-    free(cube->Vx0);
-    free(cube->Vy0);
-    free(cube->Vz0);
-
-    free(cube);
-}
 
 static void set_bnd(int b, float *x, int N)
 {
@@ -121,13 +67,13 @@ static void lin_solve(int b, float *x, float *x0, float a, float c, int iter, in
                     x[IX(i, j, m)] =
                         (
                             x0[IX(i, j, m)]
-                            + a * (x[IX(i + 1, j, m)]
-                                + x[IX(i - 1, j, m)]
-                                + x[IX(i, j + 1, m)]
-                                + x[IX(i, j - 1, m)]
-                                + x[IX(i, j, m + 1)]
-                                + x[IX(i, j, m - 1)]
-                            )
+                                + a * (x[IX(i + 1, j, m)]
+                                    + x[IX(i - 1, j, m)]
+                                    + x[IX(i, j + 1, m)]
+                                    + x[IX(i, j - 1, m)]
+                                    + x[IX(i, j, m + 1)]
+                                    + x[IX(i, j, m - 1)]
+                                )
                         ) * cRecip;
                 }
             }
@@ -248,49 +194,109 @@ static void project(float *velocX, float *velocY, float *velocZ, float *p, float
     set_bnd(3, velocZ, N);
 }
 
-void FluidCubeStep(FluidCube *cube)
+class FluidCube
 {
-    int N = cube->size;
-    float visc = cube->visc;
-    float diff = cube->diff;
-    float dt = cube->dt;
-    float *Vx = cube->Vx;
-    float *Vy = cube->Vy;
-    float *Vz = cube->Vz;
-    float *Vx0 = cube->Vx0;
-    float *Vy0 = cube->Vy0;
-    float *Vz0 = cube->Vz0;
-    float *s = cube->s;
-    float *density = cube->density;
+public:
+    int size;
+    float dt;
+    float diff;
+    float visc;
 
-    diffuse(1, Vx0, Vx, visc, dt, 4, N);
-    diffuse(2, Vy0, Vy, visc, dt, 4, N);
-    diffuse(3, Vz0, Vz, visc, dt, 4, N);
+    float *s;
+    float *density;
 
-    project(Vx0, Vy0, Vz0, Vx, Vy, 4, N);
+    float *Vx;
+    float *Vy;
+    float *Vz;
 
-    advect(1, Vx, Vx0, Vx0, Vy0, Vz0, dt, N);
-    advect(2, Vy, Vy0, Vx0, Vy0, Vz0, dt, N);
-    advect(3, Vz, Vz0, Vx0, Vy0, Vz0, dt, N);
+    float *Vx0;
+    float *Vy0;
+    float *Vz0;
 
-    project(Vx, Vy, Vz, Vx0, Vy0, 4, N);
+    FluidCube(int size, int diffusion, int viscosity, float dt)
+    {
+        int N = size;
 
-    diffuse(0, s, density, diff, dt, 4, N);
-    advect(0, density, s, Vx, Vy, Vz, dt, N);
-}
+        this->size = size;
+        this->dt = dt;
+        this->diff = diffusion;
+        this->visc = viscosity;
 
-void FluidCubeAddDensity(FluidCube *cube, int x, int y, int z, float amount)
-{
-    int N = cube->size;
-    cube->density[IX(x, y, z)] += amount;
-}
+        this->s = new float[N * N * N];
+        this->density = new float[N * N * N];
 
-void FluidCubeAddVelocity(FluidCube *cube, int x, int y, int z, float amountX, float amountY, float amountZ)
-{
-    int N = cube->size;
-    int index = IX(x, y, z);
+        this->Vx = new float[N * N * N];
+        this->Vy = new float[N * N * N];
+        this->Vz = new float[N * N * N];
 
-    cube->Vx[index] += amountX;
-    cube->Vy[index] += amountY;
-    cube->Vz[index] += amountZ;
-}
+        this->Vx0 = new float[N * N * N];
+        this->Vy0 = new float[N * N * N];
+        this->Vz0 = new float[N * N * N];
+    }
+
+    ~FluidCube()
+    {
+        delete this->s;
+        delete this->density;
+
+        delete this->Vx;
+        delete this->Vy;
+        delete this->Vz;
+
+        delete this->Vx0;
+        delete this->Vy0;
+        delete this->Vz0;
+
+//        delete this;
+    }
+
+    void step()
+    {
+        int N = this->size;
+        float visc = this->visc;
+        float diff = this->diff;
+        float dt = this->dt;
+        float *Vx = this->Vx;
+        float *Vy = this->Vy;
+        float *Vz = this->Vz;
+        float *Vx0 = this->Vx0;
+        float *Vy0 = this->Vy0;
+        float *Vz0 = this->Vz0;
+        float *s = this->s;
+        float *density = this->density;
+
+        diffuse(1, Vx0, Vx, visc, dt, 4, N);
+        diffuse(2, Vy0, Vy, visc, dt, 4, N);
+        diffuse(3, Vz0, Vz, visc, dt, 4, N);
+
+        project(Vx0, Vy0, Vz0, Vx, Vy, 4, N);
+
+        advect(1, Vx, Vx0, Vx0, Vy0, Vz0, dt, N);
+        advect(2, Vy, Vy0, Vx0, Vy0, Vz0, dt, N);
+        advect(3, Vz, Vz0, Vx0, Vy0, Vz0, dt, N);
+
+        project(Vx, Vy, Vz, Vx0, Vy0, 4, N);
+
+        diffuse(0, s, density, diff, dt, 4, N);
+        advect(0, density, s, Vx, Vy, Vz, dt, N);
+    }
+
+    void addDensity(int x, int y, int z, float amount)
+    {
+        int N = this->size;
+        this->density[IX(x, y, z)] += amount;
+    }
+
+    void addVelocity(int x, int y, int z, float amountX, float amountY, float amountZ)
+    {
+        int N = this->size;
+        int index = IX(x, y, z);
+
+        this->Vx[index] += amountX;
+        this->Vy[index] += amountY;
+        this->Vz[index] += amountZ;
+    }
+};
+
+
+#endif //WATERSURFACESIMULATION_FLUIDCUBE_H

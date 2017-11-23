@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "test.h"
+
 
 // Qt 3D
 #include <Qt3DRender/qcamera.h>
@@ -18,8 +18,11 @@
 
 //local includes
 #include <CScene.h>
+#include <include/CParticleSimulator.h>
+#include <include/CParticle.h>
 
-MainWindow::MainWindow(QWidget *parent) :
+MainWindow::MainWindow(QWidget *parent)
+    :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
@@ -33,14 +36,14 @@ MainWindow::MainWindow(QWidget *parent) :
     this->setCentralWidget(container);
 
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
-    m_view->registerAspect(input);    
+    m_view->registerAspect(input);
     // Camera
     Qt3DRender::QCamera *cameraEntity = m_view->camera();
-    
-    cameraEntity->lens()->setPerspectiveProjection(45.0f, 16.0f/9.0f, 0.1f, 1000.0f);
+
+    cameraEntity->lens()->setPerspectiveProjection(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
     cameraEntity->setPosition(QVector3D(0, 0, 20.0f));
     cameraEntity->setUpVector(QVector3D(0, 1, 0));
-    cameraEntity->setViewCenter(QVector3D(0, 0, 0));    
+    cameraEntity->setViewCenter(QVector3D(0, 0, 0));
 
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
@@ -48,19 +51,20 @@ MainWindow::MainWindow(QWidget *parent) :
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(cameraEntity);
-    camController->setLookSpeed(camController->lookSpeed()*(-1.0f));
+    camController->setLookSpeed(camController->lookSpeed() * (-1.0f));
 
     // Set root object of the scene
     m_view->setRootEntity(rootEntity);
 
     //TODO: Test - delete later
-    m_scene->createSphere();
 
-    test();
+    auto simulator = new CParticleSimulator(m_scene);
 
-    this->showMaximized();
+    this->show();
 }
 
 MainWindow::~MainWindow()
 {
 }
+
+
