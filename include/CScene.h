@@ -2,16 +2,12 @@
 #define CSCENE_H
 
 #include<QObject>
+#include <QEntity>
 
-//forward declaration
-namespace Qt3DCore
-{
-    class QEntity;
-};
 
-class CScene : QObject
+class CScene: QObject
 {
-    Q_OBJECT
+Q_OBJECT
 public:
 
     CScene();
@@ -22,7 +18,6 @@ public:
 
     //TODO: Test method - delete later
     void createScene();
-    void test();
 
 //private:
     Qt3DCore::QEntity *m_rootEntity;

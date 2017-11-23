@@ -8,6 +8,7 @@
 #include <CScene.h>
 #include <CParticle.h>
 #include <cmath>
+#include <QKeyEvent>
 #include "FluidCube.h"
 
 
@@ -15,41 +16,45 @@ class CParticleSimulator: QObject
 {
 Q_OBJECT
 
-    typedef std::vector<CParticle> particleVector;
+    typedef std::vector<CParticle *> particleVector;
 
 
 private slots:
     void doWork();
 
+
 private:
     QTimer timer;
     CScene *scene;
+    FluidCube *cube;
 
     particleVector *particles;
 
-    double dt = 0.01;
-    unsigned long iteration = 0;
     int size = 10;
-    int particlesNumber = 2000;
-
+    int particlesNumber = 1000;
 
 public:
 
     CParticleSimulator(CScene *pScene);
     ~CParticleSimulator();
 
-    void start();
-
-    void setupParticles()
+    void toggleSimulation()
     {
-        particles = new particleVector();
-
-        for (int i = 0; i < particlesNumber; ++i) {
-            particles->push_back(CParticle(scene->m_rootEntity));
+        if (timer.isActive()) {
+            qDebug() << "pausing simulation...";
+            timer.stop();
+        }
+        else {
+            qDebug() << "resuming simulation ...";
+            timer.start();
         }
     }
-    void randomParticles();
-    FluidCube *cube;
+
+    void start();
+
+    void setupParticles();
+    void step();
+    void render();
 };
 
 #endif
