@@ -1,16 +1,27 @@
 #ifndef CGRID_H
 #define CGRID_H
 
-#include<QObject>
+#include "renderableentity.h"
+//#include <Qt3DExtras/ge>
+#include <qgeometry.h>
+//#include <Qt3DExtras/QNormalDiffuseSpecularMapMaterial>
+#include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DExtras/qcuboidgeometry.h>
 
-class CGrid : QObject
+class CGrid : RenderableEntity
 {
     Q_OBJECT
 
 public:
 
-    CGrid();
+    CGrid(Qt3DCore::QNode *parent = 0);
     ~CGrid();
+
+private:
+    //Qt3DExtras::
+    Qt3DExtras::QCuboidGeometry *m_geometry;
+    Qt3DExtras::QPhongMaterial *m_material;
+
 };
 
 #endif

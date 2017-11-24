@@ -15,6 +15,9 @@
 #include <Qt3DExtras/QPhongMaterial>
 #include <Qt3DCore/qentity.h>
 
+
+#include "CGrid.h"
+
 CScene::CScene()
 {
     // Root entity
@@ -29,7 +32,7 @@ CScene::CScene()
     lightTransform->setTranslation(QVector3D(0, 0, 20.0f));
     lightEntity->addComponent(lightTransform);
 
-
+    m_grid = new CGrid(m_rootEntity);
 
 }
 
@@ -60,4 +63,8 @@ void CScene::createSphere()
     sphereEntity->addComponent(sphereMaterial);
     sphereEntity->addComponent(sphereTransform);
     sphereEntity->setEnabled(true);
+}
+
+void CScene::addGrid()
+{
 }
