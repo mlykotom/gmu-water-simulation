@@ -29,7 +29,7 @@ CScene::CScene()
     light->setIntensity(1);
     lightEntity->addComponent(light);
     Qt3DCore::QTransform *lightTransform = new Qt3DCore::QTransform(lightEntity);
-    lightTransform->setTranslation(QVector3D(0, 0, 20.0f));
+    lightTransform->setTranslation(QVector3D(0, 0, 100.0f));
     lightEntity->addComponent(lightTransform);
 }
 

@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->setWindowTitle("GMU Water surface simulation");
 
     Qt3DExtras::Qt3DWindow *m_view = new Qt3DExtras::Qt3DWindow();
-    m_view->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
+    m_view->defaultFrameGraph()->setClearColor(QColor(QRgb(0xffffff))); //0x4d4d4f
     QWidget *container = QWidget::createWindowContainer(m_view);
     this->setCentralWidget(container);
 
@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Camera
     Qt3DRender::QCamera *cameraEntity = m_view->camera();
     cameraEntity->lens()->setPerspectiveProjection(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
-    cameraEntity->setPosition(QVector3D(0, 0, 20.0f));
+    cameraEntity->setPosition(QVector3D(10.0f, 0, 40.0f));
     cameraEntity->setUpVector(QVector3D(0, 1, 0));
     cameraEntity->setViewCenter(QVector3D(0, 0, 0));
 
@@ -62,6 +62,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             if (m_simulator) {
                 m_simulator->toggleSimulation();
             }
+            break;
+
+        case Qt::Key_A:
+            if(m_simulator){
+            }
+
             break;
     }
 }
