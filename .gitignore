@@ -55,7 +55,9 @@
 
 # CMake
 cmake-build-debug/
-
+cmake-build-release/
+CMakeFiles/
+CMakeCache.txt
 
 ## Plugin-specific files:
 
