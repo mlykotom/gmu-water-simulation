@@ -49,6 +49,7 @@ GMU_START_NEW_TARGET( WaterSurfaceSimulation )
 #include cpp and header files
 GMU_SOURCE_DIR( ${CMAKE_CURRENT_LIST_DIR}/src  )
 GMU_INCLUDE_DIR( ${CMAKE_CURRENT_LIST_DIR}/include )
+GMU_QT_RES_DIR(${CMAKE_CURRENT_LIST_DIR}/resources )
 
 #include resoureces dir
 GMU_SET_RESOURCE_DIR(${CMAKE_CURRENT_LIST_DIR}/resources)

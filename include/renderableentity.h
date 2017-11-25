@@ -65,6 +65,7 @@ public:
 
 protected:
     Qt3DRender::QMesh *m_mesh;
+
     Qt3DCore::QTransform *m_transform;
 };
 
