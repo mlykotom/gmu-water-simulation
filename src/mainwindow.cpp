@@ -15,6 +15,7 @@
 #include <Qt3DExtras/qt3dwindow.h>
 #include <Qt3DExtras/qfirstpersoncameracontroller.h>
 
+#include <QCullFace>
 
 //local includes
 #include <CScene.h>
@@ -54,7 +55,10 @@ MainWindow::MainWindow(QWidget *parent) :
     // FrameGraph
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
+
+
     
+    auto frameGraph = m_mainView->defaultFrameGraph();
    // m_pFrameGraph->setCamera(basicCamera);    
    //// rootEntity->addComponent(m_pFrameGraph);
 

@@ -1,8 +1,9 @@
 <RCC>
     <qresource prefix="/">
-        <file>shaders/vert2.glsl</file>
-        <file>shaders/frag.glsl</file>
         <file>shaders/basic.vert</file>
         <file>shaders/basic.frag</file>
+        <file>shaders/robustwireframe.vert</file>
+        <file>shaders/robustwireframe.frag</file>
+        <file>shaders/robustwireframe.geom</file>
     </qresource>
 </RCC>
