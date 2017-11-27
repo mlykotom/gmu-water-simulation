@@ -1,3 +1,5 @@
+#include <QOrbitCameraController>
+#include <QFirstPersonCameraController>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -17,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Camera
     Qt3DRender::QCamera *cameraEntity = m_view->camera();
     cameraEntity->lens()->setPerspectiveProjection(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
-    cameraEntity->setPosition(QVector3D(10.0f, 0, 40.0f));
+    cameraEntity->setPosition(QVector3D(0, 0, 15.0f));
     cameraEntity->setUpVector(QVector3D(0, 1, 0));
     cameraEntity->setViewCenter(QVector3D(0, 0, 0));
 
@@ -29,15 +31,13 @@ MainWindow::MainWindow(QWidget *parent)
     // Set root object of the scene
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
-    camController->setCamera(cameraEntity);
     camController->setLookSpeed(camController->lookSpeed() * (-1.0f));
-
-    //TODO: Test - delete later
-//    m_scene->createScene();
+    camController->setCamera(cameraEntity);
 
     m_simulator = new CParticleSimulator(m_scene);
     m_simulator->start();
 
+    connect(cameraEntity, &Qt3DRender::QCamera::viewVectorChanged, this, &MainWindow::onCameraChanged);
 
     this->show();
 }
@@ -68,4 +68,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 
             break;
     }
+}
+
+void MainWindow::onCameraChanged(const QVector3D &viewVector)
+{
+//    qDebug() << viewVector;
 }

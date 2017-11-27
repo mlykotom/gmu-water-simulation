@@ -3,13 +3,13 @@
 
 
 // Qt 3D
-#include <Qt3DRender/qcamera.h>
-#include <Qt3DInput/QInputAspect>
-#include <Qt3DCore/qaspectengine.h>
-#include <Qt3DRender/qrenderaspect.h>
-#include <Qt3DExtras/qforwardrenderer.h>
-#include <Qt3DExtras/qt3dwindow.h>
-#include <Qt3DExtras/qfirstpersoncameracontroller.h>
+#include <QCamera>
+#include <QInputAspect>
+#include <QAspectEngine>
+#include <QRenderAspect>
+#include <QForwardRenderer>
+#include <Qt3DWindow>
+#include <QOrbitCameraController>
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QApplication>
@@ -47,8 +47,11 @@ private:
 
     CParticleSimulator *m_simulator;
 
+private slots:
+    void onCameraChanged(const QVector3D &viewVector);
+
 protected:
-    void keyPressEvent(QKeyEvent *event);
+    void keyPressEvent(QKeyEvent *event) override;
 };
 
 

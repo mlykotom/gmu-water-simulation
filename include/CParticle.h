@@ -15,10 +15,11 @@ private:
     Qt3DCore::QTransform *m_transform;
     Qt3DExtras::QPhongMaterial *m_material;
 
-//    const unsigned long m_id;
+    const unsigned long m_id;
 public:
-    explicit CParticle(Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0.0f, 0.0f, 0.0f))
-        : m_rootEntity(rootEntity), m_position(initialPosition), m_velocity(0.0f, 0.0f, 0.0f),
+    explicit CParticle(const unsigned long id, Qt3DCore::QEntity *rootEntity,
+                       QVector3D initialPosition = QVector3D(0, 0, 0))
+        : m_id(id), m_rootEntity(rootEntity), m_position(initialPosition), m_velocity(0.0f, 0.0f, 0.0f),
           m_acceleration(0.0f, 0.0f, 0.0f), m_density(0.0), m_pressure(0.0)
     {
         // Sphere shape data
@@ -30,7 +31,7 @@ public:
         // Sphere mesh transform
         m_transform = new Qt3DCore::QTransform();
         m_transform->setTranslation(initialPosition);
-        m_transform->setScale(0.05);
+        m_transform->setScale(0.1);
 
         // material
         m_material = new Qt3DExtras::QPhongMaterial();
@@ -52,7 +53,6 @@ public:
     }
 
 private:
-    // TODO make private + accessors
     QVector3D m_position;
     QVector3D m_velocity;
     QVector3D m_acceleration;
@@ -66,6 +66,8 @@ public:
     static constexpr double gas_stiffness = 3.0; //20.0 // 461.5  // Nm/kg is gas constant of water vapor
     static constexpr double rest_density = 998.29; // kg/m^3 is rest density of water particle
 
+    const unsigned long getId() const { return m_id; }
+
     QVector3D &position() { return m_position; }
     QVector3D &acceleration() { return m_acceleration; };
     QVector3D &velocity() { return m_velocity; };
@@ -75,22 +77,13 @@ public:
 
     void translate(QVector3D to)
     {
-        m_position.setX(to.x());
-        m_position.setY(to.x());
-        m_position.setZ(to.x());
-
+        m_position = to;
         m_transform->setTranslation(to);
     }
 
     inline QVector3D distanceTo(CParticle *otherParticle)
     {
         return position() - otherParticle->position();
-    }
-
-    inline double getRadiusSquared(CParticle *otherParticle)
-    {
-        QVector3D distance = distanceTo(otherParticle);
-        return QVector3D::dotProduct(distance, distance);
     }
 };
 
