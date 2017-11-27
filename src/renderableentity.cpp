@@ -55,7 +55,7 @@ RenderableEntity::RenderableEntity(Qt3DCore::QNode *parent)
     , m_mesh(new Qt3DRender::QMesh())
     , m_transform(new Qt3DCore::QTransform())
 {
-    //addComponent(m_mesh);
+    addComponent(m_mesh);
     addComponent(m_transform);
 }
 
