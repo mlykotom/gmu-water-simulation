@@ -1,11 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-
 MainWindow::MainWindow(QWidget *parent)
-    :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
@@ -41,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_simulator = new CParticleSimulator(m_scene);
     m_simulator->start();
 
+
     this->show();
 }
 
@@ -65,7 +63,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             break;
 
         case Qt::Key_A:
-            if(m_simulator){
+            if (m_simulator) {
             }
 
             break;

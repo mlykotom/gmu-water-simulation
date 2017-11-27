@@ -11,6 +11,8 @@
 #include <Qt3DExtras/qt3dwindow.h>
 #include <Qt3DExtras/qfirstpersoncameracontroller.h>
 #include <QMainWindow>
+#include <QKeyEvent>
+#include <QApplication>
 
 #include "CParticleSimulator.h"
 
@@ -34,8 +36,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    Qt3DExtras::Qt3DWindow *getView()
-    { return m_view; }
+    Qt3DExtras::Qt3DWindow *getView() { return m_view; }
 
 private:
     //UI

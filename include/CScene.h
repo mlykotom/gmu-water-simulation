@@ -19,7 +19,7 @@ public:
     //TODO: Test method - delete later
     void createScene();
 
-//private:
+private:
     Qt3DCore::QEntity *m_rootEntity;
 };
 
