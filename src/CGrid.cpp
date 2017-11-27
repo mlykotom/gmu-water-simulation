@@ -62,14 +62,14 @@ CWireframeMaterial::CWireframeMaterial(Qt3DCore::QNode *parent )
 
 {
 
-    QFile vertexShaderFile(":shaders/robustwireframe.vert");
+    QFile vertexShaderFile(":shaders/wireframe.vert");
     QByteArray vertByteArray;
     if (vertexShaderFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
         vertByteArray = vertexShaderFile.readAll();
     }
 
-    QFile fragmentShaderFile(":shaders/robustwireframe.frag");
+    QFile fragmentShaderFile(":shaders/wireframe.frag");
     QByteArray fragByteArray;
     if (fragmentShaderFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -77,7 +77,7 @@ CWireframeMaterial::CWireframeMaterial(Qt3DCore::QNode *parent )
     }
 
 
-    QFile geometryShaderFile(":shaders/robustwireframe.geom");
+    QFile geometryShaderFile(":shaders/wireframe.geom");
     QByteArray geomByteArray;
     if (geometryShaderFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
