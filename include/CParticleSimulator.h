@@ -8,44 +8,14 @@
 #include "CScene.h"
 #include "CGrid.h"
 #include <QtMath>
+#include <iostream>
 
 #define GRAVITY_ACCELERATION (-9.80665f)
 #define WALL_K 10000.0 // wall spring constant
 #define WALL_DAMPING (-0.9) // wall damping constant
 
-static double Wpoly6(double radiusSquared)
-{
-    static double coefficient = 315.0 / (64.0 * M_PI * pow(CParticle::h, 9));
-    static double hSquared = CParticle::h * CParticle::h;
 
-    return coefficient * pow(hSquared - radiusSquared, 3);
-}
-
-static const QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared)
-{
-    static double coefficient = -945.0 / (32.0 * M_PI * pow(CParticle::h, 9));
-    static double hSquared = CParticle::h * CParticle::h;
-
-    return coefficient * pow(hSquared - radiusSquared, 2) * diffPosition;
-}
-
-static const QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared)
-{
-    static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
-}
-
-static double WviscosityLaplacian(double radiusSquared)
-{
-    static double coefficient = 45.0 / (M_PI * pow(CParticle::h, 6));
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * (CParticle::h - radius);
-}
-
-class CParticleSimulator: QObject
+class CParticleSimulator: public QObject
 {
 Q_OBJECT
 
@@ -53,6 +23,8 @@ private slots:
     void doWork()
     {
         this->step(dt);
+        iteration++;
+        emit iterationChanged(iteration);
     };
 
 private:
@@ -69,10 +41,47 @@ private:
 
     CGrid *m_grid;
 
-    QVector3D boxSize = QVector3D(0.4f, 0.4f, 0.4f);
+    unsigned long iteration = 0;
+    QVector3D boxSize = QVector3D(0.4, 0.4, 0.4);
+    double surfaceThreshold = 0.01;
+
+    double Wpoly6(double radiusSquared)
+    {
+        static double coefficient = 315.0 / (64.0 * M_PI * pow(CParticle::h, 9));
+        static double hSquared = CParticle::h * CParticle::h;
+
+        return coefficient * pow(hSquared - radiusSquared, 3);
+    }
+
+    QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared)
+    {
+        static double coefficient = -945.0 / (32.0 * M_PI * pow(CParticle::h, 9));
+        static double hSquared = CParticle::h * CParticle::h;
+
+        return coefficient * pow(hSquared - radiusSquared, 2) * diffPosition;
+    }
+
+    QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared)
+    {
+        static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
+        double radius = sqrt(radiusSquared);
+
+        return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
+    }
+
+    double WviscosityLaplacian(double radiusSquared)
+    {
+        static double coefficient = 45.0 / (M_PI * pow(CParticle::h, 6));
+        double radius = sqrt(radiusSquared);
+
+        return coefficient * (CParticle::h - radius);
+    }
+
+signals:
+    void iterationChanged(unsigned long iteration);
 
 public:
-    explicit CParticleSimulator(CScene *scene, unsigned long particlesCount = 1000)
+    explicit CParticleSimulator(CScene *scene, unsigned long particlesCount = 500)
         : gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
           m_scene(scene),
           m_particles_count(particlesCount),
@@ -96,32 +105,12 @@ public:
 
     virtual void setup()
     {
-        _walls.emplace_back(QVector3D(0, 0, 1), QVector3D(0, 0, -m_grid->zRes() / 2.0f)); // back
-        _walls.emplace_back(QVector3D(0, 0, -1), QVector3D(0, 0, m_grid->zRes() / 2.0f)); // front
-        _walls.emplace_back(QVector3D(1, 0, 0), QVector3D(-m_grid->xRes() / 2.0f, 0, 0));     // left
-        _walls.emplace_back(QVector3D(-1, 0, 0), QVector3D(m_grid->xRes() / 2.0f, 0, 0));     // right
-        _walls.emplace_back(QVector3D(0, 1, 0), QVector3D(0, -m_grid->yRes() / 2.0f, 0)); // bottom
-        _walls.emplace_back(QVector3D(0, -1, 0), QVector3D(0, m_grid->yRes() / 2.0f, 0)); // bottom
-//
-////         Plane shape data
-//        Qt3DExtras::QPlaneMesh *planeMesh = new Qt3DExtras::QPlaneMesh();
-//        planeMesh->setWidth(m_grid->xRes());
-//        planeMesh->setHeight(m_grid->yRes());
-//
-////        Plane        mesh transform
-//        Qt3DCore::QTransform *planeTransform = new Qt3DCore::QTransform();
-////        planeTransform->setRotation(QQuaternion::fromAxisAndAngle(1, 0, 0, 90.0));
-//        planeTransform->setRotation(QQuaternion::fromAxisAndAngle(QVector3D(1.0f, 0.0f, 0.0f), 45.0f));
-//        planeTransform->setTranslation(_walls.at(0).second);
-//
-//        Qt3DExtras::QPhongMaterial *planeMaterial = new Qt3DExtras::QPhongMaterial();
-//        planeMaterial->setDiffuse(QColor(QRgb(0xa69929)));
-//
-////        Plane
-//        Qt3DCore::QEntity *planeEntity = new Qt3DCore::QEntity(m_scene->getRootEntity());
-//        planeEntity->addComponent(planeMesh);
-//        planeEntity->addComponent(planeMaterial);
-//        planeEntity->addComponent(planeTransform);
+        _walls.emplace_back(QVector3D(0, 0, 1), QVector3D(0, 0, -boxSize.z() / 2.0f)); // back
+        _walls.emplace_back(QVector3D(0, 0, -1), QVector3D(0, 0, boxSize.z() / 2.0f)); // front
+        _walls.emplace_back(QVector3D(1, 0, 0), QVector3D(-boxSize.x() / 2.0f, 0, 0));     // left
+        _walls.emplace_back(QVector3D(-1, 0, 0), QVector3D(boxSize.x() / 2.0f, 0, 0));     // right
+        _walls.emplace_back(QVector3D(0, 1, 0), QVector3D(0, -boxSize.y() / 2.0f, 0)); // bottom
+//        _walls.emplace_back(QVector3D(0, -1, 0), QVector3D(0, m_grid->yRes() / 2.0f, 0)); // bottom
 
 // BRUTE FORCE
 //        for (unsigned long i = 0; i < m_particles_count; ++i) {
@@ -131,17 +120,25 @@ public:
 
         auto &firstGridCell = m_grid->at(0, 0, 0);
 
+        double halfParticle = CParticle::h / 2.0f;
         // add particles
         unsigned long particleId = 0;
-        for (double y = -boxSize.y() / 2.0; y < boxSize.y() / 2.0; y += CParticle::h / 2.0) {
-            for (double x = -boxSize.x() / 2.0; x < -boxSize.x() / 4.0; x += CParticle::h / 2.0) {
-                for (double z = -boxSize.z() / 2.0; z < boxSize.z() / 2.0; z += CParticle::h / 2.0) {
+//        for (float y = -boxSize.y() / 2.0f; y < boxSize.y() / 2.0f; y += halfParticle) {
+//            for (float x = -boxSize.x() / 2.0f; x < -boxSize.x() / 4.0; x += halfParticle) {
+//                for (float z = -boxSize.z() / 2.0f; z < boxSize.z() / 2.0f; z += halfParticle) {
+
+        for (double y = 0; y < boxSize.y(); y += CParticle::h / 2.0) {
+            for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += CParticle::h / 2.0) {
+                for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += CParticle::h / 2.0) {
                     auto particle = new CParticle(particleId, m_scene->getRootEntity(), QVector3D(x, y, z));
                     firstGridCell.push_back(particle);
                     particleId++;
                 }
             }
         }
+
+        qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
+        qDebug() << "simulating" << particleId << "particles";
 
         updateGrid();
     }
@@ -160,21 +157,32 @@ public:
         }
     }
 
+    void toggleGravity()
+    {
+        if (gravity.length() > 0.0) {
+            gravity = QVector3D(0, 0, 0);
+        }
+        else {
+            gravity = QVector3D(0, GRAVITY_ACCELERATION, 0);
+        }
+    }
+
     void updateGrid()
     {
-        for (unsigned int x = 0; x < m_grid->xRes(); x++) {
-            for (unsigned int y = 0; y < m_grid->yRes(); y++) {
-                for (unsigned int z = 0; z < m_grid->zRes(); z++) {
+        for (int x = 0; x < m_grid->xRes(); x++) {
+            for (int y = 0; y < m_grid->yRes(); y++) {
+                for (int z = 0; z < m_grid->zRes(); z++) {
 
-                    auto &particles = m_grid->at(x, y, z);
+                    std::vector<CParticle *> &particles = m_grid->at(x, y, z);
+//                    qDebug() << x << y << z << particles.size();
 
                     for (int p = 0; p < particles.size(); p++) {
-                        auto &particle = particles[p];
+                        CParticle *particle = particles[p];
 
                         int newGridCellX = (int) floor((particle->position().x() + boxSize.x() / 2.0) / CParticle::h);
                         int newGridCellY = (int) floor((particle->position().y() + boxSize.y() / 2.0) / CParticle::h);
                         int newGridCellZ = (int) floor((particle->position().z() + boxSize.z() / 2.0) / CParticle::h);
-
+//                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
                         //cout << "particle position: " << particle->position() << endl;
                         //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
 
@@ -206,17 +214,23 @@ public:
 
                         if (x != newGridCellX || y != newGridCellY || z != newGridCellZ) {
 
-                            // move the particle to the nem_grid ->ll
+                            // move the particle to the new grid cell
 
-                            m_grid->at(newGridCellX, newGridCellY, newGridCellZ).push_back(particle);
-
+                            std::vector<CParticle *> &what = m_grid->at(newGridCellX, newGridCellY, newGridCellZ);
+                            what.push_back(particle);
                             // remove it from it's previous grid cell
 
-                            particles[p] = particles.back();
+                            particles.at(p) = particles.back();
                             particles.pop_back();
+
+//                            qDebug() << particles.size() << what.size();
+
+//                            if (particles.size() == what.size()) {
+//                                qDebug() << x << y << z << newGridCellX << newGridCellY << newGridCellZ;
+//                            }
+
                             p--; // important! make sure to redo this index, since a new particle will (probably) be there
                         }
-
                     }
                 }
             }
@@ -225,23 +239,39 @@ public:
 
     void updateDensityPressure()
     {
-        for (unsigned int x = 0; x < m_grid->xRes(); x++) {
-            for (unsigned int y = 0; y < m_grid->yRes(); y++) {
-                for (unsigned int z = 0; z < m_grid->zRes(); z++) {
+        for (int x = 0; x < m_grid->xRes(); x++) {
+            for (int y = 0; y < m_grid->yRes(); y++) {
+                for (int z = 0; z < m_grid->zRes(); z++) {
 
                     auto &particles = m_grid->at(x, y, z);
-
-                    for (int p = 0; p < particles.size(); p++) {
-                        auto &particle = particles[p];
+                    for (auto &particle : particles) {
 
                         particle->density() = 0.0;
 
                         // neighbors
-                        for (auto &neighbor : m_grid->getNeighborsCells(x, y, z)) {
-                            double radiusSquared = particle->distanceTo(neighbor).lengthSquared();
+//                        for (auto &neighbor : m_grid->getNeighborsCells(x, y, z)) {
 
-                            if (radiusSquared <= CParticle::h * CParticle::h) {
-                                particle->density() += Wpoly6(radiusSquared);
+                        for (int offsetX = -1; offsetX <= 1; offsetX++) {
+                            if (x + offsetX < 0) continue;
+                            if (x + offsetX >= m_grid->xRes()) break;
+
+                            for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                                if (y + offsetY < 0) continue;
+                                if (y + offsetY >= m_grid->yRes()) break;
+
+                                for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                                    if (z + offsetZ < 0) continue;
+                                    if (z + offsetZ >= m_grid->zRes()) break;
+
+                                    auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
+                                    for (auto &neighbor : neighborGridCellParticles) {
+                                        double radiusSquared = particle->diffPosition(neighbor).lengthSquared();
+
+                                        if (radiusSquared <= CParticle::h * CParticle::h) {
+                                            particle->density() += Wpoly6(radiusSquared);
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -256,33 +286,49 @@ public:
 
     void updateForces()
     {
-        for (unsigned int x = 0; x < m_grid->xRes(); x++) {
-            for (unsigned int y = 0; y < m_grid->yRes(); y++) {
-                for (unsigned int z = 0; z < m_grid->zRes(); z++) {
+        for (int x = 0; x < m_grid->xRes(); x++) {
+            for (int y = 0; y < m_grid->yRes(); y++) {
+                for (int z = 0; z < m_grid->zRes(); z++) {
 
                     auto &particles = m_grid->at(x, y, z);
 
-                    for (int p = 0; p < particles.size(); p++) {
-                        auto &particle = particles[p];
-
-                        QVector3D f_gravity = particle->density() * gravity;
-                        QVector3D f_pressure, f_viscosity;
+                    for (auto &particle : particles) {
+                        QVector3D f_gravity = gravity * particle->density();
+                        QVector3D f_pressure, f_viscosity, f_surface;
 
                         // neighbors
-                        for (auto &neighbor : m_grid->getNeighborsCells(x, y, z)) {
-                            QVector3D distance = particle->distanceTo(neighbor);
-                            double radiusSquared = distance.lengthSquared();
+//                        for (auto &neighbor : m_grid->getNeighborsCells(x, y, z)) {
 
-                            if (radiusSquared <= CParticle::h * CParticle::h) {
-                                if (particle->getId() != neighbor->getId()) {
-//                        QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
-                                    QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
+                        for (int offsetX = -1; offsetX <= 1; offsetX++) {
+                            if (x + offsetX < 0) continue;
+                            if (x + offsetX >= m_grid->xRes()) break;
 
-                                    f_pressure += (particle->pressure() / pow(particle->density(), 2) + neighbor->pressure() / pow(neighbor->density(), 2)) * spikyGradient;
-                                    f_viscosity += (neighbor->velocity() - particle->velocity()) * WviscosityLaplacian(radiusSquared) / neighbor->density();
+                            for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                                if (y + offsetY < 0) continue;
+                                if (y + offsetY >= m_grid->yRes()) break;
+
+                                for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                                    if (z + offsetZ < 0) continue;
+                                    if (z + offsetZ >= m_grid->zRes()) break;
+
+                                    auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
+                                    for (auto &neighbor : neighborGridCellParticles) {
+
+                                        QVector3D distance = particle->diffPosition(neighbor);
+                                        double radiusSquared = distance.lengthSquared();
+
+                                        if (radiusSquared <= CParticle::h * CParticle::h) {
+                                            QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
+                                            QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
+
+                                            if (particle->getId() != neighbor->getId()) {
+                                                f_pressure += (particle->pressure() / pow(particle->density(), 2) + neighbor->pressure() / pow(neighbor->density(), 2)) * spikyGradient;
+                                                f_viscosity += (neighbor->velocity() - particle->velocity()) * WviscosityLaplacian(radiusSquared) / neighbor->density();
+                                            }
+                                        }
+                                    }
                                 }
                             }
-
                         }
 
                         f_pressure *= -CParticle::mass * particle->density();
@@ -297,11 +343,11 @@ public:
 
                             if (d > 0.0) {
                                 // This is an alernate way of calculating collisions of particles against walls, but produces some jitter at boundaries
-                                particle->position() += d * wall.first;
-                                particle->velocity() -= QVector3D::dotProduct(particle->velocity(), wall.first) * 1.9 * wall.first;
+//                                particle->position() += d * wall.first;
+//                                particle->velocity() -= QVector3D::dotProduct(particle->velocity(), wall.first) * 1.9 * wall.first;
 
-//                    particle->acceleration() += WALL_K * wall.first * d;
-//                    particle->acceleration() += WALL_DAMPING * QVector3D::dotProduct(particle->velocity(), wall.first) * wall.first;
+                                particle->acceleration() += WALL_K * wall.first * d;
+                                particle->acceleration() += WALL_DAMPING * QVector3D::dotProduct(particle->velocity(), wall.first) * wall.first;
                             }
                         }
                     }
@@ -327,6 +373,7 @@ public:
 
     virtual void step(double dt)
     {
+//        qDebug() << iteration;
         updateDensityPressure();
         updateForces();
         updateNewPositionVelocity();

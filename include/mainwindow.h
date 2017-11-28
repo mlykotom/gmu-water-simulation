@@ -50,6 +50,9 @@ private:
 private slots:
     void onCameraChanged(const QVector3D &viewVector);
 
+public slots:
+    void onSimulationIterationChanged(unsigned long iteration);
+
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 };

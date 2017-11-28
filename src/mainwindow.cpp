@@ -1,5 +1,6 @@
 #include <QOrbitCameraController>
 #include <QFirstPersonCameraController>
+#include <QTextEdit>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -14,12 +15,13 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *container = QWidget::createWindowContainer(m_view);
     this->setCentralWidget(container);
 
+
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
     m_view->registerAspect(input);
     // Camera
     Qt3DRender::QCamera *cameraEntity = m_view->camera();
     cameraEntity->lens()->setPerspectiveProjection(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
-    cameraEntity->setPosition(QVector3D(0, 0, 15.0f));
+    cameraEntity->setPosition(QVector3D(0, 0, 2.0f));
     cameraEntity->setUpVector(QVector3D(0, 1, 0));
     cameraEntity->setViewCenter(QVector3D(0, 0, 0));
 
@@ -35,9 +37,10 @@ MainWindow::MainWindow(QWidget *parent)
     camController->setCamera(cameraEntity);
 
     m_simulator = new CParticleSimulator(m_scene);
-    m_simulator->start();
+//    m_simulator->start();
 
     connect(cameraEntity, &Qt3DRender::QCamera::viewVectorChanged, this, &MainWindow::onCameraChanged);
+    connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
     this->show();
 }
@@ -62,8 +65,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             }
             break;
 
-        case Qt::Key_A:
+        case Qt::Key_G:
             if (m_simulator) {
+                m_simulator->toggleGravity();
             }
 
             break;
@@ -73,4 +77,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 void MainWindow::onCameraChanged(const QVector3D &viewVector)
 {
 //    qDebug() << viewVector;
+}
+void MainWindow::onSimulationIterationChanged(unsigned long iteration)
+{
+    this->ui->iterationWidget->setText(QString::number(iteration));
 }

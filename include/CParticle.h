@@ -24,14 +24,14 @@ public:
     {
         // Sphere shape data
         m_mesh = new Qt3DExtras::QSphereMesh();
-        m_mesh->setRings(20);
-        m_mesh->setSlices(20);
-        m_mesh->setRadius(1);
+        m_mesh->setRings(10);
+        m_mesh->setSlices(10);
+        m_mesh->setRadius(0.014);
 
         // Sphere mesh transform
         m_transform = new Qt3DCore::QTransform();
         m_transform->setTranslation(initialPosition);
-        m_transform->setScale(0.1);
+//        m_transform->setScale(0.1);
 
         // material
         m_material = new Qt3DExtras::QPhongMaterial();
@@ -81,7 +81,7 @@ public:
         m_transform->setTranslation(to);
     }
 
-    inline QVector3D distanceTo(CParticle *otherParticle)
+    inline QVector3D diffPosition(CParticle *otherParticle)
     {
         return position() - otherParticle->position();
     }
