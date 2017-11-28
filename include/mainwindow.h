@@ -1,22 +1,36 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
 
-namespace Ui {
-    class MainWindow;
+// Qt 3D
+#include <QCamera>
+#include <QInputAspect>
+#include <QAspectEngine>
+#include <QRenderAspect>
+#include <QForwardRenderer>
+#include <Qt3DWindow>
+#include <QOrbitCameraController>
+#include <QMainWindow>
+#include <QKeyEvent>
+#include <QApplication>
+
+#include "CParticleSimulator.h"
+
+namespace Ui
+{
+class MainWindow;
 }
 
 //forward declarations
 namespace Qt3DExtras
 {
-    class Qt3DWindow;
+class Qt3DWindow;
 }
 class CScene;
 
-class MainWindow : public QMainWindow
+class MainWindow: public QMainWindow
 {
-    Q_OBJECT
+Q_OBJECT
 
 public:
     explicit MainWindow(QWidget *parent = 0);
@@ -30,6 +44,17 @@ private:
 
     Qt3DExtras::Qt3DWindow *m_view;
     CScene *m_scene;
+
+    CParticleSimulator *m_simulator;
+
+private slots:
+    void onCameraChanged(const QVector3D &viewVector);
+
+public slots:
+    void onSimulationIterationChanged(unsigned long iteration);
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
 };
 
 
