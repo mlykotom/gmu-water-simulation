@@ -70,23 +70,5 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 };
 
-class FrameGraph : public Qt3DRender::QRenderSettings
-{
-    Q_OBJECT
-
-public:
-    FrameGraph(Qt3DCore::QNode* parent = 0);
-    ~FrameGraph();
-    void setCamera(Qt3DRender::QCamera* camera);
-    inline Qt3DRender::QLayer* layer() { return m_pLayerFilter->layers().at(0); };
-    inline Qt3DRender::QViewport* viewport() { return m_pViewport; };
-
-private:
-    Qt3DRender::QViewport* m_pViewport;
-    Qt3DRender::QClearBuffers* m_pClearBuffer;
-    Qt3DRender::QCameraSelector* m_pCameraSelector;
-    Qt3DRender::QLayerFilter* m_pLayerFilter;
-    Qt3DRender::QRenderSurfaceSelector* m_pRenderSurfaceSelector;
-};
 
 #endif // MAINWINDOW_H

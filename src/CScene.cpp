@@ -35,7 +35,7 @@ CScene::CScene()
     lightTransform->setTranslation(QVector3D(0, 0, 100.0f));
     lightEntity->addComponent(lightTransform);
 
-    m_grid = new CGrid(m_rootEntity);
+    //m_grid = new CGrid(m_rootEntity);
 
 }
 

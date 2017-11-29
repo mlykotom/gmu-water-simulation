@@ -25,8 +25,7 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    m_pFrameGraph(new FrameGraph())
+    ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
@@ -40,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
-    m_view->setRootEntity(rootEntity);
+    m_mainView->setRootEntity(rootEntity);
 
 
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
@@ -53,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
     basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 30.0f));
+    basicCamera->setPosition(QVector3D(0.0f, 0.0f,5.0f));
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
@@ -63,17 +62,18 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
 
-    
-    auto frameGraph = m_mainView->defaultFrameGraph();
-   // m_pFrameGraph->setCamera(basicCamera);    
-   //// rootEntity->addComponent(m_pFrameGraph);
-
-
     // Set root object of the scene
     m_mainView->setRootEntity(rootEntity);
 
     //TODO: Test - delete later
    // m_scene->createSphere();
+    //m_scene->createScene();
+
+    m_simulator = new CParticleSimulator(m_scene);
+    //    m_simulator->start();
+
+    connect(basicCamera, &Qt3DRender::QCamera::viewVectorChanged, this, &MainWindow::onCameraChanged);
+    connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
     this->show();
 }
@@ -114,41 +114,4 @@ void MainWindow::onCameraChanged(const QVector3D &viewVector)
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
     this->ui->iterationWidget->setText(QString::number(iteration));
-}
-
-
-FrameGraph::FrameGraph(Qt3DCore::QNode* parent)
-    : QRenderSettings(parent),
-    m_pViewport(new Qt3DRender::QViewport()),
-    m_pClearBuffer(new Qt3DRender::QClearBuffers()),
-    m_pCameraSelector(new Qt3DRender::QCameraSelector()),
-    m_pLayerFilter(new Qt3DRender::QLayerFilter()),
-    m_pRenderSurfaceSelector(new Qt3DRender::QRenderSurfaceSelector())
-{
-    m_pViewport->setNormalizedRect(QRect(0, 0, 1, 1));
-    // GONE
-    m_pClearBuffer->setClearColor(QColor(QRgb(0x4d4d4f)));
-    //setActiveFrameGraph(m_pRenderSurfaceSelector);
-    m_pLayerFilter->setEnabled(true);
-    m_pLayerFilter->addLayer(new Qt3DRender::QLayer());
-    m_pClearBuffer->setBuffers(Qt3DRender::QClearBuffers::AllBuffers);
-    //m_pCameraSelector->setParent(m_pClearBuffer);
-    m_pCameraSelector->setParent(m_pLayerFilter);
-
-    m_pClearBuffer->setParent(m_pCameraSelector);
-    m_pLayerFilter->setParent(m_pRenderSurfaceSelector);
-    m_pRenderSurfaceSelector->setParent(m_pViewport);
-    //setExternalRenderTargetSize(QSize(800,600));
-    // GONE
-    setActiveFrameGraph(m_pViewport);
-}
-
-FrameGraph::~FrameGraph()
-{
-    //QNode::cleanup();
-}
-
-void FrameGraph::setCamera(Qt3DRender::QCamera* camera)
-{
-    m_pCameraSelector->setCamera(camera);
 }
