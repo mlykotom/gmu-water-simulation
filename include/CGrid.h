@@ -3,7 +3,7 @@
 
 //Qt3D
 #include <QGeometry>
-#include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DRender/QMaterial>
 #include <Qt3DExtras/QCuboidGeometry>
 #include <QVector3D>
 
@@ -36,7 +36,7 @@ public: //methods
 
 private: //attributes
     Qt3DExtras::QCuboidGeometry *m_geometry;
-    Qt3DExtras::QPhongMaterial *m_material;
+    Qt3DRender::QMaterial *m_material;
     Qt3DRender::QGeometryRenderer *m_meshRenderer;
     
     std::vector<CParticle *> *m_data;

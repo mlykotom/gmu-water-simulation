@@ -62,15 +62,12 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
 
-    // Set root object of the scene
-    m_mainView->setRootEntity(rootEntity);
-
-    //TODO: Test - delete later
-   // m_scene->createSphere();
-    //m_scene->createScene();
-
+    //Particle simulator
     m_simulator = new CParticleSimulator(m_scene);
     //    m_simulator->start();
+
+    // Set root object of the scene
+    m_mainView->setRootEntity(rootEntity);
 
     connect(basicCamera, &Qt3DRender::QCamera::viewVectorChanged, this, &MainWindow::onCameraChanged);
     connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);

@@ -37,6 +37,7 @@ CScene::CScene()
 
     //m_grid = new CGrid(m_rootEntity);
 
+
 }
 
 CScene::~CScene()

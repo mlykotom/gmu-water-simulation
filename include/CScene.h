@@ -9,7 +9,8 @@ class CGrid;
 
 class CScene : QObject
 {
-Q_OBJECT
+    Q_OBJECT
+
 public:
 
     CScene();
