@@ -66,6 +66,7 @@ find_package( Qt53DExtras REQUIRED )
 find_package( Qt53DRender REQUIRED )
 find_package( Qt53DInput REQUIRED )
 
+find_package(OpenCL REQUIRED)
 
 set(QT_LIBRARIES
 	Qt5::Core
@@ -76,18 +77,21 @@ set(QT_LIBRARIES
 	Qt5::3DExtras
 	Qt5::3DRender
 	Qt5::3DInput
+	OpenCL::OpenCL
 	)
 
 
 ADD_QT_LIBS(
-	Qt5::Core	
+	Qt5::Core
 	Qt5::Gui
 	Qt5::Widgets
 	Qt5::OpenGL
 	Qt5::3DCore
 	Qt5::3DExtras
 	Qt5::3DRender
-	Qt5::3DInput)
+	Qt5::3DInput
+	OpenCL::OpenCL
+)
 
 if( WIN32 )
 	ADD_QT_LIBS(Qt5::WinMain)

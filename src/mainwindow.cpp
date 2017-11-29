@@ -1,3 +1,6 @@
+#include <QOrbitCameraController>
+#include <QFirstPersonCameraController>
+#include <QTextEdit>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -34,8 +37,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setCentralWidget(container);
 
+    // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
+    m_view->setRootEntity(rootEntity);
+
 
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
     m_mainView->registerAspect(input);
@@ -69,11 +75,45 @@ MainWindow::MainWindow(QWidget *parent) :
     //TODO: Test - delete later
    // m_scene->createSphere();
 
-    this->showMaximized();
+    this->show();
 }
 
 MainWindow::~MainWindow()
 {
+//    delete m_scene;
+//    delete m_simulator;
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key()) {
+        case Qt::Key_Escape:
+            QApplication::quit();
+            break;
+
+        case Qt::Key_Space:
+            // TODO this is not handled inside of the 3Dwidget :(
+            if (m_simulator) {
+                m_simulator->toggleSimulation();
+            }
+            break;
+
+        case Qt::Key_G:
+            if (m_simulator) {
+                m_simulator->toggleGravity();
+            }
+
+            break;
+    }
+}
+
+void MainWindow::onCameraChanged(const QVector3D &viewVector)
+{
+//    qDebug() << viewVector;
+}
+void MainWindow::onSimulationIterationChanged(unsigned long iteration)
+{
+    this->ui->iterationWidget->setText(QString::number(iteration));
 }
 
 

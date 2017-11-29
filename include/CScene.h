@@ -1,20 +1,15 @@
 #ifndef CSCENE_H
 #define CSCENE_H
 
-#include<QObject>
+#include <QObject>
+#include <QEntity>
 
-//forward declaration
-namespace Qt3DCore
-{
-    class QEntity;
-};
 
 class CGrid;
 
 class CScene : QObject
 {
-    Q_OBJECT
-
+Q_OBJECT
 public:
 
     CScene();
@@ -24,6 +19,7 @@ public:
     void setRootEntity(Qt3DCore::QEntity *e) { m_rootEntity = e; }
    
     //TODO: Test method - delete later
+    void createScene();
     void createSphere();
 
     void addGrid();
