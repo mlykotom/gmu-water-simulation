@@ -7,12 +7,32 @@
 
 CGrid::CGrid(int x, int y, int z, Qt3DCore::QNode * parent)
     : RenderableEntity(parent),
+    m_material(new Qt3DExtras::QPhongMaterial()),
+    m_meshRenderer(new Qt3DRender::QGeometryRenderer()),
     m_x(x), 
     m_y(y),
     m_z(z), 
     m_cell_count(x * y * z)
 {
     m_data = new std::vector<CParticle *>[m_cell_count];
+
+    //Cuboid geometry
+    m_geometry = new Qt3DExtras::QCuboidGeometry(this);
+    m_geometry->setZExtent(z);
+    m_geometry->setYExtent(y);
+    m_geometry->setXExtent(x);
+
+    m_meshRenderer->setGeometry(m_geometry);
+    m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
+    addComponent(m_meshRenderer);
+
+    //Custom material
+    /*========================================*/
+    CWireframeMaterial *wireframeMaterial = new CWireframeMaterial();
+    addComponent(wireframeMaterial);
+
+    this->setEnabled(true);
+
 }
 
 

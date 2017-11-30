@@ -22,6 +22,7 @@
 
 //local includes
 #include <CScene.h>
+#include <CQt3DWindow.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -30,12 +31,13 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
 
-    m_mainView = new Qt3DExtras::Qt3DWindow();
+    m_mainView = new CQt3DWindow();
+    //m_mainView->setKeyboardGrabEnabled(false);
 
     QWidget *container = QWidget::createWindowContainer(m_mainView);
 
     this->setCentralWidget(container);
-
+    
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
@@ -69,8 +71,8 @@ MainWindow::MainWindow(QWidget *parent) :
     // Set root object of the scene
     m_mainView->setRootEntity(rootEntity);
 
-    connect(basicCamera, &Qt3DRender::QCamera::viewVectorChanged, this, &MainWindow::onCameraChanged);
     connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+    connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator,SLOT(onKeyPressed(Qt::Key)));
 
     this->show();
 }
@@ -81,34 +83,8 @@ MainWindow::~MainWindow()
 //    delete m_simulator;
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event)
-{
-    switch (event->key()) {
-        case Qt::Key_Escape:
-            QApplication::quit();
-            break;
-
-        case Qt::Key_Space:
-            // TODO this is not handled inside of the 3Dwidget :(
-            if (m_simulator) {
-                m_simulator->toggleSimulation();
-            }
-            break;
-
-        case Qt::Key_G:
-            if (m_simulator) {
-                m_simulator->toggleGravity();
-            }
-
-            break;
-    }
-}
-
-void MainWindow::onCameraChanged(const QVector3D &viewVector)
-{
-//    qDebug() << viewVector;
-}
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
     this->ui->iterationWidget->setText(QString::number(iteration));
 }
+

@@ -9,7 +9,7 @@ CParticleSimulator::CParticleSimulator(QObject *parent)
     dt(0.01),
     iteration(0),
     surfaceThreshold(0.01),
-    boxSize(QVector3D(0.4, 0.4, 0.4))
+    boxSize(QVector3D(2, 2, 2))
 {
 }
 
@@ -360,3 +360,18 @@ void CParticleSimulator::doWork()
     iteration++;
     emit iterationChanged(iteration);
 };
+
+
+void CParticleSimulator::onKeyPressed(Qt::Key key)
+{
+    switch (key) 
+    {
+        case Qt::Key_Space:
+            toggleSimulation();           
+            break;
+
+        case Qt::Key_G:
+            toggleGravity();
+            break;
+    }
+}

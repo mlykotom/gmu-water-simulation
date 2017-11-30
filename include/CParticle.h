@@ -1,5 +1,5 @@
-#ifndef WATERSURFACESIMULATION_PARTICLE_H
-#define WATERSURFACESIMULATION_PARTICLE_H
+#ifndef CPARTICLE_H
+#define CPARTICLE_H
 
 #include <QEntity>
 #include <QSphereMesh>
@@ -37,7 +37,7 @@ public: //methods
 
 //TODOL urobit getre a settre
 public: //attributes
-    static constexpr double h = 0.0457; //0.02 //0.045
+    static constexpr double h = 1.0; //0.0457; //0.02 //0.045
     static constexpr double viscosity = 3.5; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
     static constexpr double mass = 0.02; // kg
     static constexpr double gas_stiffness = 3.0; //20.0 // 461.5  // Nm/kg is gas constant of water vapor

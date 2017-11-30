@@ -27,7 +27,7 @@ class CParticleSimulator: public QObject
 
 public:
     CParticleSimulator(QObject *parent = 0);
-    explicit CParticleSimulator(CScene *scene, unsigned long particlesCount = 500, QObject *parent = 0);
+    explicit CParticleSimulator(CScene *scene, unsigned long particlesCount = 20, QObject *parent = 0);
 
     ~CParticleSimulator();
 
@@ -48,6 +48,9 @@ public:
     QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
     QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
     double WviscosityLaplacian(double radiusSquared);
+
+public slots:
+    void onKeyPressed(Qt::Key key);
 
 private slots:
     void doWork();
