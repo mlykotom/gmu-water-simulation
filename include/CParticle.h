@@ -35,7 +35,8 @@ public: //methods
         return position() - otherParticle->position();
     }
 
-private: //attributes
+//TODOL urobit getre a settre
+public: //attributes
     static constexpr double h = 0.0457; //0.02 //0.045
     static constexpr double viscosity = 3.5; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
     static constexpr double mass = 0.02; // kg
