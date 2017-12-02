@@ -67,7 +67,14 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 
 
     /*============================ Working area ====================================================*/
-    //m_geometry->boundingVolumePositionAttribute()->vertexSize();
+    
+    //Qt3DRender::QAttribute *BVAttribute =  m_geometry->boundingVolumePositionAttribute();
+    //qDebug() << BVAttribute->vertexSize();
+    //qDebug() << BVAttribute->vertexBaseType();
+    //qDebug() << BVAttribute->byteOffset();
+    //qDebug() << BVAttribute->byteStride() / sizeof(float);
+    //qDebug() << BVAttribute->count();
+
 
     //Qt3DRender::QAttribute *posAttribute = m_geometry->positionAttribute();
     //qDebug() << posAttribute->vertexSize();

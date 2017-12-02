@@ -6,8 +6,9 @@
 #include <QPhongMaterial>
 #include <Qt3DCore/qtransform.h>
 
+#include "renderableentity.h"
 
-class CParticle
+class CParticle : RenderableEntity
 {
 
 public:
@@ -37,8 +38,9 @@ public: //methods
 
 //TODOL urobit getre a settre
 public: //attributes
-    static constexpr double h = 0.0457;
-    //1.0;  //0.02 //0.045
+    static constexpr double h = 
+    //0.0457;
+    1.0;  //0.02 //0.045
     static constexpr double viscosity = 3.5; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
     static constexpr double mass = 0.02; // kg
     static constexpr double gas_stiffness = 3.0; //20.0 // 461.5  // Nm/kg is gas constant of water vapor
@@ -51,9 +53,7 @@ private:
     double m_density;
     double m_pressure;
 
-    Qt3DCore::QEntity *m_rootEntity;
     Qt3DExtras::QSphereMesh *m_mesh;
-    Qt3DCore::QTransform *m_transform;
     Qt3DExtras::QPhongMaterial *m_material;
 
     const unsigned long m_id;
