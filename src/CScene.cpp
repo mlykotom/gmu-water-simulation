@@ -20,6 +20,7 @@
 
 
 #include "CGrid.h"
+#include <CToplessBox.h>
 
 CScene::CScene()
 {
@@ -37,7 +38,7 @@ CScene::CScene()
 
     //m_grid = new CGrid(m_rootEntity);
 
-
+    //CToplessBox *box = new CToplessBox(1, 1, 1, m_rootEntity);
 }
 
 CScene::~CScene()

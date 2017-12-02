@@ -4,6 +4,11 @@
 
 #include <Qt3DExtras/qcuboidmesh.h>
 
+#include <QAttribute>
+#include <Qt3DRender/QBuffer>
+#include <Qt3DRender/QBufferDataGeneratorPtr>
+#include <Qt3DRender/QBufferDataGenerator>
+
 
 CGrid::CGrid(int x, int y, int z, Qt3DCore::QNode * parent)
     : RenderableEntity(parent),
@@ -22,12 +27,13 @@ CGrid::CGrid(int x, int y, int z, Qt3DCore::QNode * parent)
     m_geometry->setYExtent(y);
     m_geometry->setXExtent(x);
 
+
+
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
     addComponent(m_meshRenderer);
 
     //Custom material
-    /*========================================*/
     CWireframeMaterial *wireframeMaterial = new CWireframeMaterial();
     addComponent(wireframeMaterial);
 
@@ -47,24 +53,60 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 {
     //Translation
     m_transform->setScale(4.0f);
-    m_transform->setTranslation(QVector3D(5.0f, -4.0f, 0.0f)); 
+    m_transform->setTranslation(QVector3D(0, 0, -10.0f)); 
 
     //Cuboid geometry
     m_geometry = new Qt3DExtras::QCuboidGeometry(this);
+    m_geometry->updateVertices();
+    m_geometry->updateIndices();
+
 
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
     addComponent(m_meshRenderer);
 
+
+    /*============================ Working area ====================================================*/
+    //m_geometry->boundingVolumePositionAttribute()->vertexSize();
+
+    //Qt3DRender::QAttribute *posAttribute = m_geometry->positionAttribute();
+    //qDebug() << posAttribute->vertexSize();
+    //qDebug() << posAttribute->vertexBaseType();
+    //qDebug() << posAttribute->byteOffset();
+    //qDebug() << posAttribute->byteStride() / sizeof(float);
+    //qDebug() << posAttribute->count();
+
+    //Qt3DRender::QBuffer *posBuffer = m_geometry->positionAttribute()->buffer();
+    //
+
+
+
+    //Qt3DRender::QBufferDataGeneratorPtr generator = posBuffer->dataGenerator();
+
+    //Qt3DRender::QBufferDataGenerator * gen = generator.operator->();
+    //QByteArray arr = gen->operator()();
+
+
+    //float* vertices = reinterpret_cast<float*>(arr.data());
+    ////int size = sizeof(vertices) / sizeof(*vertices);
+
+    //int size = arr.size() / sizeof(float);
+
+
+    //for (int i = 0; i < size; ++i)
+    //{
+    //    qDebug() << vertices[i];
+    //}
+    /*============================ Working area ====================================================*/
+
+
     //Custom material
-    /*========================================*/
     CWireframeMaterial *wireframeMaterial = new CWireframeMaterial();
     addComponent(wireframeMaterial);
 
     //CRobustWireframeMaterial *robustWireframeMaterial = new CRobustWireframeMaterial();
     //addComponent(robustWireframeMaterial);
 
-    /*================================================================*/
     this->setEnabled(true);
 }
 CGrid::~CGrid()

@@ -29,7 +29,7 @@ CParticleSimulator::CParticleSimulator(CScene *scene, unsigned long particlesCou
     int gridY = (int)ceil(boxSize.y() / CParticle::h);
     int gridZ = (int)ceil(boxSize.z() / CParticle::h);
 
-    m_grid = new CGrid(gridX, gridY, gridZ);
+    m_grid = new CGrid(gridX, gridY, gridZ, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
     setup();

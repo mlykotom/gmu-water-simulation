@@ -24,6 +24,7 @@
 #include <CScene.h>
 #include <CQt3DWindow.h>
 
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -66,13 +67,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //Particle simulator
     m_simulator = new CParticleSimulator(m_scene);
-    //    m_simulator->start();
+    connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator, SLOT(onKeyPressed(Qt::Key)));
+    connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+
 
     // Set root object of the scene
     m_mainView->setRootEntity(rootEntity);
 
-    connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
-    connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator,SLOT(onKeyPressed(Qt::Key)));
 
     this->show();
 }
