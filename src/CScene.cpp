@@ -18,6 +18,10 @@
 #include <QPlaneMesh>
 #include <QThread>
 
+
+#include "CGrid.h"
+#include <CToplessBox.h>
+
 CScene::CScene()
 {
     // Root entity
@@ -31,11 +35,40 @@ CScene::CScene()
     Qt3DCore::QTransform *lightTransform = new Qt3DCore::QTransform(lightEntity);
     lightTransform->setTranslation(QVector3D(0, 0, 100.0f));
     lightEntity->addComponent(lightTransform);
+
+    //m_grid = new CGrid(m_rootEntity);
+
+    //CToplessBox *box = new CToplessBox(1, 1, 1, m_rootEntity);
 }
 
 CScene::~CScene()
 {
     delete m_rootEntity;
+}
+
+void CScene::createSphere()
+{
+    // Sphere shape data
+    Qt3DExtras::QSphereMesh *sphereMesh = new Qt3DExtras::QSphereMesh();
+    sphereMesh->setRings(20);
+    sphereMesh->setSlices(20);
+    sphereMesh->setRadius(2);
+
+    // Sphere mesh transform
+    Qt3DCore::QTransform *sphereTransform = new Qt3DCore::QTransform();
+
+    sphereTransform->setScale(1.3f);
+    sphereTransform->setTranslation(QVector3D(-5.0f, -4.0f, 0.0f));
+
+    Qt3DExtras::QPhongMaterial *sphereMaterial = new Qt3DExtras::QPhongMaterial();
+    sphereMaterial->setDiffuse(QColor(QRgb(0xa69929)));
+
+    // Sphere
+    Qt3DCore::QEntity *sphereEntity = new Qt3DCore::QEntity(m_rootEntity);
+    sphereEntity->addComponent(sphereMesh);
+    sphereEntity->addComponent(sphereMaterial);
+    sphereEntity->addComponent(sphereTransform);
+    sphereEntity->setEnabled(true);
 }
 
 void CScene::createScene()
@@ -62,3 +95,6 @@ void CScene::createScene()
     planeEntity->addComponent(planeTransform);
 }
 
+void CScene::addGrid()
+{
+}

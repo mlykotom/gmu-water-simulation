@@ -114,7 +114,8 @@ MACRO( GMU_WINDOWS_APP_BUILD)
     ADD_EXECUTABLE( ${GMU_TARGET_NAME}
                     ${GMU_SOURCES}
                     ${GMU_HEADERS} 
-                    ${UIS_HDRS}        
+                    ${UIS_HDRS}    
+                    ${GMU_QT_RES}    
                     )
 
     SET_TARGET_PROPERTIES( ${GMU_TARGET_NAME}

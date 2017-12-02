@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/basic.vert</file>
+        <file>shaders/basic.frag</file>
+        <file>shaders/robustwireframe.vert</file>
+        <file>shaders/robustwireframe.frag</file>
+        <file>shaders/robustwireframe.geom</file>
+        <file>shaders/wireframe.vert</file>        
+        <file>shaders/wireframe.frag</file>
+        <file>shaders/wireframe.geom</file>        
+    </qresource>
+</RCC>

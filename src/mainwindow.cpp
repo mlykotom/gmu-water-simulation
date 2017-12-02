@@ -4,43 +4,76 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+// Qt 3D
+#include <Qt3DCore/qentity.h>
+#include <Qt3DCore/qaspectengine.h>
+
+#include <Qt3DRender/qcamera.h>
+#include <Qt3DRender/qcameralens.h>
+#include <Qt3DRender/qrenderaspect.h>
+
+#include <Qt3DInput/QInputAspect>
+
+#include <Qt3DExtras/qforwardrenderer.h>
+#include <Qt3DExtras/qt3dwindow.h>
+#include <Qt3DExtras/qfirstpersoncameracontroller.h>
+
+#include <QCullFace>
+
+//local includes
+#include <CScene.h>
+#include <CQt3DWindow.h>
+
+
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
 
-    Qt3DExtras::Qt3DWindow *m_view = new Qt3DExtras::Qt3DWindow();
-    m_view->defaultFrameGraph()->setClearColor(QColor(QRgb(0xffffff))); //0x4d4d4f
-    QWidget *container = QWidget::createWindowContainer(m_view);
+    m_mainView = new CQt3DWindow();
+    //m_mainView->setKeyboardGrabEnabled(false);
+
+    QWidget *container = QWidget::createWindowContainer(m_mainView);
+
     this->setCentralWidget(container);
-
-
-    Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
-    m_view->registerAspect(input);
-    // Camera
-    Qt3DRender::QCamera *cameraEntity = m_view->camera();
-    cameraEntity->lens()->setPerspectiveProjection(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
-    cameraEntity->setPosition(QVector3D(0, 0, 2.0f));
-    cameraEntity->setUpVector(QVector3D(0, 1, 0));
-    cameraEntity->setViewCenter(QVector3D(0, 0, 0));
-
+    
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
-    m_view->setRootEntity(rootEntity);
+    m_mainView->setRootEntity(rootEntity);
 
-    // Set root object of the scene
+
+    Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
+    m_mainView->registerAspect(input);
+
+
+    // Scene Camera
+    Qt3DRender::QCamera *basicCamera = m_mainView->camera();
+    basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
+
+    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
+    basicCamera->setPosition(QVector3D(0.0f, 0.0f,5.0f));
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
-    camController->setLookSpeed(camController->lookSpeed() * (-1.0f));
-    camController->setCamera(cameraEntity);
+    camController->setCamera(basicCamera);
 
+    // FrameGraph
+    m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
+    m_mainView->defaultFrameGraph()->setCamera(basicCamera);
+
+
+    //Particle simulator
     m_simulator = new CParticleSimulator(m_scene);
-//    m_simulator->start();
-
-    connect(cameraEntity, &Qt3DRender::QCamera::viewVectorChanged, this, &MainWindow::onCameraChanged);
+    connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator, SLOT(onKeyPressed(Qt::Key)));
     connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+
+
+    // Set root object of the scene
+    m_mainView->setRootEntity(rootEntity);
+
 
     this->show();
 }
@@ -51,34 +84,8 @@ MainWindow::~MainWindow()
 //    delete m_simulator;
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event)
-{
-    switch (event->key()) {
-        case Qt::Key_Escape:
-            QApplication::quit();
-            break;
-
-        case Qt::Key_Space:
-            // TODO this is not handled inside of the 3Dwidget :(
-            if (m_simulator) {
-                m_simulator->toggleSimulation();
-            }
-            break;
-
-        case Qt::Key_G:
-            if (m_simulator) {
-                m_simulator->toggleGravity();
-            }
-
-            break;
-    }
-}
-
-void MainWindow::onCameraChanged(const QVector3D &viewVector)
-{
-//    qDebug() << viewVector;
-}
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
     this->ui->iterationWidget->setText(QString::number(iteration));
 }
+
