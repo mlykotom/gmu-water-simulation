@@ -7,6 +7,7 @@
 #include <QtMath>
 
 #include <iostream>
+#include <QElapsedTimer>
 
 #include "CScene.h"
 #include "CParticle.h"
@@ -40,7 +41,7 @@ public:
     void updateGrid();
     void updateDensityPressure();
     void updateForces();
-        void updateNewPositionVelocity();
+    void updateNewPositionVelocity();
 
     void step(double dt);
 
@@ -48,6 +49,8 @@ public:
     QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
     QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
     double WviscosityLaplacian(double radiusSquared);
+
+    qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
 
 public slots:
     void onKeyPressed(Qt::Key key);
@@ -58,6 +61,7 @@ private slots:
 private: //attributes
 
     QTimer m_timer;
+    QElapsedTimer m_elapsed_timer;
     CScene *m_scene;
     QVector3D gravity;
 
@@ -73,7 +77,6 @@ private: //attributes
     unsigned long iteration;
     QVector3D boxSize;
     double surfaceThreshold;
-
 
 
 signals:

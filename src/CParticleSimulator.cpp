@@ -37,9 +37,9 @@ CParticleSimulator::CParticleSimulator(CScene *scene, unsigned long particlesCou
 
 CParticleSimulator::~CParticleSimulator()
 {
-    
+
     delete m_particles;
-    
+
 }
 
 void CParticleSimulator::setup()
@@ -85,6 +85,7 @@ void CParticleSimulator::setup()
 void CParticleSimulator::start()
 {
     m_timer.start();
+    m_elapsed_timer.start();
 }
 
 void CParticleSimulator::toggleSimulation()
@@ -191,8 +192,6 @@ void CParticleSimulator::updateDensityPressure()
                     particle->density() = 0.0;
 
                     // neighbors
-                    //                        for (auto &neighbor : m_grid->getNeighborsCells(x, y, z)) {
-
                     for (int offsetX = -1; offsetX <= 1; offsetX++) {
                         if (x + offsetX < 0) continue;
                         if (x + offsetX >= m_grid->xRes()) break;
@@ -239,8 +238,6 @@ void CParticleSimulator::updateForces()
                     QVector3D f_pressure, f_viscosity, f_surface;
 
                     // neighbors
-                    //                        for (auto &neighbor : m_grid->getNeighborsCells(x, y, z)) {
-
                     for (int offsetX = -1; offsetX <= 1; offsetX++) {
                         if (x + offsetX < 0) continue;
                         if (x + offsetX >= m_grid->xRes()) break;
@@ -357,17 +354,16 @@ double CParticleSimulator::WviscosityLaplacian(double radiusSquared)
 void CParticleSimulator::doWork()
 {
     this->step(dt);
-    iteration++;
-    emit iterationChanged(iteration);
+    emit iterationChanged(++iteration);
 };
 
 
 void CParticleSimulator::onKeyPressed(Qt::Key key)
 {
-    switch (key) 
+    switch (key)
     {
         case Qt::Key_Space:
-            toggleSimulation();           
+            toggleSimulation();
             break;
 
         case Qt::Key_G:

@@ -32,8 +32,6 @@ public: //methods
     const int zRes() const { return m_z; }
     const int &getCellCount() const { return m_cell_count; }
 
-    std::vector<CParticle *> getNeighborsCells(int x, int y, int z);
-
 private: //attributes
     Qt3DExtras::QCuboidGeometry *m_geometry;
     Qt3DRender::QMaterial *m_material;

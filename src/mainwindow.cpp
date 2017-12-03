@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QWidget *container = QWidget::createWindowContainer(m_mainView);
 
     this->setCentralWidget(container);
-    
+
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
@@ -55,7 +55,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
     basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f,5.0f));
+    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
@@ -86,6 +86,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    this->ui->iterationWidget->setText(QString::number(iteration));
+    double elapsed = m_simulator->getElapsedTime() / 1000.0;
+    double fps = iteration / elapsed;
+    this->ui->iterationWidget->setText(QString::number(fps));
 }
 
