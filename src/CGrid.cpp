@@ -1,13 +1,10 @@
 #include "CGrid.h"
 #include "CWireframeMaterial.h"
 #include "CRobustWireframeMaterial.h"
+#include "CCollisionGeometry.h"
 
 #include <Qt3DExtras/qcuboidmesh.h>
 
-#include <QAttribute>
-#include <Qt3DRender/QBuffer>
-#include <Qt3DRender/QBufferDataGeneratorPtr>
-#include <Qt3DRender/QBufferDataGenerator>
 
 
 CGrid::CGrid(int x, int y, int z, Qt3DCore::QNode * parent)
@@ -60,6 +57,9 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
     m_geometry->updateVertices();
     m_geometry->updateIndices();
 
+    m_geometry->setXExtent(4.25f);
+    m_geometry->setYExtent(88.88f);
+    m_geometry->setZExtent(100.0f);
 
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
@@ -67,43 +67,11 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 
 
     /*============================ Working area ====================================================*/
-    
-    //Qt3DRender::QAttribute *BVAttribute =  m_geometry->boundingVolumePositionAttribute();
-    //qDebug() << BVAttribute->vertexSize();
-    //qDebug() << BVAttribute->vertexBaseType();
-    //qDebug() << BVAttribute->byteOffset();
-    //qDebug() << BVAttribute->byteStride() / sizeof(float);
-    //qDebug() << BVAttribute->count();
-
-
-    //Qt3DRender::QAttribute *posAttribute = m_geometry->positionAttribute();
-    //qDebug() << posAttribute->vertexSize();
-    //qDebug() << posAttribute->vertexBaseType();
-    //qDebug() << posAttribute->byteOffset();
-    //qDebug() << posAttribute->byteStride() / sizeof(float);
-    //qDebug() << posAttribute->count();
-
-    //Qt3DRender::QBuffer *posBuffer = m_geometry->positionAttribute()->buffer();
-    //
+    CCollisionGeometry *collisions = new CCollisionGeometry(m_geometry);
 
 
 
-    //Qt3DRender::QBufferDataGeneratorPtr generator = posBuffer->dataGenerator();
 
-    //Qt3DRender::QBufferDataGenerator * gen = generator.operator->();
-    //QByteArray arr = gen->operator()();
-
-
-    //float* vertices = reinterpret_cast<float*>(arr.data());
-    ////int size = sizeof(vertices) / sizeof(*vertices);
-
-    //int size = arr.size() / sizeof(float);
-
-
-    //for (int i = 0; i < size; ++i)
-    //{
-    //    qDebug() << vertices[i];
-    //}
     /*============================ Working area ====================================================*/
 
 
