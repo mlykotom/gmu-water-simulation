@@ -7,23 +7,25 @@
 
 
 
-CGrid::CGrid(int x, int y, int z, Qt3DCore::QNode * parent)
+CGrid::CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode * parent)
     : RenderableEntity(parent),
     m_material(new Qt3DExtras::QPhongMaterial()),
     m_meshRenderer(new Qt3DRender::QGeometryRenderer()),
-    m_x(x), 
-    m_y(y),
-    m_z(z), 
-    m_cell_count(x * y * z)
+    m_ResX(resolution.x()), 
+    m_ResY(resolution.y()),
+    m_ResZ(resolution.z())
 {
+    m_cell_count = (m_ResX * m_ResY * m_ResZ);
     m_data = new std::vector<CParticle *>[m_cell_count];
 
     //Cuboid geometry
     m_geometry = new Qt3DExtras::QCuboidGeometry(this);
-    m_geometry->setZExtent(z);
-    m_geometry->setYExtent(y);
-    m_geometry->setXExtent(x);
+    m_geometry->setZExtent(size.z());
+    m_geometry->setYExtent(size.y());
+    m_geometry->setXExtent(size.x());
 
+    m_geometry->updateVertices();
+    m_geometry->updateIndices();
 
 
     m_meshRenderer->setGeometry(m_geometry);
@@ -43,9 +45,9 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
     : RenderableEntity(parent),
     m_material(new Qt3DExtras::QPhongMaterial()),
     m_meshRenderer(new Qt3DRender::QGeometryRenderer()),
-    m_x(0),
-    m_y(0),
-    m_z(0),
+    m_ResX(0),
+    m_ResY(0),
+    m_ResZ(0),
     m_cell_count(0)
 {
     //Translation
@@ -56,10 +58,6 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
     m_geometry = new Qt3DExtras::QCuboidGeometry(this);
     m_geometry->updateVertices();
     m_geometry->updateIndices();
-
-    m_geometry->setXExtent(4.25f);
-    m_geometry->setYExtent(88.88f);
-    m_geometry->setZExtent(100.0f);
 
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);

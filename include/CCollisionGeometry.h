@@ -7,21 +7,55 @@
 
 struct sVertex
 {
+
     //position
-    QVector3D x, y, z;
+    QVector3D m_pos;
 
     //normal
-    QVector3D normal;
+    QVector3D m_normal;
 
+    sVertex::sVertex(QVector3D pos)
+        :m_pos(pos)
+    {
+    }
+
+    sVertex(QVector3D pos, QVector3D normal)
+        : m_pos(pos),
+        m_normal(normal)
+    {
+    }
+
+    sVertex()
+    {
+    }
 };
 
 struct sFace
 {
     //vertices
-    sVertex v0, v1, v2;
+    sVertex m_v0, m_v1, m_v2;
 
     //normal
-    QVector3D normal;
+    QVector3D m_normal;
+
+    sFace()
+    {
+    }
+
+    sFace(sVertex v0, sVertex v1, sVertex v2)
+        :m_v0(v0),
+        m_v1(v1),
+        m_v2(v2)
+    {
+        m_normal = QVector3D::crossProduct(v0.m_pos,v1.m_pos);
+    }
+
+    sFace(sVertex v0, sVertex v1, sVertex v2, QVector3D normal)
+        :m_v0(v0),
+        m_v1(v1),
+        m_v2(v2),
+        m_normal(normal)
+    {}
 };
 
 class CCollisionGeometry : public Qt3DCore::QEntity

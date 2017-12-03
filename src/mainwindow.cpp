@@ -66,9 +66,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     //Particle simulator
-    //m_simulator = new CParticleSimulator(m_scene);
-    //connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator, SLOT(onKeyPressed(Qt::Key)));
-    //connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+    m_simulator = new CParticleSimulator(m_scene);
+    connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator, SLOT(onKeyPressed(Qt::Key)));
+    connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
 
     // Set root object of the scene

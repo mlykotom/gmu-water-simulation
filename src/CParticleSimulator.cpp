@@ -22,14 +22,16 @@ CParticleSimulator::CParticleSimulator(CScene *scene, unsigned long particlesCou
     dt(0.01),
     iteration(0),
     surfaceThreshold(0.01),
-    boxSize(QVector3D(0.4, 0.4, 0.4))
+    boxSize(QVector3D(1, 1, 1))
 {
 
     int gridX = (int)ceil(boxSize.x() / CParticle::h);
     int gridY = (int)ceil(boxSize.y() / CParticle::h);
     int gridZ = (int)ceil(boxSize.z() / CParticle::h);
 
-    m_grid = new CGrid(gridX, gridY, gridZ, m_scene->getRootEntity());
+    QVector3D gridResolution(gridX, gridY, gridZ);
+
+    m_grid = new CGrid(boxSize,gridResolution, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
     setup();
@@ -278,7 +280,7 @@ void CParticleSimulator::updateForces()
 
                     // ADD IN SPH FORCES
                     particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
-
+                    
                     // collision force
                     for (auto wall : _walls) {
                         double d = QVector3D::dotProduct(wall.second - particle->position(), wall.first) + 0.01; // particle radius

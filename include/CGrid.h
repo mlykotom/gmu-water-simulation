@@ -15,7 +15,7 @@ class CGrid : RenderableEntity
 {
 
 public: //methods
-    explicit CGrid(int x, int y, int z, Qt3DCore::QNode *parent = 0);
+    explicit CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode *parent = 0);
     
     CGrid(Qt3DCore::QNode *parent = 0);
     ~CGrid();
@@ -24,12 +24,13 @@ public: //methods
     std::vector<CParticle *> *getData() const { return m_data; }
     std::vector<CParticle *> &at(int x, int y, int z)
     {
-        return m_data[x + y * m_y + z * m_z * m_y];
+        return m_data[x + y * m_ResY + z * m_ResZ * m_ResY];
     }
 
-    const int xRes() const { return m_x; }
-    const int yRes() const { return m_y; }
-    const int zRes() const { return m_z; }
+    const int xRes() const { return m_ResX; }
+    const int yRes() const { return m_ResY; }
+    const int zRes() const { return m_ResZ; }
+
     const int &getCellCount() const { return m_cell_count; }
 
     std::vector<CParticle *> getNeighborsCells(int x, int y, int z);
@@ -40,8 +41,8 @@ private: //attributes
     Qt3DRender::QGeometryRenderer *m_meshRenderer;
     
     std::vector<CParticle *> *m_data;
-    const int m_cell_count, m_x, m_y, m_z;
-   
+    int m_cell_count, m_ResX, m_ResY, m_ResZ;
+    QVector3D m_resolution;
 };
 
 #endif //WATERSURFACESIMULATION_CGRID_H
