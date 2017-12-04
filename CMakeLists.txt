@@ -68,6 +68,8 @@ find_package( Qt53DInput REQUIRED )
 
 find_package(OpenCL REQUIRED)
 
+include_directories( ${OpenCL_INCLUDE_DIRS} )
+
 ADD_LIBS(
 	Qt5::Core
 	Qt5::Gui
