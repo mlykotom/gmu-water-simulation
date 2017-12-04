@@ -28,6 +28,8 @@
 #include <Qt3DRender/QRenderSurfaceSelector>
 
 
+#include <oclHelper.h>
+
 namespace Ui {
     class MainWindow;
 }
@@ -64,6 +66,21 @@ private:
 
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
+
+
+    //OpenCL TEST
+private:
+
+    cl::Context m_context;
+    cl::Device m_gpu_device;
+
+    void createCLContext();
+    void doCalculation();
+
 };
+
+
+#define MATRIX_W 1024
+#define MATRIX_H 1024
 
 #endif // MAINWINDOW_H
