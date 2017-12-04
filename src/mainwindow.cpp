@@ -5,23 +5,10 @@
 #include "ui_mainwindow.h"
 
 // Qt 3D
-#include <Qt3DCore/qentity.h>
-#include <Qt3DCore/qaspectengine.h>
-
-#include <Qt3DRender/qcamera.h>
-#include <Qt3DRender/qcameralens.h>
-#include <Qt3DRender/qrenderaspect.h>
-
-#include <Qt3DInput/QInputAspect>
-
-#include <Qt3DExtras/qforwardrenderer.h>
-#include <Qt3DExtras/qt3dwindow.h>
-#include <Qt3DExtras/qfirstpersoncameracontroller.h>
 
 #include <QCullFace>
 
 //local includes
-#include <CScene.h>
 #include <CQt3DWindow.h>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -37,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QWidget *container = QWidget::createWindowContainer(m_mainView);
 
     this->setCentralWidget(container);
-    
+
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
@@ -54,9 +41,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
     basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f,5.0f));
+    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
     // For camera controls
-    Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
+    Qt3DExtras::QFirstPersonCameraController * camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
 
     // FrameGraph
@@ -85,7 +72,7 @@ MainWindow::~MainWindow()
 //    delete m_simulator;
     clPrintErrorExit(cl::flush(), "error");
     clPrintErrorExit(cl::finish(), "error");
-    
+
 }
 
 void MainWindow::createCLContext()
@@ -97,8 +84,7 @@ void MainWindow::createCLContext()
     clPrintErrorExit(cl::Platform::get(&platforms), "cl::Platform::get");
 
     qDebug() << "Platforms:\n";
-    for (int i = 0; i < platforms.size(); i++)
-    {
+    for (int i = 0; i < platforms.size(); i++) {
         // Print platform name
         qDebug() << QString(" %1. platform name: %2.\n").arg(QString::number(i), platforms[i].getInfo<CL_PLATFORM_NAME>(&err_msg).c_str());
         //printf(" %d. platform name: %s.\n", i, platforms[i].getInfo<CL_PLATFORM_NAME>(&err_msg).c_str());
@@ -108,8 +94,7 @@ void MainWindow::createCLContext()
         clPrintErrorExit(platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &platform_devices), "getDevices");
         if (platform_devices.size() == 0) continue;
 
-        for (int j = 0; j < platform_devices.size(); j++)
-        {
+        for (int j = 0; j < platform_devices.size(); j++) {
             // Get device name
             qDebug() << QString("  %1. device name: %2.\n").arg(QString::number(j), platform_devices[j].getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
             //  printf("  %d. device name: %s.\n", j, platform_devices[j].getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
@@ -125,20 +110,28 @@ void MainWindow::createCLContext()
     * =======================================================
     */
 
-
     std::vector<cl::Device> devices;
-    platforms.at(1).getDevices(CL_DEVICE_TYPE_GPU, &devices);
-    m_gpu_device = devices.at(0);
+
+    int platform_index, device_index;
+
+#ifdef __APPLE__
+    platform_index = 0;
+    device_index = 1;
+#else
+    platform_index = 1;
+    device_index = 0;
+#endif
+
+    platforms.at(platform_index).getDevices(CL_DEVICE_TYPE_GPU, &devices);
+    m_gpu_device = devices.at(device_index);
 
     qDebug() << "Selected device: " << m_gpu_device.getInfo<CL_DEVICE_NAME>(&err_msg).c_str();
 
     // check if device is correct
-    if (m_gpu_device.getInfo<CL_DEVICE_TYPE>(&err_msg) == CL_DEVICE_TYPE_GPU)
-    {
+    if (m_gpu_device.getInfo<CL_DEVICE_TYPE>(&err_msg) == CL_DEVICE_TYPE_GPU) {
         printf("\nSelected device type: Correct\n");
     }
-    else
-    {
+    else {
         printf("\nSelected device type: Incorrect\n");
     }
     clPrintErrorExit(err_msg, "cl::Device::getInfo<CL_DEVICE_TYPE>");
@@ -153,20 +146,17 @@ void MainWindow::createCLContext()
     * =======================================================
     */
     cl_int err;
-    m_context = cl::Context (m_gpu_device, NULL, NULL, NULL, &err);
+    m_context = cl::Context(m_gpu_device, NULL, NULL, NULL, &err);
 
-    if (err)
-    {
+    if (err) {
         clPrintErrorExit(err, "Context");
     }
 }
 
 void matrix_add(cl_int *a, cl_int *b, cl_int *c, int width, int height)
 {
-    for (int y = 0; y < height; y++)
-    {
-        for (int x = 0; x < width; x++)
-        {
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
             c[y * width + x] = a[y * width + x] + b[y * width + x];
         }
     }
@@ -184,12 +174,11 @@ void MainWindow::doCalculation()
 
     cl::CommandQueue queue(m_context, m_gpu_device, CL_QUEUE_PROFILING_ENABLE, &err_msg);
 
-    if (err_msg)
-    {
+    if (err_msg) {
         clPrintErrorExit(err_msg, "Queue");
     }
 
-    char * program_source = readFile(APP_RESOURCES"/kernels/matrix_add.cl");
+    char *program_source = readFile(APP_RESOURCES"/kernels/matrix_add.cl");
     cl::Program::Sources sources;
     sources.push_back(std::pair<const char *, size_t>(program_source, strlen(program_source)));
 
@@ -198,8 +187,7 @@ void MainWindow::doCalculation()
     clPrintErrorExit(err_msg, "clCreateProgramWithSource");
 
     // build program
-    if ((err_msg = program.build(std::vector<cl::Device>(1, m_gpu_device), "", NULL, NULL)) == CL_BUILD_PROGRAM_FAILURE)
-    {
+    if ((err_msg = program.build(std::vector<cl::Device>(1, m_gpu_device), "", NULL, NULL)) == CL_BUILD_PROGRAM_FAILURE) {
         printf("Build log:\n %s", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_gpu_device, &err_msg).c_str());
         clPrintErrorExit(err_msg, "cl::Program::getBuildInfo<CL_PROGRAM_BUILD_LOG>");
     }
@@ -215,28 +203,24 @@ void MainWindow::doCalculation()
     * vytvorit buffery
     * =======================================================
     */
-    cl::Buffer a_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, &err_msg);
+    cl::Buffer a_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
 
-    if (err_msg)
-    {
+    if (err_msg) {
         clPrintErrorExit(err_msg, "Buffer A");
 
     }
 
-    cl::Buffer b_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, &err_msg);
+    cl::Buffer b_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
 
-    if (err_msg)
-    {
+    if (err_msg) {
         clPrintErrorExit(err_msg, "Buffer B");
     }
 
-    cl::Buffer c_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, &err_msg);
+    cl::Buffer c_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
 
-    if (err_msg)
-    {
+    if (err_msg) {
         clPrintErrorExit(err_msg, "Buffer C");
     }
-
 
 
     cl_int matrix_width = MATRIX_W;
@@ -269,7 +253,7 @@ void MainWindow::doCalculation()
     /* ======================================================
     * TODO 5. Cast
     * velikost skupiny, kopirovat data na gpu, spusteni kernelu, kopirovani dat zpet
-    * pro zarovn·nÌ muzete pouzit funkci alignTo(co, na_nasobek_ceho)
+    * pro zarovn√°n√≠ muzete pouzit funkci alignTo(co, na_nasobek_ceho)
     * jako vystupni event kopirovani nastavte prepripravene eventy a_event b_event c_event
     * vystupni event kernelu kernel_event
     * =======================================================
@@ -283,8 +267,8 @@ void MainWindow::doCalculation()
     // Create host buffers
     cl_int *a_data = genRandomBuffer(MATRIX_W * MATRIX_H);
     cl_int *b_data = genRandomBuffer(MATRIX_W * MATRIX_H);
-    cl_int *host_data = (cl_int *)malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
-    cl_int *device_data = (cl_int *)malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
+    cl_int *host_data = (cl_int *) malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
+    cl_int *device_data = (cl_int *) malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
 
     queue.enqueueWriteBuffer(a_buffer, false, 0, sizeof(cl_int) * MATRIX_W * MATRIX_H, a_data, NULL, &a_event);
     queue.enqueueWriteBuffer(b_buffer, false, 0, sizeof(cl_int) * MATRIX_W * MATRIX_H, b_data, NULL, &b_event);
@@ -304,19 +288,16 @@ void MainWindow::doCalculation()
     double cpu_end = getTime();
 
     // check data
-    if (memcmp(device_data, host_data, MATRIX_W * MATRIX_H * sizeof(cl_int)) == 0)
-    {
+    if (memcmp(device_data, host_data, MATRIX_W * MATRIX_H * sizeof(cl_int)) == 0) {
         printf("\nResult: Correct\n");
     }
-    else
-    {
+    else {
         printf("\nResult: Incorrect\n");
     }
 
     // print results
     printf("\nExample results:\n");
-    for (int x = 0; x < 10; x++)
-    {
+    for (int x = 0; x < 10; x++) {
         int y = x + 1;
         int i = y * MATRIX_W + x;
         printf(" [%d,%d] %d + %d = %d(gpu) %d(cpu)\n", y, x, a_data[i], b_data[i], device_data[i], host_data[i]);
@@ -333,7 +314,6 @@ void MainWindow::doCalculation()
     // deallocate host data
     queue.flush();
     queue.finish();
-
 
 
     clPrintErrorExit(cl::flush(), "error");
