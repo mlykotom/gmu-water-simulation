@@ -4,34 +4,35 @@
 
 #include <Qt3DExtras/qcuboidmesh.h>
 
-#include <QAttribute>
-#include <Qt3DRender/QBuffer>
-#include <Qt3DRender/QBufferDataGeneratorPtr>
-#include <Qt3DRender/QBufferDataGenerator>
 
 
-CGrid::CGrid(int x, int y, int z, Qt3DCore::QNode * parent)
+CGrid::CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode * parent)
     : RenderableEntity(parent),
     m_material(new Qt3DExtras::QPhongMaterial()),
     m_meshRenderer(new Qt3DRender::QGeometryRenderer()),
-    m_x(x), 
-    m_y(y),
-    m_z(z), 
-    m_cell_count(x * y * z)
+    m_ResX(resolution.x()), 
+    m_ResY(resolution.y()),
+    m_ResZ(resolution.z())
 {
+    m_cell_count = (m_ResX * m_ResY * m_ResZ);
     m_data = new std::vector<CParticle *>[m_cell_count];
 
     //Cuboid geometry
     m_geometry = new Qt3DExtras::QCuboidGeometry(this);
-    m_geometry->setZExtent(z);
-    m_geometry->setYExtent(y);
-    m_geometry->setXExtent(x);
+    m_geometry->setZExtent(size.z());
+    m_geometry->setYExtent(size.y());
+    m_geometry->setXExtent(size.x());
 
+    m_geometry->updateVertices();
+    m_geometry->updateIndices();
 
 
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
     addComponent(m_meshRenderer);
+
+    //collision geometry
+    m_collisionGeometry = new CCollisionGeometry(m_geometry);
 
     //Custom material
     CWireframeMaterial *wireframeMaterial = new CWireframeMaterial();
@@ -46,9 +47,9 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
     : RenderableEntity(parent),
     m_material(new Qt3DExtras::QPhongMaterial()),
     m_meshRenderer(new Qt3DRender::QGeometryRenderer()),
-    m_x(0),
-    m_y(0),
-    m_z(0),
+    m_ResX(0),
+    m_ResY(0),
+    m_ResZ(0),
     m_cell_count(0)
 {
     //Translation
@@ -60,43 +61,18 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
     m_geometry->updateVertices();
     m_geometry->updateIndices();
 
-
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
     addComponent(m_meshRenderer);
 
 
     /*============================ Working area ====================================================*/
-    //m_geometry->boundingVolumePositionAttribute()->vertexSize();
-
-    //Qt3DRender::QAttribute *posAttribute = m_geometry->positionAttribute();
-    //qDebug() << posAttribute->vertexSize();
-    //qDebug() << posAttribute->vertexBaseType();
-    //qDebug() << posAttribute->byteOffset();
-    //qDebug() << posAttribute->byteStride() / sizeof(float);
-    //qDebug() << posAttribute->count();
-
-    //Qt3DRender::QBuffer *posBuffer = m_geometry->positionAttribute()->buffer();
-    //
+    //collision geometry
+    m_collisionGeometry = new CCollisionGeometry(m_geometry);
 
 
 
-    //Qt3DRender::QBufferDataGeneratorPtr generator = posBuffer->dataGenerator();
 
-    //Qt3DRender::QBufferDataGenerator * gen = generator.operator->();
-    //QByteArray arr = gen->operator()();
-
-
-    //float* vertices = reinterpret_cast<float*>(arr.data());
-    ////int size = sizeof(vertices) / sizeof(*vertices);
-
-    //int size = arr.size() / sizeof(float);
-
-
-    //for (int i = 0; i < size; ++i)
-    //{
-    //    qDebug() << vertices[i];
-    //}
     /*============================ Working area ====================================================*/
 
 

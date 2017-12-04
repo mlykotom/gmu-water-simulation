@@ -23,13 +23,16 @@ CParticleSimulator::CParticleSimulator(CScene *scene, unsigned long particlesCou
     iteration(0),
     surfaceThreshold(0.01),
     boxSize(QVector3D(0.4, 0.4, 0.4))
+    //boxSize(QVector3D(1, 1, 1))
 {
 
     int gridX = (int)ceil(boxSize.x() / CParticle::h);
     int gridY = (int)ceil(boxSize.y() / CParticle::h);
     int gridZ = (int)ceil(boxSize.z() / CParticle::h);
 
-    m_grid = new CGrid(gridX, gridY, gridZ, m_scene->getRootEntity());
+    QVector3D gridResolution(gridX, gridY, gridZ);
+
+    m_grid = new CGrid(boxSize,gridResolution, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
     setup();
@@ -66,7 +69,7 @@ void CParticleSimulator::setup()
     //            for (float x = -boxSize.x() / 2.0f; x < -boxSize.x() / 4.0; x += halfParticle) {
     //                for (float z = -boxSize.z() / 2.0f; z < boxSize.z() / 2.0f; z += halfParticle) {
 
-    for (double y = 0; y < boxSize.y(); y += CParticle::h / 2.0) {
+    for (double y = -boxSize.y() / 4.0; y < boxSize.y() / 4.0; y += CParticle::h / 2.0) {
         for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += CParticle::h / 2.0) {
             for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += CParticle::h / 2.0) {
                 auto particle = new CParticle(particleId, m_scene->getRootEntity(), QVector3D(x, y, z));
@@ -278,20 +281,24 @@ void CParticleSimulator::updateForces()
 
                     // ADD IN SPH FORCES
                     particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
-
+                    
                     // collision force
-                    for (auto wall : _walls) {
-                        double d = QVector3D::dotProduct(wall.second - particle->position(), wall.first) + 0.01; // particle radius
+                    //for (auto wall : _walls) 
+                    //{
+                    //    double d = QVector3D::dotProduct(wall.second - particle->position(), wall.first) + 0.01; // particle radius
 
-                        if (d > 0.0) {
-                            // This is an alernate way of calculating collisions of particles against walls, but produces some jitter at boundaries
-                            //                                particle->position() += d * wall.first;
-                            //                                particle->velocity() -= QVector3D::dotProduct(particle->velocity(), wall.first) * 1.9 * wall.first;
+                    //    if (d > 0.0) {
+                    //        // This is an alernate way of calculating collisions of particles against walls, but produces some jitter at boundaries
+                    //        //                                particle->position() += d * wall.first;
+                    //        //                                particle->velocity() -= QVector3D::dotProduct(particle->velocity(), wall.first) * 1.9 * wall.first;
 
-                            particle->acceleration() += WALL_K * wall.first * d;
-                            particle->acceleration() += WALL_DAMPING * QVector3D::dotProduct(particle->velocity(), wall.first) * wall.first;
-                        }
-                    }
+                    //        particle->acceleration() += WALL_K * wall.first * d;
+                    //        particle->acceleration() += WALL_DAMPING * QVector3D::dotProduct(particle->velocity(), wall.first) * wall.first;
+                    //    }
+                    //}
+
+                    particle->acceleration() +=  m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
+
                 }
             }
         }
