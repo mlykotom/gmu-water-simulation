@@ -139,6 +139,9 @@ private: //methods
     template<typename T>
     void extractVertices(Qt3DRender::QAttribute *posAttribute, Qt3DRender::QAttribute *normalAttribute);
 
+    template<typename T>
+    void extractFaces(Qt3DRender::QAttribute *indexAttribute);
+
 private: //attributes
     Qt3DRender::QGeometry *m_geometry;
     QVector<sVertex> m_vertices;
@@ -149,7 +152,7 @@ private: //attributes
 
 
 template<typename T>
-void CCollisionGeometry::extractVertices(Qt3DRender::QAttribute *posAttribute, Qt3DRender::QAttribute *normalAttribute)
+inline void CCollisionGeometry::extractVertices(Qt3DRender::QAttribute *posAttribute, Qt3DRender::QAttribute *normalAttribute)
 {
     m_vertices.clear();
 
@@ -177,6 +180,23 @@ void CCollisionGeometry::extractVertices(Qt3DRender::QAttribute *posAttribute, Q
         QVector3D normal(vertices[i + normalByteOffset], vertices[i + normalByteOffset + 1], vertices[i + normalByteOffset + 2]);
 
         m_vertices.push_back(sVertex(pos, normal));
+    }
+}
+
+template<typename T>
+inline void CCollisionGeometry::extractFaces(Qt3DRender::QAttribute * indexAttribute)
+{
+    Qt3DRender::QBuffer *indexBuffer = indexAttribute->buffer();
+    Qt3DRender::QBufferDataGeneratorPtr indexGenerator = indexBuffer->dataGenerator();
+    Qt3DRender::QBufferDataGenerator * indexGen = indexGenerator.operator->();
+    QByteArray indexArr = indexGen->operator()();
+    T* indices = reinterpret_cast<T*>(indexArr.data());
+
+    int size = indexArr.size() / sizeof(T);
+
+    for (int i = 0; i < size; i += 3)
+    {
+        m_faces.push_back(sFace(m_vertices.at(indices[i]), m_vertices.at(indices[i + 1]), m_vertices.at(indices[i + 2])));
     }
 }
 

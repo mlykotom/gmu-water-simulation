@@ -43,10 +43,6 @@ void CCollisionGeometry::init()
     //needed atttributes were not found
     if (posAttribute == nullptr || indexAttribute == nullptr || normalAttribute == nullptr)
         return;
-
-    //TODO dat do templatovej funckie !!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    //qDebug() << posAttribute->vertexBaseType();
     
     switch (posAttribute->vertexBaseType())
     {
@@ -68,27 +64,39 @@ void CCollisionGeometry::init()
     case Qt3DRender::QAttribute::VertexBaseType::UnsignedInt:
         extractVertices<unsigned int>(posAttribute, normalAttribute);
         break;
+    case Qt3DRender::QAttribute::VertexBaseType::UnsignedShort:
+        extractVertices<unsigned short>(posAttribute, normalAttribute);
+        break;
     default:
         break;
     }
 
-    //QByteArray indexArr =  indexAttribute->buffer()->dataGenerator().operator->()->operator()();
-    
-    //qDebug() << indexAttribute->vertexBaseType();
-    Qt3DRender::QBuffer *indexBuffer = indexAttribute->buffer();
-    Qt3DRender::QBufferDataGeneratorPtr indexGenerator = indexBuffer->dataGenerator();
-    Qt3DRender::QBufferDataGenerator * indexGen = indexGenerator.operator->();
-    QByteArray indexArr = indexGen->operator()();
-    unsigned short* indices = reinterpret_cast<unsigned short *>(indexArr.data());
-
-    int size = indexArr.size() / sizeof(unsigned short);
-
-    for (int i = 0; i < size; i +=3)
+    switch (indexAttribute->vertexBaseType())
     {
-        m_faces.push_back(sFace(m_vertices.at(indices[i]), m_vertices.at(indices[i+1]), m_vertices.at(indices[i+2])));
-        //qDebug() << indices[i] << indices[i+1]<< indices[i+2];
+    case Qt3DRender::QAttribute::VertexBaseType::Byte:
+        extractFaces<char>(indexAttribute);
+        break;
+    case Qt3DRender::QAttribute::VertexBaseType::Double:
+        extractFaces<double>(indexAttribute);
+        break;
+    case Qt3DRender::QAttribute::VertexBaseType::Float:
+        extractFaces<float>(indexAttribute);
+        break;
+    case Qt3DRender::QAttribute::VertexBaseType::Int:
+        extractFaces<int>(indexAttribute);
+        break;
+    case Qt3DRender::QAttribute::VertexBaseType::Short:
+        extractFaces<short>(indexAttribute);
+        break;
+    case Qt3DRender::QAttribute::VertexBaseType::UnsignedInt:
+        extractFaces<unsigned int>(indexAttribute);
+        break;
+    case Qt3DRender::QAttribute::VertexBaseType::UnsignedShort:
+        extractFaces<unsigned short>(indexAttribute);
+        break;
+    default:
+        break;
     }
-
 
     //BOUNDING BOX
     for (sVertex vertex : m_vertices)
