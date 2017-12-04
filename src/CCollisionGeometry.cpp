@@ -14,12 +14,11 @@ CCollisionGeometry::CCollisionGeometry(Qt3DRender::QGeometry *geometry, Qt3DCore
 }
 
 CCollisionGeometry::~CCollisionGeometry()
-{
+{    
 }
 
 void CCollisionGeometry::init()
 {
-
     Qt3DRender::QAttribute *posAttribute = nullptr;
     Qt3DRender::QAttribute *indexAttribute = nullptr;
     Qt3DRender::QAttribute *normalAttribute = nullptr;
@@ -111,7 +110,7 @@ void CCollisionGeometry::init()
 
     //QByteArray indexArr =  indexAttribute->buffer()->dataGenerator().operator->()->operator()();
     
-    qDebug() << indexAttribute->vertexBaseType();
+    //qDebug() << indexAttribute->vertexBaseType();
     Qt3DRender::QBuffer *indexBuffer = indexAttribute->buffer();
     Qt3DRender::QBufferDataGeneratorPtr indexGenerator = indexBuffer->dataGenerator();
     Qt3DRender::QBufferDataGenerator * indexGen = indexGenerator.operator->();
@@ -123,6 +122,57 @@ void CCollisionGeometry::init()
     for (int i = 0; i < size; i +=3)
     {
         m_faces.push_back(sFace(m_vertices.at(indices[i]), m_vertices.at(indices[i+1]), m_vertices.at(indices[i+2])));
-        qDebug() << indices[i] << indices[i+1]<< indices[i+2];
+        //qDebug() << indices[i] << indices[i+1]<< indices[i+2];
     }
+
+
+    //BOUNDING BOX
+    for (sVertex vertex : m_vertices)
+    {
+        m_boundingBox.expandBy(vertex.m_pos);
+    }
+}
+
+
+QVector3D CCollisionGeometry::inverseBounce(QVector3D pos, QVector3D velocity)
+{
+    QVector3D acc(0, 0, 0);
+    for (auto face : m_faces)
+    {
+        for (auto vertex : face.m_vertices)
+        {
+            QVector3D inverseNormal(face.m_normal * (-1));
+            inverseNormal.normalize();
+
+            double d = QVector3D::dotProduct(vertex.m_pos - pos, inverseNormal) + 0.01; // particle radius
+
+            if (d > 0.0) 
+            {
+                acc += QVector3D(5000.0 * inverseNormal * d);
+                acc += -0.9 * QVector3D::dotProduct(velocity, inverseNormal) *  inverseNormal;
+            }
+        }
+    }
+
+    return acc;
+}
+
+QVector3D CCollisionGeometry::inverseBoundingBoxBounce(QVector3D pos, QVector3D velocity)
+{
+    QVector3D acc(0, 0, 0);
+
+    for (sBoundingBox::tWall wall : m_boundingBox.m_walls)
+    {
+        QVector3D inverseNormal(wall.first * (-1));
+
+        double d = QVector3D::dotProduct(wall.second - pos, inverseNormal) + 0.01; // particle radius
+
+        if (d > 0.0) 
+        {
+            acc += 10000 * inverseNormal * d;
+            acc += -0.9 * QVector3D::dotProduct(velocity, inverseNormal) * inverseNormal;
+        }
+    }
+
+    return acc;
 }

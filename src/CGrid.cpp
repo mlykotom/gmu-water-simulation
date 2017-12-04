@@ -1,7 +1,6 @@
 #include "CGrid.h"
 #include "CWireframeMaterial.h"
 #include "CRobustWireframeMaterial.h"
-#include "CCollisionGeometry.h"
 
 #include <Qt3DExtras/qcuboidmesh.h>
 
@@ -31,6 +30,9 @@ CGrid::CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode * parent)
     m_meshRenderer->setGeometry(m_geometry);
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
     addComponent(m_meshRenderer);
+
+    //collision geometry
+    m_collisionGeometry = new CCollisionGeometry(m_geometry);
 
     //Custom material
     CWireframeMaterial *wireframeMaterial = new CWireframeMaterial();
@@ -65,7 +67,8 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 
 
     /*============================ Working area ====================================================*/
-    CCollisionGeometry *collisions = new CCollisionGeometry(m_geometry);
+    //collision geometry
+    m_collisionGeometry = new CCollisionGeometry(m_geometry);
 
 
 

@@ -12,7 +12,7 @@ CParticle::CParticle(const unsigned long id, Qt3DCore::QEntity * rootEntity, QVe
     m_mesh = new Qt3DExtras::QSphereMesh();
     m_mesh->setRings(10);
     m_mesh->setSlices(10);
-    m_mesh->setRadius(0.014f);
+    m_mesh->setRadius(0.01f);
 
     // Sphere mesh transform
     m_transform = new Qt3DCore::QTransform();

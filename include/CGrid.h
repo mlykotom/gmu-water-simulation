@@ -10,6 +10,7 @@
 //local includes
 #include "CParticle.h"
 #include "renderableentity.h"
+#include "CCollisionGeometry.h"
 
 class CGrid : RenderableEntity
 {
@@ -35,11 +36,15 @@ public: //methods
 
     std::vector<CParticle *> getNeighborsCells(int x, int y, int z);
 
+    CCollisionGeometry *getCollisionGeometry() { return m_collisionGeometry; }
+    //QVector3D inverseBounce();
+
 private: //attributes
     Qt3DExtras::QCuboidGeometry *m_geometry;
     Qt3DRender::QMaterial *m_material;
     Qt3DRender::QGeometryRenderer *m_meshRenderer;
-    
+    CCollisionGeometry *m_collisionGeometry;
+
     std::vector<CParticle *> *m_data;
     int m_cell_count, m_ResX, m_ResY, m_ResZ;
     QVector3D m_resolution;
