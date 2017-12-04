@@ -68,20 +68,7 @@ find_package( Qt53DInput REQUIRED )
 
 find_package(OpenCL REQUIRED)
 
-set(QT_LIBRARIES
-	Qt5::Core
-	Qt5::Gui
-	Qt5::Widgets
-	Qt5::OpenGL
-	Qt5::3DCore
-	Qt5::3DExtras
-	Qt5::3DRender
-	Qt5::3DInput
-	OpenCL::OpenCL
-	)
-
-
-ADD_QT_LIBS(
+ADD_LIBS(
 	Qt5::Core
 	Qt5::Gui
 	Qt5::Widgets
@@ -94,8 +81,7 @@ ADD_QT_LIBS(
 )
 
 if( WIN32 )
-	ADD_QT_LIBS(Qt5::WinMain)
-	LIST(APPEND QT_LIBRARIES Qt5::WinMain)
+	ADD_LIBS(Qt5::WinMain)
 endif()
 
 add_definitions( ${QT_DEFINITIONS} )
@@ -106,6 +92,8 @@ include_directories( ${CMAKE_BINARY_DIR} )
 #QT5_ADD_RESOURCES( RESOURCES ${PT_RES} )
 GMU_UI_DIR( ${CMAKE_CURRENT_LIST_DIR}/ui )
 QT5_WRAP_UI( UIS_HDRS ${GMU_UI} )
+
+#include_directories( ${CMAKE_CURRENT_LIST_DIR}/include/CL )
 
 #Build it
 GMU_WINDOWS_APP_BUILD()
