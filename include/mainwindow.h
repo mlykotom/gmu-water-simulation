@@ -64,7 +64,6 @@ private:
 
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
-
 };
 
 #endif // MAINWINDOW_H

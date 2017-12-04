@@ -40,7 +40,7 @@ public:
     void updateGrid();
     void updateDensityPressure();
     void updateForces();
-        void updateNewPositionVelocity();
+    void updateNewPositionVelocity();
 
     void step(double dt);
 

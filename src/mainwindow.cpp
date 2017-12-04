@@ -23,7 +23,6 @@
 //local includes
 #include <CScene.h>
 #include <CQt3DWindow.h>
-#include <oclHelper.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -74,38 +73,6 @@ MainWindow::MainWindow(QWidget *parent) :
     // Set root object of the scene
     m_mainView->setRootEntity(rootEntity);
 
-
-    cl_int err_msg;
-    std::vector<cl::Platform> platforms;
-    std::vector<cl::Device> platform_devices;
-    // Get Platforms count
-    clPrintErrorExit(cl::Platform::get(&platforms), "cl::Platform::get");
-
-    qDebug() << "Platforms:\n";
-    for (int i = 0; i < platforms.size(); i++)
-    {
-        // Print platform name
-        qDebug() << QString(" %1. platform name: %2.\n").arg(QString::number(i), platforms[i].getInfo<CL_PLATFORM_NAME>(&err_msg).c_str());
-        //printf(" %d. platform name: %s.\n", i, platforms[i].getInfo<CL_PLATFORM_NAME>(&err_msg).c_str());
-        clPrintErrorExit(err_msg, "cl::Platform::getInfo<CL_PLATFORM_NAME>");
-
-        // Get platform devices count
-        clPrintErrorExit(platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &platform_devices), "getDevices");
-        if (platform_devices.size() == 0) continue;
-
-        for (int j = 0; j < platform_devices.size(); j++)
-        {
-            // Get device name
-            qDebug() << QString(" %1. platform name: %2.\n").arg(QString::number(j), platform_devices[j].getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
-          //  printf("  %d. device name: %s.\n", j, platform_devices[j].getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
-            clPrintErrorExit(err_msg, "cl::Device::getInfo<CL_DEVICE_NAME>");
-        }
-        platform_devices.clear();
-    }
-
-
-
-    this->show();
 }
 
 MainWindow::~MainWindow()
