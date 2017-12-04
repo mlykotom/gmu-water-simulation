@@ -1,11 +1,17 @@
 #ifndef CCOLLISIONGEOMETRY_H
 #define CCOLLISIONGEOMETRY_H
 
+//qt
 #include <Qt3DCore/QEntity>
 #include <QVector3D>
 #include <QVector>
 #include <QGeometry>
+#include <QAttribute>
+#include <Qt3DRender/QBuffer>
+#include <Qt3DRender/QBufferDataGeneratorPtr>
+#include <Qt3DRender/QBufferDataGenerator>
 
+//std
 #include <limits>
 
 struct sVertex
@@ -91,8 +97,6 @@ struct sBoundingBox
     {
         minimize(vec);
         maximize(vec);
-
-
     }
 
     void minimize(QVector3D vec)
@@ -132,6 +136,9 @@ public:
 private: //methods
     void init();
 
+    template<typename T>
+    void extractVertices(Qt3DRender::QAttribute *posAttribute, Qt3DRender::QAttribute *normalAttribute);
+
 private: //attributes
     Qt3DRender::QGeometry *m_geometry;
     QVector<sVertex> m_vertices;
@@ -139,5 +146,38 @@ private: //attributes
 
     sBoundingBox m_boundingBox;
 };
+
+
+template<typename T>
+void CCollisionGeometry::extractVertices(Qt3DRender::QAttribute *posAttribute, Qt3DRender::QAttribute *normalAttribute)
+{
+    m_vertices.clear();
+
+    int vertexSize = posAttribute->vertexSize();
+    int vertexCount = posAttribute->count();
+    int vertexByteOffset = posAttribute->byteOffset() / sizeof(T);
+    int vertexByteStride = posAttribute->byteStride() / sizeof(T);
+
+    int normalByteStride = posAttribute->byteStride() / sizeof(T);
+    int normalByteOffset = normalAttribute->byteOffset() / sizeof(T);
+    int normalCount = normalAttribute->count();
+
+    Qt3DRender::QBuffer *posBuffer = posAttribute->buffer();
+    Qt3DRender::QBufferDataGeneratorPtr generator = posBuffer->dataGenerator();
+    Qt3DRender::QBufferDataGenerator * gen = generator.operator->();
+    QByteArray posArr = gen->operator()();
+    T* vertices = reinterpret_cast<T*>(posArr.data());
+
+    int size = posArr.size() / sizeof(T);
+
+    for (int i = 0; i < size; i += vertexByteStride)
+    {
+
+        QVector3D pos(vertices[i + vertexByteOffset], vertices[i + vertexByteOffset + 1], vertices[i + vertexByteOffset + 2]);
+        QVector3D normal(vertices[i + normalByteOffset], vertices[i + normalByteOffset + 1], vertices[i + normalByteOffset + 2]);
+
+        m_vertices.push_back(sVertex(pos, normal));
+    }
+}
 
 #endif
