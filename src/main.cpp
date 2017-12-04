@@ -274,5 +274,7 @@ int main(int argc, char *argv[])
 
 
 
-    return a.exec();
+    a.exec();
+
+    exit(0);
 }
