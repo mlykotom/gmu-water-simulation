@@ -1,11 +1,12 @@
 #ifndef OCL_HELPER_H
 #define OCL_HELPER_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <time.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstdarg>
+#include <cstring>
+#include <ctime>
+#include <QtGlobal>
 #include <omp.h>
 
 #include <CL/cl.hpp>
@@ -20,7 +21,7 @@ double getTime(void);
 void clPrintErrorExit(cl_int err_id, const char *msg);
 
 // Read file to string
-char* readFile(const char* filename);
+char *readFile(const char *filename);
 
 // align data_size size to align_size
 unsigned int alignTo(unsigned int data_size, unsigned int align_size);

@@ -24,7 +24,7 @@ struct sVertex
     //normal
     QVector3D m_normal;
 
-    sVertex::sVertex(QVector3D pos)
+    sVertex(QVector3D pos)
         :m_pos(pos)
     {
     }
