@@ -14,6 +14,7 @@
 //std
 #include <limits>
 
+
 struct sVertex
 {
 
@@ -23,7 +24,7 @@ struct sVertex
     //normal
     QVector3D m_normal;
 
-    sVertex::sVertex(QVector3D pos)
+    sVertex(QVector3D pos)
         :m_pos(pos)
     {
     }
@@ -80,7 +81,7 @@ struct sBoundingBox
 {
     //normal, position
     typedef QPair<QVector3D, QVector3D> tWall;
- 
+
     QVector3D m_min;
     QVector3D m_max;
 
@@ -131,7 +132,7 @@ public:
     ~CCollisionGeometry();
 
     QVector3D inverseBounce(QVector3D pos, QVector3D velocity);
-    QVector3D inverseBoundingBoxBounce(QVector3D pos, QVector3D velocity);
+    QVector3D inverseBoundingBoxBounce(QVector3D &pos, QVector3D &velocity);
 
 private: //methods
     void init();

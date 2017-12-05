@@ -59,15 +59,11 @@ MACRO( GMU_QT_RES_DIR _DIR )
     list(APPEND GMU_QT_RES ${_TMP})
 ENDMACRO( GMU_QT_RES_DIR )
 
-# Macro for adding library to project
-MACRO( GMU_ADD_LIB _LIB )
-    list(APPEND GMU_LIBS ${_LIB})
-ENDMACRO( GMU_ADD_LIB )
 
-#Macro for adding Qt libraries
-MACRO(ADD_QT_LIBS)
+#Macro for adding libraries
+MACRO(ADD_LIBS)
     list(APPEND GMU_TARGET_LIBRARIES ${ARGV})
-ENDMACRO(ADD_QT_LIBS)
+ENDMACRO(ADD_LIBS)
 
   # Building console app macro
 MACRO( GMU_CONSOLE_APP_BUILD)

@@ -7,6 +7,9 @@
         <file>shaders/robustwireframe.geom</file>
         <file>shaders/wireframe.vert</file>        
         <file>shaders/wireframe.frag</file>
-        <file>shaders/wireframe.geom</file>        
+        <file>shaders/wireframe.geom</file>   
+
+        <file>kernels/matrix_add.cl</file>        
+   
     </qresource>
 </RCC>

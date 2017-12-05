@@ -40,7 +40,7 @@ public:
     void updateGrid();
     void updateDensityPressure();
     void updateForces();
-        void updateNewPositionVelocity();
+    void updateNewPositionVelocity();
 
     void step(double dt);
 
@@ -63,6 +63,7 @@ private: //attributes
 
     unsigned long m_particles_count;
     std::vector<CParticle *> *m_particles;
+    QVector3D m_cellSize;
 
     double dt;
 

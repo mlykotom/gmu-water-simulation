@@ -15,7 +15,7 @@
 #include <QApplication>
 
 #include "CParticleSimulator.h"
-
+#include "CLWrapper.h"
 
 
 #include <Qt3DRender/QRenderSettings>
@@ -28,8 +28,9 @@
 #include <Qt3DRender/QRenderSurfaceSelector>
 
 
-namespace Ui {
-    class MainWindow;
+namespace Ui
+{
+class MainWindow;
 }
 
 //forward declarations
@@ -40,7 +41,6 @@ class Qt3DWindow;
 class CScene;
 class FrameGraph;
 class CQt3DWindow;
-
 
 class MainWindow: public QMainWindow
 {
@@ -61,10 +61,9 @@ private:
     FrameGraph *m_pFrameGraph;
 
     CParticleSimulator *m_simulator;
-
+    CLWrapper *m_cl_wrapper;
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
-
 };
 
 #endif // MAINWINDOW_H
