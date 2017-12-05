@@ -28,8 +28,6 @@
 #include <Qt3DRender/QRenderSurfaceSelector>
 
 
-#include <oclHelper.h>
-
 namespace Ui
 {
 class MainWindow;
@@ -66,14 +64,6 @@ private:
     CLWrapper *m_cl_wrapper;
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
-
-
-private:
-    void doCalculation();
 };
-
-
-#define MATRIX_W 1024
-#define MATRIX_H 1024
 
 #endif // MAINWINDOW_H

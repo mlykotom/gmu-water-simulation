@@ -17,7 +17,7 @@ class CGrid : RenderableEntity
 
 public: //methods
     explicit CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode *parent = 0);
-    
+
     CGrid(Qt3DCore::QNode *parent = 0);
     ~CGrid();
 

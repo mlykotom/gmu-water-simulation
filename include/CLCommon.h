@@ -6,13 +6,13 @@
 #include <exception>
 #include <stdexcept>
 #include <CL/cl.hpp>
+#include <omp.h>
 
 class CLException: public std::runtime_error
 {
 public:
     explicit CLException(const std::string &__arg) : runtime_error("OpenCL::" + __arg) {}
 };
-
 
 class CLCommon
 {
@@ -136,7 +136,37 @@ public:
         return ((data - 1 + align_size) / align_size) * align_size;
     }
 
-    //(common CL methods)
+    /**
+     * get time in seconds
+     * @return
+     */
+    static double getTime(void)
+    {
+        return omp_get_wtime();
+    }
+
+    /**
+     * TODO not sure if needed
+     * @param i_event
+     * @return
+     */
+    static double getEventTime(cl_event i_event)
+    {
+        cl_ulong time_from, time_to;
+        clGetEventProfilingInfo(i_event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_from, NULL);
+        clGetEventProfilingInfo(i_event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_to, NULL);
+        return double(time_to - time_from) / 1000000000;
+    }
+
+    /**
+     * TODO not sure if needed
+     * @param event
+     * @return
+     */
+    static double getEventTime(cl::Event &event)
+    {
+        return (event.getProfilingInfo<CL_PROFILING_COMMAND_END>() - event.getProfilingInfo<CL_PROFILING_COMMAND_START>()) / 1000000000.0;
+    }
 };
 
 #endif //WATERSURFACESIMULATION_CLCOMMON_H

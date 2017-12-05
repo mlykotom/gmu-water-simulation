@@ -1,4 +1,3 @@
-#include <include/oclHelper.h>
 #include "CLPlatforms.h"
 
 std::vector<cl::Platform> CLPlatforms::getAllPlatforms()
