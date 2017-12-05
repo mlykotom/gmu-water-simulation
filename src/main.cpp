@@ -9,5 +9,7 @@ int main(int argc, char *argv[])
 
     a.exec();
 
+#ifndef __APPLE__
     exit(0);
+#endif
 }

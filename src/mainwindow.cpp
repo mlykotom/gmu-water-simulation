@@ -3,8 +3,10 @@
 #include <QTextEdit>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "CLPlatforms.h"
 
 // Qt 3D
+#include <QMessageBox>
 
 #include <QCullFace>
 
@@ -60,97 +62,28 @@ MainWindow::MainWindow(QWidget *parent) :
     // Set root object of the scene
     m_mainView->setRootEntity(rootEntity);
 
-    createCLContext();
+    try {
+        CLPlatforms::printInfoAll();
+    }
+    catch (CLException &exc) {
+        qDebug() << exc.what();
+        // TODO alert message?
+//        QMessageBox message;
+//        message.setText(QString(exc.what()));
+//        message.show();
+    }
+
+    m_cl_wrapper = new CLWrapper(CLPlatforms::getBestGPU());
+    qDebug() << "Selected device: " << CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
 
     doCalculation();
-
 }
 
 MainWindow::~MainWindow()
 {
 //    delete m_scene;
 //    delete m_simulator;
-    clPrintErrorExit(cl::flush(), "error");
-    clPrintErrorExit(cl::finish(), "error");
-
-}
-
-void MainWindow::createCLContext()
-{
-    cl_int err_msg;
-    std::vector<cl::Platform> platforms;
-    std::vector<cl::Device> platform_devices;
-    // Get Platforms count
-    clPrintErrorExit(cl::Platform::get(&platforms), "cl::Platform::get");
-
-    qDebug() << "Platforms:\n";
-    for (int i = 0; i < platforms.size(); i++) {
-        // Print platform name
-        qDebug() << QString(" %1. platform name: %2.\n").arg(QString::number(i), platforms[i].getInfo<CL_PLATFORM_NAME>(&err_msg).c_str());
-        //printf(" %d. platform name: %s.\n", i, platforms[i].getInfo<CL_PLATFORM_NAME>(&err_msg).c_str());
-        clPrintErrorExit(err_msg, "cl::Platform::getInfo<CL_PLATFORM_NAME>");
-
-        // Get platform devices count
-        clPrintErrorExit(platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &platform_devices), "getDevices");
-        if (platform_devices.size() == 0) continue;
-
-        for (int j = 0; j < platform_devices.size(); j++) {
-            // Get device name
-            qDebug() << QString("  %1. device name: %2.\n").arg(QString::number(j), platform_devices[j].getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
-            //  printf("  %d. device name: %s.\n", j, platform_devices[j].getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
-            clPrintErrorExit(err_msg, "cl::Device::getInfo<CL_DEVICE_NAME>");
-        }
-        platform_devices.clear();
-    }
-
-    //===========================================================================================
-    /* ======================================================
-    * TODO 1. Cast
-    * ziskat gpu device
-    * =======================================================
-    */
-
-    std::vector<cl::Device> devices;
-
-    int platform_index, device_index;
-
-#ifdef __APPLE__
-    platform_index = 0;
-    device_index = 1;
-#else
-    platform_index = 1;
-    device_index = 0;
-#endif
-
-    platforms.at(platform_index).getDevices(CL_DEVICE_TYPE_GPU, &devices);
-    m_gpu_device = devices.at(device_index);
-
-    qDebug() << "Selected device: " << m_gpu_device.getInfo<CL_DEVICE_NAME>(&err_msg).c_str();
-
-    // check if device is correct
-    if (m_gpu_device.getInfo<CL_DEVICE_TYPE>(&err_msg) == CL_DEVICE_TYPE_GPU) {
-        printf("\nSelected device type: Correct\n");
-    }
-    else {
-        printf("\nSelected device type: Incorrect\n");
-    }
-    clPrintErrorExit(err_msg, "cl::Device::getInfo<CL_DEVICE_TYPE>");
-    printf("Selected device name: %s.\n", m_gpu_device.getInfo<CL_DEVICE_NAME>(&err_msg).c_str());
-    clPrintErrorExit(err_msg, "cl::Device::getInfo<CL_DEVICE_NAME>");
-    platforms.clear();
-
-    //===========================================================================================
-    /* ======================================================
-    * TODO 2. Cast
-    * vytvorit context a query se zapnutym profilovanim
-    * =======================================================
-    */
-    cl_int err;
-    m_context = cl::Context(m_gpu_device, NULL, NULL, NULL, &err);
-
-    if (err) {
-        clPrintErrorExit(err, "Context");
-    }
+    delete m_cl_wrapper;
 }
 
 void matrix_add(cl_int *a, cl_int *b, cl_int *c, int width, int height)
@@ -172,7 +105,7 @@ void MainWindow::doCalculation()
     */
     cl_int err_msg;
 
-    cl::CommandQueue queue(m_context, m_gpu_device, CL_QUEUE_PROFILING_ENABLE, &err_msg);
+    cl::CommandQueue queue(m_cl_wrapper->getContext(), m_cl_wrapper->getDevice(), CL_QUEUE_PROFILING_ENABLE, &err_msg);
 
     if (err_msg) {
         clPrintErrorExit(err_msg, "Queue");
@@ -180,15 +113,15 @@ void MainWindow::doCalculation()
 
     char *program_source = readFile(APP_RESOURCES"/kernels/matrix_add.cl");
     cl::Program::Sources sources;
-    sources.push_back(std::pair<const char *, size_t>(program_source, strlen(program_source)));
+    sources.emplace_back(program_source, strlen(program_source));
 
     // get program
-    cl::Program program(m_context, sources);
+    cl::Program program(m_cl_wrapper->getContext(), sources);
     clPrintErrorExit(err_msg, "clCreateProgramWithSource");
 
     // build program
-    if ((err_msg = program.build(std::vector<cl::Device>(1, m_gpu_device), "", NULL, NULL)) == CL_BUILD_PROGRAM_FAILURE) {
-        printf("Build log:\n %s", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_gpu_device, &err_msg).c_str());
+    if ((err_msg = program.build(std::vector<cl::Device>(1, m_cl_wrapper->getDevice()), "", NULL, NULL)) == CL_BUILD_PROGRAM_FAILURE) {
+        printf("Build log:\n %s", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_cl_wrapper->getDevice(), &err_msg).c_str());
         clPrintErrorExit(err_msg, "cl::Program::getBuildInfo<CL_PROGRAM_BUILD_LOG>");
     }
     clPrintErrorExit(err_msg, "clBuildProgram");
@@ -203,20 +136,20 @@ void MainWindow::doCalculation()
     * vytvorit buffery
     * =======================================================
     */
-    cl::Buffer a_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
+    cl::Buffer a_buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
 
     if (err_msg) {
         clPrintErrorExit(err_msg, "Buffer A");
 
     }
 
-    cl::Buffer b_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
+    cl::Buffer b_buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
 
     if (err_msg) {
         clPrintErrorExit(err_msg, "Buffer B");
     }
 
-    cl::Buffer c_buffer(m_context, CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
+    cl::Buffer c_buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
 
     if (err_msg) {
         clPrintErrorExit(err_msg, "Buffer C");
@@ -239,13 +172,13 @@ void MainWindow::doCalculation()
     kernel.setArg(3, matrix_width);
     kernel.setArg(4, matrix_height);
 
-    cl::UserEvent a_event(m_context, &err_msg);
+    cl::UserEvent a_event(m_cl_wrapper->getContext(), &err_msg);
     clPrintErrorExit(err_msg, "clCreateUserEvent a_event");
-    cl::UserEvent b_event(m_context, &err_msg);
+    cl::UserEvent b_event(m_cl_wrapper->getContext(), &err_msg);
     clPrintErrorExit(err_msg, "clCreateUserEvent b_event");
-    cl::UserEvent kernel_event(m_context, &err_msg);
+    cl::UserEvent kernel_event(m_cl_wrapper->getContext(), &err_msg);
     clPrintErrorExit(err_msg, "clCreateUserEvent kernel_event");
-    cl::UserEvent c_event(m_context, &err_msg);
+    cl::UserEvent c_event(m_cl_wrapper->getContext(), &err_msg);
     clPrintErrorExit(err_msg, "clCreateUserEvent c_event");
 
 
@@ -262,13 +195,16 @@ void MainWindow::doCalculation()
     double gpu_start = getTime();
 
     cl::NDRange local(16, 16);
-    cl::NDRange global(alignTo(MATRIX_W, 16), alignTo(MATRIX_H, 16));
+    cl::NDRange global(CLCommon::alignTo(MATRIX_W, 16), CLCommon::alignTo(MATRIX_H, 16));
 
     // Create host buffers
     cl_int *a_data = genRandomBuffer(MATRIX_W * MATRIX_H);
     cl_int *b_data = genRandomBuffer(MATRIX_W * MATRIX_H);
-    cl_int *host_data = (cl_int *) malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
-    cl_int *device_data = (cl_int *) malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
+//    cl_int *host_data = (cl_int *) malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
+//    cl_int *device_data = (cl_int *) malloc(sizeof(cl_int) * MATRIX_W * MATRIX_H);
+
+    cl_int *host_data = new cl_int[MATRIX_W * MATRIX_H]();
+    cl_int *device_data = new cl_int[MATRIX_W * MATRIX_H]();
 
     queue.enqueueWriteBuffer(a_buffer, false, 0, sizeof(cl_int) * MATRIX_W * MATRIX_H, a_data, NULL, &a_event);
     queue.enqueueWriteBuffer(b_buffer, false, 0, sizeof(cl_int) * MATRIX_W * MATRIX_H, b_data, NULL, &b_event);
@@ -315,15 +251,14 @@ void MainWindow::doCalculation()
     queue.flush();
     queue.finish();
 
-
     clPrintErrorExit(cl::flush(), "error");
     clPrintErrorExit(cl::finish(), "error");
 
 
     free(a_data);
     free(b_data);
-    free(host_data);
-    free(device_data);
+    delete[] host_data;
+    delete[] device_data;
 
     return;
 }
