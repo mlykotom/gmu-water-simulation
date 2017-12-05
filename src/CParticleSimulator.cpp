@@ -32,6 +32,8 @@ CParticleSimulator::CParticleSimulator(CScene *scene, unsigned long particlesCou
 
     QVector3D gridResolution(gridX, gridY, gridZ);
 
+    m_cellSize = QVector3D(boxSize.x() / gridX, boxSize.y() / gridY, boxSize.z() / gridZ);
+
     m_grid = new CGrid(boxSize,gridResolution, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
@@ -47,19 +49,6 @@ CParticleSimulator::~CParticleSimulator()
 
 void CParticleSimulator::setup()
 {
-    _walls.emplace_back(QVector3D(0, 0, 1), QVector3D(0, 0, -boxSize.z() / 2.0f)); // back
-    _walls.emplace_back(QVector3D(0, 0, -1), QVector3D(0, 0, boxSize.z() / 2.0f)); // front
-    _walls.emplace_back(QVector3D(1, 0, 0), QVector3D(-boxSize.x() / 2.0f, 0, 0));     // left
-    _walls.emplace_back(QVector3D(-1, 0, 0), QVector3D(boxSize.x() / 2.0f, 0, 0));     // right
-    _walls.emplace_back(QVector3D(0, 1, 0), QVector3D(0, -boxSize.y() / 2.0f, 0)); // bottom
-                                                                                   //        _walls.emplace_back(QVector3D(0, -1, 0), QVector3D(0, m_grid->yRes() / 2.0f, 0)); // bottom
-
-                                                                                   // BRUTE FORCE
-                                                                                   //        for (unsigned long i = 0; i < m_particles_count; ++i) {
-                                                                                   //            CParticle *particle = new CParticle(i, m_scene->getRootEntity(), QVector3D(0.0001 * i, 0.0001 * i, 0.2));
-                                                                                   //            m_particles->push_back(particle);
-                                                                                   //        }
-
     auto &firstGridCell = m_grid->at(0, 0, 0);
 
     double halfParticle = CParticle::h / 2.0f;
@@ -124,9 +113,9 @@ void CParticleSimulator::updateGrid()
                 for (int p = 0; p < particles.size(); p++) {
                     CParticle *particle = particles[p];
 
-                    int newGridCellX = (int)floor((particle->position().x() + boxSize.x() / 2.0) / CParticle::h);
-                    int newGridCellY = (int)floor((particle->position().y() + boxSize.y() / 2.0) / CParticle::h);
-                    int newGridCellZ = (int)floor((particle->position().z() + boxSize.z() / 2.0) / CParticle::h);
+                    int newGridCellX = (int)floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
+                    int newGridCellY = (int)floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
+                    int newGridCellZ = (int)floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
                     //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
                     //cout << "particle position: " << particle->position() << endl;
                     //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
@@ -283,20 +272,6 @@ void CParticleSimulator::updateForces()
                     particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
                     
                     // collision force
-                    //for (auto wall : _walls) 
-                    //{
-                    //    double d = QVector3D::dotProduct(wall.second - particle->position(), wall.first) + 0.01; // particle radius
-
-                    //    if (d > 0.0) {
-                    //        // This is an alernate way of calculating collisions of particles against walls, but produces some jitter at boundaries
-                    //        //                                particle->position() += d * wall.first;
-                    //        //                                particle->velocity() -= QVector3D::dotProduct(particle->velocity(), wall.first) * 1.9 * wall.first;
-
-                    //        particle->acceleration() += WALL_K * wall.first * d;
-                    //        particle->acceleration() += WALL_DAMPING * QVector3D::dotProduct(particle->velocity(), wall.first) * wall.first;
-                    //    }
-                    //}
-
                     particle->acceleration() +=  m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
 
                 }
