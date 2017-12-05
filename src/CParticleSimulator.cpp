@@ -76,6 +76,7 @@ void CParticleSimulator::setup()
 void CParticleSimulator::start()
 {
     m_timer.start();
+    m_elapsed_timer.start();
 }
 
 void CParticleSimulator::toggleSimulation()
@@ -326,8 +327,7 @@ double CParticleSimulator::WviscosityLaplacian(double radiusSquared)
 void CParticleSimulator::doWork()
 {
     this->step(dt);
-    iteration++;
-    emit iterationChanged(iteration);
+    emit iterationChanged(++iteration);
 };
 
 

@@ -85,6 +85,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    this->ui->iterationWidget->setText(QString::number(iteration));
+    double elapsed = m_simulator->getElapsedTime() / 1000.0;
+    double fps = iteration / elapsed;
+    this->ui->iterationWidget->setText(QString::number(fps));
 }
 
