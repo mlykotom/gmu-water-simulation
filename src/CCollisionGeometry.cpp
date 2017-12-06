@@ -116,6 +116,9 @@ QVector3D CCollisionGeometry::inverseBounce(QVector3D pos, QVector3D velocity)
     return acc;
 }
 
+#define WALL_K 10000.0 // wall spring constant
+#define WALL_DAMPING (-0.9) // wall damping constant
+
 QVector3D CCollisionGeometry::inverseBoundingBoxBounce(QVector3D &pos, QVector3D &velocity)
 {
     QVector3D acc(0, 0, 0);
@@ -130,8 +133,8 @@ QVector3D CCollisionGeometry::inverseBoundingBoxBounce(QVector3D &pos, QVector3D
 //            pos += d * wall.first;
 //            velocity -= QVector3D::dotProduct(velocity, wall.first) * 1.9 * wall.first;
 
-            acc += 10000 * inverseNormal * d;
-            acc += -0.9 * QVector3D::dotProduct(velocity, inverseNormal) * inverseNormal;
+            acc += WALL_K * inverseNormal * d;
+            acc += WALL_DAMPING * QVector3D::dotProduct(velocity, inverseNormal) * inverseNormal;
         }
     }
 

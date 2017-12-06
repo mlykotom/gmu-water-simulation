@@ -34,6 +34,7 @@
         </widget>
         <widget class="QStatusBar" name="statusBar">
             <widget class="QLabel" name="iterationWidget"/>
+            <widget class="QLabel" name="particlesCountWidget"/>
         </widget>
     </widget>
     <layoutdefault spacing="6" margin="11"/>

@@ -1,107 +1,12 @@
-#include "CParticleSimulator.h"
+#include "CCPUParticleSimulator.h"
 
-#include "CScene.h"
-
-CParticleSimulator::CParticleSimulator(QObject *parent)
-    : QObject(parent),
-      m_scene(nullptr),
-      m_particles_count(0),
-      dt(0.01),
-      iteration(0),
-      surfaceThreshold(0.01),
-      boxSize(QVector3D(2, 2, 2))
+CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr)
+    : CBaseParticleSimulator(scene, parent)
 {
-}
-
-CParticleSimulator::CParticleSimulator(CScene *scene, unsigned long particlesCount, QObject *parent)
-    : QObject(parent),
-      gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
-      m_scene(scene),
-      m_particles_count(particlesCount),
-      m_particles(new std::vector<CParticle *>()),
-      dt(0.01),
-      iteration(0),
-      surfaceThreshold(0.01),
-      boxSize(QVector3D(0.4, 0.4, 0.4))
-{
-
-    int gridX = (int) ceil(boxSize.x() / CParticle::h);
-    int gridY = (int) ceil(boxSize.y() / CParticle::h);
-    int gridZ = (int) ceil(boxSize.z() / CParticle::h);
-
-    QVector3D gridResolution(gridX, gridY, gridZ);
-
-    m_cellSize = QVector3D(boxSize.x() / gridX, boxSize.y() / gridY, boxSize.z() / gridZ);
-
-    m_grid = new CGrid(boxSize, gridResolution, m_scene->getRootEntity());
-
-    connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
-    setup();
-}
-
-CParticleSimulator::~CParticleSimulator()
-{
-
-    delete m_particles;
 
 }
 
-void CParticleSimulator::setup()
-{
-    auto &firstGridCell = m_grid->at(0, 0, 0);
-
-    double halfParticle = CParticle::h / 2.0f;
-    // add particles
-    unsigned long particleId = 0;
-    //        for (float y = -boxSize.y() / 2.0f; y < boxSize.y() / 2.0f; y += halfParticle) {
-    //            for (float x = -boxSize.x() / 2.0f; x < -boxSize.x() / 4.0; x += halfParticle) {
-    //                for (float z = -boxSize.z() / 2.0f; z < boxSize.z() / 2.0f; z += halfParticle) {
-
-    for (double y = -boxSize.y() / 4.0; y < boxSize.y() / 4.0; y += halfParticle) {
-        for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += halfParticle) {
-            for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += halfParticle) {
-                auto particle = new CParticle(particleId, m_scene->getRootEntity(), QVector3D(x, y, z));
-                firstGridCell.push_back(particle);
-                particleId++;
-            }
-        }
-    }
-
-    qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
-    qDebug() << "simulating" << particleId << "particles";
-
-    updateGrid();
-}
-
-void CParticleSimulator::start()
-{
-    m_timer.start();
-    m_elapsed_timer.start();
-}
-
-void CParticleSimulator::toggleSimulation()
-{
-    if (m_timer.isActive()) {
-        qDebug() << "pausing simulation...";
-        m_timer.stop();
-    }
-    else {
-        qDebug() << "resuming simulation ...";
-        start();
-    }
-}
-
-void CParticleSimulator::toggleGravity()
-{
-    if (gravity.length() > 0.0) {
-        gravity = QVector3D(0, 0, 0);
-    }
-    else {
-        gravity = QVector3D(0, GRAVITY_ACCELERATION, 0);
-    }
-}
-
-void CParticleSimulator::updateGrid()
+void CCPUParticleSimulator::updateGrid()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
@@ -164,7 +69,7 @@ void CParticleSimulator::updateGrid()
     }
 }
 
-void CParticleSimulator::updateDensityPressure()
+void CCPUParticleSimulator::updateDensityPressure()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
@@ -209,7 +114,7 @@ void CParticleSimulator::updateDensityPressure()
     }
 }
 
-void CParticleSimulator::updateForces()
+void CCPUParticleSimulator::updateForces()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
@@ -268,7 +173,7 @@ void CParticleSimulator::updateForces()
     }
 }
 
-void CParticleSimulator::updateNewPositionVelocity()
+void CCPUParticleSimulator::integrate()
 {
     for (unsigned int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
         auto &particles = m_grid->getData()[gridCellIndex];
@@ -280,66 +185,5 @@ void CParticleSimulator::updateNewPositionVelocity()
             particle->translate(newPosition);
             particle->velocity() = newVelocity;
         }
-    }
-}
-
-void CParticleSimulator::step(double dt)
-{
-    //        qDebug() << iteration;
-    updateDensityPressure();
-    updateForces();
-    updateNewPositionVelocity();
-    updateGrid();
-}
-
-double CParticleSimulator::Wpoly6(double radiusSquared)
-{
-    static double coefficient = 315.0 / (64.0 * M_PI * pow(CParticle::h, 9));
-    static double hSquared = CParticle::h * CParticle::h;
-
-    return coefficient * pow(hSquared - radiusSquared, 3);
-}
-
-QVector3D CParticleSimulator::Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared)
-{
-    static double coefficient = -945.0 / (32.0 * M_PI * pow(CParticle::h, 9));
-    static double hSquared = CParticle::h * CParticle::h;
-
-    return coefficient * pow(hSquared - radiusSquared, 2) * diffPosition;
-}
-
-QVector3D CParticleSimulator::WspikyGradient(QVector3D &diffPosition, double radiusSquared)
-{
-    static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
-}
-
-double CParticleSimulator::WviscosityLaplacian(double radiusSquared)
-{
-    static double coefficient = 45.0 / (M_PI * pow(CParticle::h, 6));
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * (CParticle::h - radius);
-}
-
-void CParticleSimulator::doWork()
-{
-    this->step(dt);
-    emit iterationChanged(++iteration);
-};
-
-
-void CParticleSimulator::onKeyPressed(Qt::Key key)
-{
-    switch (key) {
-        case Qt::Key_Space:
-            toggleSimulation();
-            break;
-
-        case Qt::Key_G:
-            toggleGravity();
-            break;
     }
 }

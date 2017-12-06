@@ -14,7 +14,7 @@
 #include <QKeyEvent>
 #include <QApplication>
 
-#include "CParticleSimulator.h"
+#include "CBaseParticleSimulator.h"
 #include "CLWrapper.h"
 
 
@@ -48,7 +48,7 @@ Q_OBJECT
 
 public:
     explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    ~MainWindow() override;
 
     CQt3DWindow *getView() { return m_mainView; }
 
@@ -60,7 +60,7 @@ private:
     CScene *m_scene;
     FrameGraph *m_pFrameGraph;
 
-    CParticleSimulator *m_simulator;
+    CBaseParticleSimulator *m_simulator;
     CLWrapper *m_cl_wrapper;
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
