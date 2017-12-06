@@ -12,7 +12,7 @@ public:
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
-    void updateNewPositionVelocity() override;
+    void integrate() override;
 };
 
 

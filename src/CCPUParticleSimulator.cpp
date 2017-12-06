@@ -173,7 +173,7 @@ void CCPUParticleSimulator::updateForces()
     }
 }
 
-void CCPUParticleSimulator::updateNewPositionVelocity()
+void CCPUParticleSimulator::integrate()
 {
     for (unsigned int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
         auto &particles = m_grid->getData()[gridCellIndex];

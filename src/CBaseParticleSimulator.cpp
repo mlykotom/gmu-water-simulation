@@ -22,9 +22,6 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
     setupScene();
 }
 
-CBaseParticleSimulator::~CBaseParticleSimulator()
-{
-}
 
 void CBaseParticleSimulator::setupScene()
 {
@@ -87,7 +84,7 @@ void CBaseParticleSimulator::step()
     updateGrid();
     updateDensityPressure();
     updateForces();
-    updateNewPositionVelocity();
+    integrate();
 }
 
 double CBaseParticleSimulator::Wpoly6(double radiusSquared)

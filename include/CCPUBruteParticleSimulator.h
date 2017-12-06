@@ -1,16 +1,16 @@
-#ifndef WATERSURFACESIMULATION_CGPUPARTICLESIMULATOR_H
-#define WATERSURFACESIMULATION_CGPUPARTICLESIMULATOR_H
+#ifndef WATERSURFACESIMULATION_CCPUBRUTEPARTICLESIMULATOR_H
+#define WATERSURFACESIMULATION_CCPUBRUTEPARTICLESIMULATOR_H
 
 #include "CScene.h"
 #include "CBaseParticleSimulator.h"
 #include "CLWrapper.h"
 
-class CGPUParticleSimulator: public CBaseParticleSimulator
+class CCPUBruteParticleSimulator: public CBaseParticleSimulator
 {
 protected:
     CLWrapper *m_cl_wrapper;
 public:
-    explicit CGPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
+    explicit CCPUBruteParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
     void updateGrid() override;
     void updateDensityPressure() override;
@@ -20,4 +20,4 @@ public:
 };
 
 
-#endif //WATERSURFACESIMULATION_CGPUPARTICLESIMULATOR_H
+#endif //WATERSURFACESIMULATION_CCPUBRUTEPARTICLESIMULATOR_H

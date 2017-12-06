@@ -12,6 +12,14 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
     auto clDevice = CLPlatforms::getBestGPU();
     m_cl_wrapper = new CLWrapper(clDevice);
     qDebug() << "Selected device: " << CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
+
+//    m_cl_wrapper->loadProgram(
+//        {
+//            APP_RESOURCES"/kernels/test_matrix_add.cl"
+//        }
+//    );
+
+//    m_cl_wrapper->getKernel("matrix_add");
 }
 
 void CGPUParticleSimulator::updateGrid()
@@ -181,17 +189,25 @@ void CGPUParticleSimulator::updateForces()
     }
 }
 
-void CGPUParticleSimulator::updateNewPositionVelocity()
+void CGPUParticleSimulator::test(double dt, QVector3D position, QVector3D velocity, QVector3D acceleration, QVector3D &newPosition, QVector3D &newVelocity)
+{
+    newPosition = position + (velocity * dt) + acceleration * dt * dt;
+    newVelocity = (newPosition - position) / dt;
+}
+
+void CGPUParticleSimulator::integrate()
 {
     for (unsigned int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
-        auto &particles = m_grid->getData()[gridCellIndex];
+        std::vector<CParticle *> &particles = m_grid->getData()[gridCellIndex];
 
         for (auto &particle : particles) {
-            QVector3D newPosition = particle->position() + (particle->velocity() * dt) + particle->acceleration() * dt * dt;
-            QVector3D newVelocity = (newPosition - particle->position()) / dt;
+            QVector3D newPosition, newVelocity;
+
+            test(dt, particle->position(), particle->velocity(), particle->acceleration(), newPosition, newVelocity);
 
             particle->translate(newPosition);
             particle->velocity() = newVelocity;
         }
     }
 }
+

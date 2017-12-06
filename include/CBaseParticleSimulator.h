@@ -50,11 +50,11 @@ protected:
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
     virtual void updateForces() = 0;
-    virtual void updateNewPositionVelocity() = 0;
+    virtual void integrate() = 0;
 
 public:
     explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
-    ~CBaseParticleSimulator() override;
+    ~CBaseParticleSimulator() override {}
 
     virtual void setupScene();
     virtual void start();
