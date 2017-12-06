@@ -1,16 +1,15 @@
+// Qt 3D
+#include <QMessageBox>
+#include <QCullFace>
 #include <QOrbitCameraController>
 #include <QFirstPersonCameraController>
 #include <QTextEdit>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "CLPlatforms.h"
-
-// Qt 3D
-#include <QMessageBox>
-
-#include <QCullFace>
 
 //local includes
+#include "CLPlatforms.h"
+#include "CCPUParticleSimulator.h"
 #include <CQt3DWindow.h>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -54,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     //Particle simulator
-    m_simulator = new CParticleSimulator(m_scene);
+    m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
     connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator, SLOT(onKeyPressed(Qt::Key)));
     connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
@@ -85,8 +84,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    double elapsed = m_simulator->getElapsedTime() / 1000.0;
-    double fps = iteration / elapsed;
-    this->ui->iterationWidget->setText(QString::number(fps));
+    this->ui->iterationWidget->setText(QString::number(m_simulator->getFps()));
 }
 
