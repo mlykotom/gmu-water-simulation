@@ -2,9 +2,9 @@
 #ifndef WATERSURFACESIMULATION_CCPUPARTICLESIMULATOR_H
 #define WATERSURFACESIMULATION_CCPUPARTICLESIMULATOR_H
 
-#include <CParticleSimulator.h>
+#include <CBaseParticleSimulator.h>
 
-class CCPUParticleSimulator: public CParticleSimulator
+class CCPUParticleSimulator: public CBaseParticleSimulator
 {
 public:
     CCPUParticleSimulator(CScene *scene, QObject *parent);

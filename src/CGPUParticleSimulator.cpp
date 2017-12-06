@@ -1,12 +1,20 @@
-#include "CCPUParticleSimulator.h"
+#include <include/CLPlatforms.h>
+#include "CGPUParticleSimulator.h"
 
-CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr)
+// TODO update this shit! yeah
+
+
+CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
     : CBaseParticleSimulator(scene, parent)
 {
+    CLPlatforms::printInfoAll();
 
+    auto clDevice = CLPlatforms::getBestGPU();
+    m_cl_wrapper = new CLWrapper(clDevice);
+    qDebug() << "Selected device: " << CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
 }
 
-void CCPUParticleSimulator::updateGrid()
+void CGPUParticleSimulator::updateGrid()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
@@ -69,7 +77,7 @@ void CCPUParticleSimulator::updateGrid()
     }
 }
 
-void CCPUParticleSimulator::updateDensityPressure()
+void CGPUParticleSimulator::updateDensityPressure()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
@@ -114,7 +122,7 @@ void CCPUParticleSimulator::updateDensityPressure()
     }
 }
 
-void CCPUParticleSimulator::updateForces()
+void CGPUParticleSimulator::updateForces()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
@@ -173,7 +181,7 @@ void CCPUParticleSimulator::updateForces()
     }
 }
 
-void CCPUParticleSimulator::updateNewPositionVelocity()
+void CGPUParticleSimulator::updateNewPositionVelocity()
 {
     for (unsigned int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
         auto &particles = m_grid->getData()[gridCellIndex];

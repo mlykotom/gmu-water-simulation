@@ -36,7 +36,7 @@ void doCalculation()
 
     m_cl_wrapper->loadProgram(
         {
-            APP_RESOURCES"/kernels/matrix_add.cl"
+            APP_RESOURCES"/kernels/test_matrix_add.cl"
         }
     );
 

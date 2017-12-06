@@ -17,7 +17,7 @@
 
 class CScene;
 
-class CParticleSimulator: public QObject
+class CBaseParticleSimulator: public QObject
 {
 Q_OBJECT
 
@@ -53,8 +53,8 @@ protected:
     virtual void updateNewPositionVelocity() = 0;
 
 public:
-    explicit CParticleSimulator(CScene *scene, QObject *parent);
-    ~CParticleSimulator() override;
+    explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
+    ~CBaseParticleSimulator() override;
 
     virtual void setupScene();
     virtual void start();

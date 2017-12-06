@@ -1,16 +1,14 @@
 // Qt 3D
 #include <QMessageBox>
 #include <QCullFace>
-#include <QOrbitCameraController>
-#include <QFirstPersonCameraController>
 #include <QTextEdit>
+#include <Qt3DExtras/QFirstPersonCameraController>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 //local includes
-#include "CLPlatforms.h"
-#include "CCPUParticleSimulator.h"
 #include <CQt3DWindow.h>
+#include <include/CGPUParticleSimulator.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -44,24 +42,23 @@ MainWindow::MainWindow(QWidget *parent) :
     basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
     basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
     // For camera controls
-    Qt3DExtras::QFirstPersonCameraController * camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
+    Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
 
     // FrameGraph
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
-
-    //Particle simulator
-    m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
-    connect(m_mainView, SIGNAL(keyPressed(Qt::Key)), m_simulator, SLOT(onKeyPressed(Qt::Key)));
-    connect(m_simulator, &CParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
-
-    // Set root object of the scene
-    m_mainView->setRootEntity(rootEntity);
-
     try {
-        CLPlatforms::printInfoAll();
+        //Particle simulator
+//        m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
+        m_simulator = new CGPUParticleSimulator(m_scene);
+
+        connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+        connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+
+        // Set root object of the scene
+        m_mainView->setRootEntity(rootEntity);
     }
     catch (CLException &exc) {
         qDebug() << exc.what();
@@ -70,15 +67,12 @@ MainWindow::MainWindow(QWidget *parent) :
 //        message.setText(QString(exc.what()));
 //        message.show();
     }
-
-    m_cl_wrapper = new CLWrapper(CLPlatforms::getBestGPU());
-    qDebug() << "Selected device: " << CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
 }
 
 MainWindow::~MainWindow()
 {
 //    delete m_scene;
-//    delete m_simulator;
+    delete m_simulator;
     delete m_cl_wrapper;
 }
 

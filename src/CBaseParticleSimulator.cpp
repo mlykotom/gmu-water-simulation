@@ -1,6 +1,6 @@
-#include "CParticleSimulator.h"
+#include "CBaseParticleSimulator.h"
 
-CParticleSimulator::CParticleSimulator(CScene *scene, QObject *parent)
+CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
     : QObject(parent),
       gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
       m_scene(scene),
@@ -22,11 +22,11 @@ CParticleSimulator::CParticleSimulator(CScene *scene, QObject *parent)
     setupScene();
 }
 
-CParticleSimulator::~CParticleSimulator()
+CBaseParticleSimulator::~CBaseParticleSimulator()
 {
 }
 
-void CParticleSimulator::setupScene()
+void CBaseParticleSimulator::setupScene()
 {
     auto &firstGridCell = m_grid->at(0, 0, 0);
 
@@ -52,13 +52,13 @@ void CParticleSimulator::setupScene()
     qDebug() << "simulating" << particleId << "particles";
 }
 
-void CParticleSimulator::start()
+void CBaseParticleSimulator::start()
 {
     m_timer.start();
     m_elapsed_timer.start();
 }
 
-void CParticleSimulator::toggleSimulation()
+void CBaseParticleSimulator::toggleSimulation()
 {
     if (m_timer.isActive()) {
         qDebug() << "pausing simulation...";
@@ -72,7 +72,7 @@ void CParticleSimulator::toggleSimulation()
     }
 }
 
-void CParticleSimulator::toggleGravity()
+void CBaseParticleSimulator::toggleGravity()
 {
     if (gravity.length() > 0.0) {
         gravity = QVector3D(0, 0, 0);
@@ -82,7 +82,7 @@ void CParticleSimulator::toggleGravity()
     }
 }
 
-void CParticleSimulator::step()
+void CBaseParticleSimulator::step()
 {
     updateGrid();
     updateDensityPressure();
@@ -90,7 +90,7 @@ void CParticleSimulator::step()
     updateNewPositionVelocity();
 }
 
-double CParticleSimulator::Wpoly6(double radiusSquared)
+double CBaseParticleSimulator::Wpoly6(double radiusSquared)
 {
     static double coefficient = 315.0 / (64.0 * M_PI * pow(CParticle::h, 9));
     static double hSquared = CParticle::h * CParticle::h;
@@ -98,7 +98,7 @@ double CParticleSimulator::Wpoly6(double radiusSquared)
     return coefficient * pow(hSquared - radiusSquared, 3);
 }
 
-QVector3D CParticleSimulator::Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared)
+QVector3D CBaseParticleSimulator::Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared)
 {
     static double coefficient = -945.0 / (32.0 * M_PI * pow(CParticle::h, 9));
     static double hSquared = CParticle::h * CParticle::h;
@@ -106,7 +106,7 @@ QVector3D CParticleSimulator::Wpoly6Gradient(QVector3D &diffPosition, double rad
     return coefficient * pow(hSquared - radiusSquared, 2) * diffPosition;
 }
 
-QVector3D CParticleSimulator::WspikyGradient(QVector3D &diffPosition, double radiusSquared)
+QVector3D CBaseParticleSimulator::WspikyGradient(QVector3D &diffPosition, double radiusSquared)
 {
     static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
     double radius = sqrt(radiusSquared);
@@ -114,7 +114,7 @@ QVector3D CParticleSimulator::WspikyGradient(QVector3D &diffPosition, double rad
     return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
 }
 
-double CParticleSimulator::WviscosityLaplacian(double radiusSquared)
+double CBaseParticleSimulator::WviscosityLaplacian(double radiusSquared)
 {
     static double coefficient = 45.0 / (M_PI * pow(CParticle::h, 6));
     double radius = sqrt(radiusSquared);
@@ -122,7 +122,7 @@ double CParticleSimulator::WviscosityLaplacian(double radiusSquared)
     return coefficient * (CParticle::h - radius);
 }
 
-void CParticleSimulator::doWork()
+void CBaseParticleSimulator::doWork()
 {
     this->step();
     ++totalIteration;
@@ -130,7 +130,7 @@ void CParticleSimulator::doWork()
     emit iterationChanged(totalIteration);
 };
 
-void CParticleSimulator::onKeyPressed(Qt::Key key)
+void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 {
     switch (key) {
         case Qt::Key_Space:
@@ -143,7 +143,7 @@ void CParticleSimulator::onKeyPressed(Qt::Key key)
     }
 }
 
-double CParticleSimulator::getFps()
+double CBaseParticleSimulator::getFps()
 {
     double elapsed = getElapsedTime() / 1000.0;
     return iterationSincePaused / elapsed;
