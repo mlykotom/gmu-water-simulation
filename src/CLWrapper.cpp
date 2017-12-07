@@ -51,3 +51,11 @@ cl::Kernel CLWrapper::getKernel(const std::string &kernelName)
     CLCommon::checkError(error, "cl::Kernel");
     return kernel;
 }
+
+cl::Buffer CLWrapper::createBuffer(cl_mem_flags flags, size_t bufferSize)
+{
+    cl_int err;
+    auto inputBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, bufferSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    return inputBuffer;
+}

@@ -33,7 +33,6 @@ public:
 
     virtual ~CLWrapper()
     {
-//        cl::flush();
 //        cl::finish();
     }
 
@@ -44,6 +43,8 @@ public:
 
     void loadProgram(std::vector<std::string> kernelFiles);
     cl::Kernel getKernel(const std::string &kernelName);
+
+    cl::Buffer createBuffer(cl_mem_flags flags, size_t bufferSize);
 };
 
 #endif //WATERSURFACESIMULATION_CLWRAPPER_H
