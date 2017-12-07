@@ -1,4 +1,4 @@
-#include <OpenCL/cl.hpp>
+//#include <OpenCL/cl.hpp>
 #include <qplatformdefs.h>
 #include <include/CLCommon.h>
 #include <include/CLWrapper.h>

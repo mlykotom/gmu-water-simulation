@@ -25,7 +25,7 @@ private slots:
     void doWork();
 
 public slots:
-    void onKeyPressed(Qt::Key key);
+    virtual void onKeyPressed(Qt::Key key);
 
 signals:
     void iterationChanged(unsigned long iteration);
@@ -52,6 +52,7 @@ protected:
     virtual void updateForces() = 0;
     virtual void integrate() = 0;
 
+
 public:
     explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
     ~CBaseParticleSimulator() override {}
@@ -71,6 +72,10 @@ public:
     QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
     QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
     double WviscosityLaplacian(double radiusSquared);
+
+
+    //TODO: DELETE
+    virtual void test() {}
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

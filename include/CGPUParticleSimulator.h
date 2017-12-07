@@ -17,7 +17,12 @@ public:
     void updateForces() override;
     void integrate() override;
     void test(double dt, QVector3D position, QVector3D velocity, QVector3D acceleration, QVector3D &newPosition, QVector3D &newVelocity);
+
+    //TODO: TEST - DELETE
+    void test() override;
+
 };
+
 
 
 #endif //WATERSURFACESIMULATION_CGPUPARTICLESIMULATOR_H
