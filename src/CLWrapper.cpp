@@ -29,16 +29,18 @@ void CLWrapper::loadProgram(std::vector<std::string> kernelFiles)
         kernelSources.emplace_back(kernelSourceCodes.back().c_str(), kernelSourceCodes.back().length());
     }
 
-    cl_int errors[2];
-    m_program = cl::Program(m_context, kernelSources, errors);
-    CLCommon::checkError(errors[0], "cl::Program creation");
+    cl_int error;
+    m_program = cl::Program(m_context, kernelSources, &error);
+    CLCommon::checkError(error, "cl::Program creation");
 
-    errors[0] = m_program.build(std::vector<cl::Device>(1, m_device));
+    error = m_program.build(std::vector<cl::Device>(1, m_device));
     qDebug() << "-> Building program";
 
-    if (errors[0] == CL_BUILD_PROGRAM_FAILURE) {
-        auto buildLog = m_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device, &errors[1]);
-        CLCommon::checkError(errors[1], buildLog);
+    if (error == CL_BUILD_PROGRAM_FAILURE) {
+        auto buildLog = m_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device, &error);
+        CLCommon::checkError(error, buildLog);
+        qDebug() << buildLog.c_str();
+
     }
 }
 

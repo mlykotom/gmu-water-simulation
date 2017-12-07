@@ -15,7 +15,7 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 
     m_cl_wrapper->loadProgram(
         {
-            APP_RESOURCES"/kernels/matrix_add.cl"
+            APP_RESOURCES"/kernels/scan.cl"
         }
     );
 
@@ -25,7 +25,45 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
 {
+    m_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("blelloch_scan"));
+
     qDebug() << "testujem kernel";
+
+    cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
+    size_t dataBufferSize = 16 * sizeof(cl_int);
+
+    cl_int output = 12;
+    size_t result_size = sizeof(cl_int);
+    cl_int result_init = 12;
+
+    cl_int err;
+    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, &result_init, &err);
+    CLCommon::checkError(err, "outputBuffer creation");
+
+    m_kernel->setArg(0, inputBuffer);
+    m_kernel->setArg(1, dataBufferSize);
+    m_kernel->setArg(2, outputBuffer);
+    m_kernel->setArg(3, cl::Local(dataBufferSize));
+
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
+
+    cl::NDRange local(16);
+    cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
+
+
+    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, input, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    qDebug() << output;
+
 }
 
 void CGPUParticleSimulator::updateGrid()

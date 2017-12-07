@@ -4,11 +4,14 @@
 #include "CScene.h"
 #include "CBaseParticleSimulator.h"
 #include "CLWrapper.h"
+#include <memory>
 
 class CGPUParticleSimulator: public CBaseParticleSimulator
 {
 protected:
     CLWrapper *m_cl_wrapper;
+    std::shared_ptr<cl::Kernel> m_kernel;;
+
 public:
     explicit CGPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
@@ -19,7 +22,7 @@ public:
     void test(double dt, QVector3D position, QVector3D velocity, QVector3D acceleration, QVector3D &newPosition, QVector3D &newVelocity);
 
     //TODO: TEST - DELETE
-    void test() override;
+    virtual void test() override;
 
 };
 
