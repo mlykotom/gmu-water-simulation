@@ -9,6 +9,7 @@
 //local includes
 #include <CQt3DWindow.h>
 #include <include/CCPUBruteParticleSimulator.h>
+#include <include/CCPUParticleSimulator.h>
 //#include <include/CGPUParticleSimulator.h>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -55,21 +56,21 @@ MainWindow::MainWindow(QWidget *parent) :
 //        m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
 //        m_simulator = new CGPUParticleSimulator(m_scene);
         m_simulator = new CCPUBruteParticleSimulator(m_scene);
-
 //        this->ui->particlesCountWidget->setText(QString("Particles: %1").arg(123));
 
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+
+        m_simulator->setupScene();
 
         // Set root object of the scene
         m_mainView->setRootEntity(rootEntity);
     }
     catch (CLException &exc) {
         qDebug() << exc.what();
-        // TODO alert message?
-//        QMessageBox message;
-//        message.setText(QString(exc.what()));
-//        message.show();
+        QMessageBox message;
+        message.setText(QString(exc.what()));
+        message.exec();
     }
 }
 
@@ -82,6 +83,11 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    this->ui->iterationWidget->setText(QString::number(m_simulator->getFps()));
+    QString text = QString("%1 | %2").arg(
+        QString::number(m_simulator->getParticlesCount()),
+        QString::number(m_simulator->getFps())
+    );
+
+    this->ui->iterationWidget->setText(text);
 }
 

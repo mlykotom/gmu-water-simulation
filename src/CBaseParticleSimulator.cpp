@@ -7,7 +7,7 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
       dt(0.01),
       totalIteration(0),
       surfaceThreshold(0.01),
-      boxSize(QVector3D(0.4, 0.4, 0.4))
+      boxSize(QVector3D(0.3, 0.3, 0.3))
 {
     QVector3D gridResolution(
         (int) ceil(boxSize.x() / CParticle::h),
@@ -19,9 +19,7 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
     m_grid = new CGrid(boxSize, gridResolution, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
-    setupScene();
 }
-
 
 void CBaseParticleSimulator::setupScene()
 {
@@ -29,8 +27,6 @@ void CBaseParticleSimulator::setupScene()
 
     double halfParticle = CParticle::h / 2.0f;
     // add particles
-    unsigned long particleId = 0;
-
     for (float y = -boxSize.y() / 2.0f; y < boxSize.y() / 2.0f; y += halfParticle) {
         for (float x = -boxSize.x() / 2.0f; x < -boxSize.x() / 4.0; x += halfParticle) {
             for (float z = -boxSize.z() / 2.0f; z < boxSize.z() / 2.0f; z += halfParticle) {
@@ -38,15 +34,15 @@ void CBaseParticleSimulator::setupScene()
 //    for (double y = -boxSize.y() / 4.0; y < boxSize.y() / 4.0; y += halfParticle) {
 //        for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += halfParticle) {
 //            for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += halfParticle) {
-                auto particle = new CParticle(particleId, m_scene->getRootEntity(), QVector3D(x, y, z));
+                auto particle = new CParticle(particlesCount, m_scene->getRootEntity(), QVector3D(x, y, z));
                 firstGridCell.push_back(particle);
-                particleId++;
+                particlesCount++;
             }
         }
     }
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
-    qDebug() << "simulating" << particleId << "particles";
+    qDebug() << "simulating" << particlesCount << "particles";
 }
 
 void CBaseParticleSimulator::start()

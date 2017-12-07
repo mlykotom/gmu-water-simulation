@@ -12,14 +12,6 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
     auto clDevice = CLPlatforms::getBestGPU();
     m_cl_wrapper = new CLWrapper(clDevice);
     qDebug() << "Selected device: " << CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
-
-//    m_cl_wrapper->loadProgram(
-//        {
-//            APP_RESOURCES"/kernels/test_matrix_add.cl"
-//        }
-//    );
-
-//    m_cl_wrapper->getKernel("matrix_add");
 }
 
 void CGPUParticleSimulator::updateGrid()

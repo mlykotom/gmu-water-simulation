@@ -38,6 +38,8 @@ void CLWrapper::loadProgram(std::vector<std::string> kernelFiles)
 
     if (errors[0] == CL_BUILD_PROGRAM_FAILURE) {
         auto buildLog = m_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device, &errors[1]);
+        qDebug() << QString::fromStdString(buildLog);
+
         CLCommon::checkError(errors[1], buildLog);
     }
 }

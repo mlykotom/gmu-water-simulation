@@ -46,6 +46,7 @@ protected:
     CGrid *m_grid;
     QVector3D boxSize;
     double surfaceThreshold;
+    unsigned long particlesCount = 0;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
@@ -64,6 +65,8 @@ public:
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
+    unsigned long getParticlesCount() { return particlesCount; }
+
     void step();
 
     // TODO  not sure if every implementation has it (or it should be static)
