@@ -89,30 +89,3 @@ CGrid::~CGrid()
 {
     //delete[] m_data;
 }
-
-std::vector<CParticle*> CGrid::getNeighborsCells(int x, int y, int z)
-{
-    {
-        auto neighborParticles = std::vector<CParticle *>();
-
-        for (int offsetX = -1; offsetX <= 1; offsetX++) {
-            if (x + offsetX < 0) continue;
-            if (x + offsetX >= xRes()) break;
-
-            for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                if (y + offsetY < 0) continue;
-                if (y + offsetY >= yRes()) break;
-
-                for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
-                    if (z + offsetZ < 0) continue;
-                    if (z + offsetZ >= zRes()) break;
-
-                    auto &particlesAtCell = at(x + offsetX, y + offsetY, z + offsetZ);
-                    neighborParticles.insert(neighborParticles.end(), particlesAtCell.begin(), particlesAtCell.end());
-                }
-            }
-        }
-
-        return neighborParticles;
-    }
-}

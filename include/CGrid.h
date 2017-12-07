@@ -12,15 +12,14 @@
 #include "renderableentity.h"
 #include "CCollisionGeometry.h"
 
-class CGrid : RenderableEntity
+class CGrid: RenderableEntity
 {
 
 public: //methods
-    explicit CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode *parent = 0);
+    explicit CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode *parent = nullptr);
 
     CGrid(Qt3DCore::QNode *parent = 0);
     ~CGrid();
-
 
     std::vector<CParticle *> *getData() const { return m_data; }
     std::vector<CParticle *> &at(int x, int y, int z)
@@ -33,8 +32,6 @@ public: //methods
     const int zRes() const { return m_ResZ; }
 
     const int &getCellCount() const { return m_cell_count; }
-
-    std::vector<CParticle *> getNeighborsCells(int x, int y, int z);
 
     CCollisionGeometry *getCollisionGeometry() { return m_collisionGeometry; }
     //QVector3D inverseBounce();
