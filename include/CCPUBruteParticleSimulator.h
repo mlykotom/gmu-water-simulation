@@ -1,6 +1,7 @@
 #ifndef WATERSURFACESIMULATION_CCPUBRUTEPARTICLESIMULATOR_H
 #define WATERSURFACESIMULATION_CCPUBRUTEPARTICLESIMULATOR_H
 
+#include <memory>
 #include "CScene.h"
 #include "CBaseParticleSimulator.h"
 #include "CLWrapper.h"
@@ -10,6 +11,8 @@ struct ParticleCL
     cl_float3 position;
     cl_float3 velocity;
     cl_float3 acceleration;
+    cl_double density;
+    cl_double pressure;
 };
 
 class CCPUBruteParticleSimulator: public CBaseParticleSimulator
@@ -17,9 +20,10 @@ class CCPUBruteParticleSimulator: public CBaseParticleSimulator
 protected:
     CLWrapper *m_cl_wrapper;
 
-    cl::Kernel m_test_kernel;
+    std::shared_ptr<cl::Kernel> m_test_kernel;
 
     std::vector<ParticleCL> *particlesCL;
+    ParticleCL *device_data;
 public:
     explicit CCPUBruteParticleSimulator(CScene *scene, QObject *parent = nullptr);
 

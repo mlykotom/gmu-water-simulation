@@ -18,7 +18,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
         }
     );
 
-    m_test_kernel = m_cl_wrapper->getKernel("test");
+    m_test_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("test"));
 
     particlesCL = new std::vector<ParticleCL>();
 }
@@ -40,8 +40,11 @@ void CCPUBruteParticleSimulator::setupScene()
                 firstGridCell.push_back(particle);
 
                 auto particleStruct = ParticleCL{
-                    .position = {x, y, z},
-                    .velocity = {0, 0, 0}
+                    .position       = {x, y, z},
+                    .velocity       = {0, 0, 0},
+                    .acceleration   = {0, 0, 0},
+                    .density        = 0,
+                    .pressure       = 5
                 };
 
                 particlesCL->push_back(particleStruct);
@@ -49,6 +52,8 @@ void CCPUBruteParticleSimulator::setupScene()
             }
         }
     }
+
+    device_data = new ParticleCL[particlesCount];
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
     qDebug() << "simulating" << particlesCount << "particles";
@@ -64,8 +69,11 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
     auto &particles = m_grid->at(0, 0, 0);
     for (int i = 0; i < particles.size(); ++i) {
         auto &particle = particles[i];
+        ParticleCL &particleCL = particlesCL->at(i);
 
         particle->density() = 0.0;
+        particleCL.density = 0.0;
+
         auto &neighborGridCellParticles = m_grid->at(0, 0, 0);
 
         for (auto &neighbor : neighborGridCellParticles) {
@@ -73,12 +81,15 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
 
             if (radiusSquared <= CParticle::h * CParticle::h) {
                 particle->density() += Wpoly6(radiusSquared);
+                particleCL.density += Wpoly6(radiusSquared);
             }
         }
 
         particle->density() *= CParticle::mass;
+        particleCL.density *= CParticle::mass;
         // p = k(density - density_rest)
         particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
+        particleCL.pressure = CParticle::gas_stiffness * (particleCL.density - CParticle::rest_density);
     }
 }
 
@@ -88,9 +99,10 @@ void CCPUBruteParticleSimulator::updateForces()
 
     for (int i = 0; i < particles.size(); ++i) {
         auto &particle = particles[i];
+        ParticleCL &particleCL = particlesCL->at(i);
 
         QVector3D f_gravity = gravity * particle->density();
-        QVector3D f_pressure, f_viscosity, f_surface;
+        QVector3D f_pressure, f_viscosity;
 
         auto &neighborGridCellParticles = m_grid->at(0, 0, 0);
 
@@ -118,7 +130,7 @@ void CCPUBruteParticleSimulator::updateForces()
         // collision force
         particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
 
-        particlesCL->at(i).acceleration = {particle->acceleration().x(), particle->acceleration().y(), particle->acceleration().z()};
+        particleCL.acceleration = {particle->acceleration().x(), particle->acceleration().y(), particle->acceleration().z()};
     }
 }
 
@@ -132,11 +144,15 @@ void CCPUBruteParticleSimulator::integrate()
 {
     size_t dataBufferSize = particlesCL->size() * sizeof(ParticleCL);
     cl_int err;
-    auto dataBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
-    CLCommon::checkError(err, "dataBuffer creation");
+    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_ONLY, dataBufferSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_WRITE_ONLY, dataBufferSize, nullptr, &err);
+    CLCommon::checkError(err, "outputBuffer creation");
 
-    m_test_kernel.setArg(0, dataBuffer);
-    m_test_kernel.setArg(1, dataBufferSize);
+    m_test_kernel->setArg(0, outputBuffer);
+    m_test_kernel->setArg(1, inputBuffer);
+    m_test_kernel->setArg(2, dataBufferSize);
+    m_test_kernel->setArg(3, dt);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -145,13 +161,12 @@ void CCPUBruteParticleSimulator::integrate()
     cl::NDRange local(16);
     cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
 
-    ParticleCL *device_data = new ParticleCL[dataBufferSize]();
-
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(dataBuffer, true, 0, dataBufferSize, &particlesCL[0], nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(m_test_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(dataBuffer, true, 0, dataBufferSize, device_data, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, particlesCL->data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_test_kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, dataBufferSize, device_data, nullptr, &readEvent);
+
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     std::vector<CParticle *> &particles = m_grid->getData()[0];
@@ -160,13 +175,19 @@ void CCPUBruteParticleSimulator::integrate()
         auto &particle = particles[i];
         auto partStru = device_data[i];
 
-        QVector3D newPosition = QVector3D(partStru.position.s[0], partStru.position.s[1], partStru.position.s[2]);;
-        QVector3D newVelocity = QVector3D(partStru.velocity.s[0], partStru.velocity.s[1], partStru.velocity.s[2]);;
+        QVector3D newPosition, newVelocity;
 
+        // cpu
 //        test(dt, particle->position(), particle->velocity(), particle->acceleration(), newPosition, newVelocity);
+
+        // gpu
+        newPosition = QVector3D(partStru.position.s[0], partStru.position.s[1], partStru.position.s[2]);
+        newVelocity = QVector3D(partStru.velocity.s[0], partStru.velocity.s[1], partStru.velocity.s[2]);
 
         particle->translate(newPosition);
         particle->velocity() = newVelocity;
+
+        particlesCL->at(i) = device_data[i];
     }
 }
 

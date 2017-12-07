@@ -71,8 +71,8 @@ cl::Device CLPlatforms::getBestGPU()
     int platform_index, device_index;
 #ifdef __APPLE__
     platform_index = 0;
-//    device_index = 1; GPU amd
-    device_index = 0;
+    device_index = 1; //+GPU amd
+//    device_index = 0;
 #else
     platform_index = 1;
     device_index = 0;

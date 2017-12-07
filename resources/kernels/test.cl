@@ -8,27 +8,24 @@
 #pragma OPENCL EXTENSION cl_amd_printf : enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 
-__constant float3 dt = float3(0.01, 0.01, 0.01);
-
 typedef struct tag_ParticleCL
 {
     float3 position;
     float3 velocity;
     float3 acceleration;
+    double density;
+    double pressure;
 } ParticleCL;
 
-__kernel void test(__global ParticleCL *output, int size)
+
+__kernel void test(__global ParticleCL *output, __global ParticleCL *input, int size, float dt)
 {
     int global_x = (int) get_global_id(0);
 
     if (global_x < size) {
-        float3 newPosition = output[global_x].position + (output[global_x].velocity * dt) + output[global_x].acceleration * dt * dt;
+        float3 newPosition = input[global_x].position + (input[global_x].velocity * dt) + (input[global_x].acceleration * dt * dt);
 
-        output[global_x].velocity = (newPosition - output[global_x].position) / dt;
         output[global_x].position = newPosition;
-
-        if (global_x == 0) {
-//            printf("%.4f\n", output[global_x].velocity);
-        }
+        output[global_x].velocity = (newPosition - input[global_x].position) / dt;
     }
 }

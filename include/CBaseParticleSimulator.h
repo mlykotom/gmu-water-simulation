@@ -42,7 +42,7 @@ protected:
 
     QVector3D m_cellSize; // TODO is it anyhow useful?
 
-    double dt;
+    float dt;
     CGrid *m_grid;
     QVector3D boxSize;
     double surfaceThreshold;
