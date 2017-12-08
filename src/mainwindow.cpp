@@ -5,6 +5,7 @@
 #include <Qt3DExtras/QFirstPersonCameraController>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "ocl_test.h"
 
 //local includes
 #include <CQt3DWindow.h>
@@ -52,11 +53,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     try {
         //Particle simulator
-//        m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
-        m_simulator = new CGPUParticleSimulator(m_scene);
+//        m_simulator = new CCPUParticleS imulator(m_scene, nullptr);
+//        m_simulator = new CGPUParticleSimulator(m_scene);
         //m_simulator = new CCPUBruteParticleSimulator(m_scene);
 
 //        this->ui->particlesCountWidget->setText(QString("Particles: %1").arg(123));
+
+        doCalculation();
 
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);

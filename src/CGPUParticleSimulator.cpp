@@ -30,7 +30,7 @@ void CGPUParticleSimulator::test()
     cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
     size_t dataBufferSize = 16 * sizeof(cl_int);
 
-    cl_int output = 12;
+    cl_int output[1] = {0};
     size_t result_size = sizeof(cl_int);
     cl_int result_init = 10;
 
@@ -60,11 +60,11 @@ void CGPUParticleSimulator::test()
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*kernel, 0, global, local, nullptr, &kernelEvent);
 
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, output, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    qDebug() << output;
+    qDebug() << output[0];
 
 
 
