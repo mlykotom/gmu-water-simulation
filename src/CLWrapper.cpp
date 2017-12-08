@@ -50,10 +50,10 @@ cl::Kernel CLWrapper::getKernel(const std::string &kernelName)
     return kernel;
 }
 
-cl::Buffer CLWrapper::createBuffer(cl_mem_flags flags, size_t bufferSize)
+cl::Buffer CLWrapper::createBuffer(cl_mem_flags flags, size_t bufferSize, void *hostPtr)
 {
     cl_int err;
-    auto inputBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, bufferSize, nullptr, &err);
+    auto inputBuffer = cl::Buffer(m_context, flags, bufferSize, hostPtr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
     return inputBuffer;
 }
