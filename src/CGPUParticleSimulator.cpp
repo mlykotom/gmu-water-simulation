@@ -27,8 +27,8 @@ void CGPUParticleSimulator::test()
 {
     cl::Kernel kernel = cl::Kernel( m_cl_wrapper->getKernel("blelloch_scan"));
 
-    cl_int inputCount = 16;
-    cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
+    cl_int inputCount = 32;
+    cl_int input[32] = { 1,3,13,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
     size_t inputSize = inputCount * sizeof(cl_int);
 
     cl_int outputCount = 1;
@@ -53,8 +53,10 @@ void CGPUParticleSimulator::test()
     cl::Event kernelEvent;
     cl::Event readEvent;
 
+
     cl::NDRange local(16);
-    cl::NDRange global(16);
+    //we need only half the threads of the input count
+    cl::NDRange global(CLCommon::alignTo(inputCount, 16));
     cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
