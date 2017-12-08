@@ -22,7 +22,7 @@ __kernel void blelloch_scan(__global int *input, int array_size, __global int *r
         //if ((local_x % (i << 1) == 0) && (global_x + i < array_size))
         //    tmp_a[local_x] += tmp_a[local_x + i];
 
-        if ( ((local_x + 1) % (i << 1) == 0) && (global_x < array_size) && (global_x -1 >= 0) )
+        if ( ((local_x + 1) % (i << 1) == 0) && (global_x < array_size) && (local_x - i >= 0) )
             tmp_a[local_x] += tmp_a[local_x - i];
 
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -33,5 +33,6 @@ __kernel void blelloch_scan(__global int *input, int array_size, __global int *r
     if (local_x == local_w - 1)
     {
         atomic_add(result, tmp_a[local_x]);
+        //*result = tmp_a[local_x];
     }
 }
