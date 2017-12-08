@@ -2,7 +2,7 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 
-__kernel void blelloch_scan(__global int *input, int array_size, __global int *result, volatile __local int *tmp_a)
+__kernel void blelloch_scan(__global int *input, int array_size, __global int *result)
 {
     int global_x = (int)get_global_id(0);
     int local_x = (int)get_local_id(0);
