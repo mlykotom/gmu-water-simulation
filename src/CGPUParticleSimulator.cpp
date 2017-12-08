@@ -24,12 +24,9 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
-{
+{    
+    std::shared_ptr<cl::Kernel> kernel = std::make_shared<cl::Kernel>( m_cl_wrapper->getKernel("blelloch_scan"));
 
-
-   // m_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("blelloch_scan"));
-
-    
     cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
     size_t dataBufferSize = 16 * sizeof(cl_int);
 
@@ -39,21 +36,16 @@ void CGPUParticleSimulator::test()
 
     cl_int err;
 
-    cl::make_kernel<cl::Buffer&, cl_int, cl::Buffer& > global_atomic_reduce_sum = cl::make_kernel<cl::Buffer&, cl_int, cl::Buffer&>(m_cl_wrapper->getProgram(), "blelloch_scan", &err);
-
 
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
     auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, &result_init, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-
-
-
-    //m_kernel->setArg(0, inputBuffer);
-    //m_kernel->setArg(1, dataBufferSize);
-    //m_kernel->setArg(2, outputBuffer);
-   // m_kernel->setArg(3, cl::Local(dataBufferSize));
+    kernel->setArg(0, inputBuffer);
+    kernel->setArg(1, dataBufferSize);
+    kernel->setArg(2, outputBuffer);
+    kernel->setArg(3, cl::Local(dataBufferSize));
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -63,24 +55,56 @@ void CGPUParticleSimulator::test()
     cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
     cl::NDRange offset(0);
 
-
-
-
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, input, nullptr, &writeEvent);
-    //m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_kernel, 0, global, local, nullptr, &kernelEvent);
 
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*kernel, 0, global, local, nullptr, &kernelEvent);
 
-    //cl::KernelF imple_add(cl::Kernel(program, "simple_add"), queue, cl::NullRange, cl::NDRange(10), cl::NullRange);
-    cl::EnqueueArgs args((cl::CommandQueue)(m_cl_wrapper->getQueue()), (cl::NDRange)global, (cl::NDRange)local);
-    global_atomic_reduce_sum(args, inputBuffer, dataBufferSize, outputBuffer);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
 
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);   
-    
-    
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     qDebug() << output;
+
+
+
+    //-------------------------------------------------------------------------
+    //cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
+    //size_t dataBufferSize = 16;
+
+    //cl_int output = 12;
+    //size_t result_size = 1;
+    //cl_int result_init = 12;
+
+    //cl_int err;
+
+    //cl::make_kernel<cl::Buffer&, cl_int, cl::Buffer&, cl::LocalSpaceArg& > global_atomic_reduce_sum = cl::make_kernel<cl::Buffer&, cl_int, cl::Buffer&, cl::LocalSpaceArg&>(m_cl_wrapper->getProgram(), "blelloch_scan", &err);
+
+    //auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
+    //CLCommon::checkError(err, "inputBuffer creation");
+    //auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, &result_init, &err);
+    //CLCommon::checkError(err, "outputBuffer creation");
+
+    //cl::Event writeEvent;
+    //cl::Event kernelEvent;
+    //cl::Event readEvent;
+
+    //cl::NDRange local(16);
+    //cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
+    //cl::NDRange offset(0);
+
+
+    //// TODO nastaveno blocking = true .. vsude bylo vzdycky false
+    //m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, input, nullptr, &writeEvent);
+
+    ////call kernel
+    //cl::EnqueueArgs args((cl::CommandQueue)(m_cl_wrapper->getQueue()), (cl::NDRange)global, (cl::NDRange)local);
+    //global_atomic_reduce_sum(args, inputBuffer, dataBufferSize, outputBuffer, cl::Local(dataBufferSize));
+
+    //m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
+    //CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    //qDebug() << output;
 
 }
 
