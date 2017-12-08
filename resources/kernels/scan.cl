@@ -9,10 +9,10 @@ __kernel void blelloch_scan(__global int *input, int array_size, __global int *r
     int local_w = (int)get_local_size(0);
 //===========================================================================================  
 
+    if((global_x  < array_size))
+        result[global_x] = 1000;
 
-//    result[0] = 1000;
-
-    atomic_add(result, 10);
+  //  atomic_add(&(result[0]), 10);
 
     //tmp_a[local_x] = global_x >= array_size ? 0 : input[global_x];
     //barrier(CLK_LOCAL_MEM_FENCE);

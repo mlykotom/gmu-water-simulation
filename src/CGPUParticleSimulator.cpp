@@ -25,13 +25,13 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
 {
-    std::shared_ptr<cl::Kernel> kernel = std::make_shared<cl::Kernel>( m_cl_wrapper->getKernel("blelloch_scan"));
+    cl::Kernel kernel = cl::Kernel( m_cl_wrapper->getKernel("blelloch_scan"));
 
     cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
     size_t dataBufferSize = 16 * sizeof(cl_int);
 
-    cl_int output[1] = {0};
-    size_t result_size = sizeof(cl_int);
+    cl_int output[16];
+    size_t result_size =16* sizeof(cl_int);
     cl_int result_init = 10;
 
     cl_int err;
@@ -39,26 +39,26 @@ void CGPUParticleSimulator::test()
 
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR, result_size, &result_init, &err);
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, nullptr, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    kernel->setArg(0, inputBuffer);
-    kernel->setArg(1, dataBufferSize);
-    kernel->setArg(2, outputBuffer);
-    kernel->setArg(3, cl::Local(dataBufferSize));
+    kernel.setArg(0, inputBuffer);
+    kernel.setArg(1, 16);
+    kernel.setArg(2, outputBuffer);
+    kernel.setArg(3, cl::Local(dataBufferSize));
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
     cl::NDRange local(16);
-    cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
+    cl::NDRange global(16);
     cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, input, nullptr, &writeEvent);
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
 
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, output, nullptr, &readEvent);
 
