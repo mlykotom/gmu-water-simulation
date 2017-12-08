@@ -13,6 +13,7 @@ protected:
     CLWrapper *m_cl_wrapper;
 
     std::shared_ptr<cl::Kernel> m_integration_kernel;
+    std::shared_ptr<cl::Kernel> m_update_density_kernel;
 
     CParticle::Physics *device_data;
 public:

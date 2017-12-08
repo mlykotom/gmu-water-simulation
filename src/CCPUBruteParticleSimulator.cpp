@@ -20,6 +20,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
     );
 
     m_integration_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
+    m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
 }
 
 void CCPUBruteParticleSimulator::setupScene()
@@ -58,8 +59,8 @@ void CCPUBruteParticleSimulator::setupScene()
     qDebug() << "simulating" << particlesCount << "particles";
 
     dataBufferSize = particlesCount * sizeof(CParticle::Physics);
-    inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, dataBufferSize);
-    outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_WRITE_ONLY, dataBufferSize);
+    inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
+    outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
 }
 
 CCPUBruteParticleSimulator::~CCPUBruteParticleSimulator()
@@ -94,10 +95,30 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
 
         particle->density() *= CParticle::mass;
         particleCL.density *= CParticle::mass;
-        // p = k(density - density_rest)
+//         p = k(density - density_rest)
         particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
         particleCL.pressure = CParticle::gas_stiffness * (particleCL.density - CParticle::rest_density);
+
+//        qDebug() << particle->density() << particleCL.density << "|" << particle->pressure() << particleCL.pressure;
     }
+
+    m_update_density_kernel->setArg(0, outputBuffer);
+    m_update_density_kernel->setArg(1, inputBuffer);
+    m_update_density_kernel->setArg(2, dataBufferSize);
+
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
+
+    cl::NDRange local(16);
+    cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
+
+    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, dataBufferSize, device_data, nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 }
 
 void CCPUBruteParticleSimulator::updateForces()
