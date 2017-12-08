@@ -24,7 +24,7 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
-{    
+{
     std::shared_ptr<cl::Kernel> kernel = std::make_shared<cl::Kernel>( m_cl_wrapper->getKernel("blelloch_scan"));
 
     cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
@@ -32,14 +32,14 @@ void CGPUParticleSimulator::test()
 
     cl_int output = 12;
     size_t result_size = sizeof(cl_int);
-    cl_int result_init = 12;
+    cl_int result_init = 10;
 
     cl_int err;
 
 
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, &result_init, &err);
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR, result_size, &result_init, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
     kernel->setArg(0, inputBuffer);
