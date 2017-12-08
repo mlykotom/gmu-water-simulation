@@ -33,7 +33,6 @@ public: //methods
     double &density() { return m_density; };
     double &pressure() { return m_pressure; };
 
-
     void translate(QVector3D to)
     {
         m_position = to;
@@ -60,6 +59,17 @@ public: //methods
     {
         return position() - otherParticle->position();
     }
+
+    static inline QVector3D clFloatToVector(cl_float3 vec)
+    {
+        return {vec.s[0], vec.s[1], vec.s[2]};
+    }
+
+    static inline QVector3D diffPosition(cl_float3 a, cl_float3 b)
+    {
+        return clFloatToVector(a) - clFloatToVector(b);
+    }
+
 
 //TODOL urobit getre a settre
 public: //attributes
