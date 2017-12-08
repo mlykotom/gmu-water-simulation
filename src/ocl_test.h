@@ -34,11 +34,11 @@ void doCalculation()
     auto m_cl_wrapper = new CLWrapper(CLPlatforms::getBestGPU());
 
 
-//    m_cl_wrapper->loadProgram(
-//        {
-//            APP_RESOURCES"/kernels/test_matrix_add.cl"
-//        }
-//    );
+    m_cl_wrapper->loadProgram(
+        {
+            APP_RESOURCES"/kernels/matrix_add.cl"
+        }
+    );
 
     cl_int err_msg;
 
