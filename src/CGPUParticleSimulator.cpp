@@ -27,13 +27,13 @@ void CGPUParticleSimulator::test()
 {
     cl::Kernel kernel = cl::Kernel( m_cl_wrapper->getKernel("blelloch_scan"));
 
-    cl_int inputCount = 32;
-    cl_int input[32] = { 1,3,13,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
+    cl_int inputCount = 8;
+    cl_int input[8] = { 1,2,3,4,5,6,7,8 };
     size_t inputSize = inputCount * sizeof(cl_int);
 
-    cl_int outputCount = 1;
-    cl_int output;
-    size_t result_size = outputCount * sizeof(cl_int);
+    cl_int outputCount = 8;
+    cl_int output[8];
+    size_t outputSize = outputCount * sizeof(cl_int);
     cl_int result_init = 10;
 
     cl_int err;
@@ -41,7 +41,7 @@ void CGPUParticleSimulator::test()
 
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, nullptr, &err);
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, &input, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
     kernel.setArg(0, inputBuffer);
@@ -64,11 +64,12 @@ void CGPUParticleSimulator::test()
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
 
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, &output, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    qDebug() << output;
+    for(int i = 0; i < outputCount; ++i)
+        qDebug() << output[i];
 
 }
 

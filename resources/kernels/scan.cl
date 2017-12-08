@@ -4,35 +4,21 @@
 
 __kernel void blelloch_scan(__global int *input, int array_size, __global int *result, volatile __local int *tmp_a)
 {
-    int global_x = (int)get_global_id(0);
+    int global_x = (int)get_global_id(0);    
+    int global_w = (int)get_global_size(0);
     int local_x = (int)get_local_id(0);
     int local_w = (int)get_local_size(0);
 //===========================================================================================  
 
-    //if((global_x  < array_size))
-    //    *result = 1000;
-
-
-    tmp_a[local_x] = global_x >= array_size ? 0 : input[global_x];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //reduce
-    for (int i = 1; i < local_w; i <<= 1) {        
-
-        //if ((local_x % (i << 1) == 0) && (global_x + i < array_size))
-        //    tmp_a[local_x] += tmp_a[local_x + i];
-
-        if ( ((local_x + 1) % (i << 1) == 0) && (global_x < array_size) && (local_x - i >= 0) )
-            tmp_a[local_x] += tmp_a[local_x - i];
-
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (local_x == local_w - 1)
+    for (int i = 1; i < global_w; i <<= 1)
     {
-        atomic_add(result, tmp_a[local_x]);
-        //*result = tmp_a[local_x];
+        if (((global_x + 1) % (i << 1) == 0) && (global_x < array_size) && (global_x - i >= 0))
+        {
+            result[global_x] = result[global_x] + result[global_x - i];
+        }
+
+        barrier(CLK_GLOBAL_MEM_FENCE);
     }
+
+
 }
