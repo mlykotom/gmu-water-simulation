@@ -27,25 +27,27 @@ void CGPUParticleSimulator::test()
 {
     cl::Kernel kernel = cl::Kernel( m_cl_wrapper->getKernel("blelloch_scan"));
 
+    cl_int inputCount = 16;
     cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
-    size_t dataBufferSize = 16 * sizeof(cl_int);
+    size_t inputSize = inputCount * sizeof(cl_int);
 
-    cl_int output[16];
-    size_t result_size =16* sizeof(cl_int);
+    cl_int outputCount = 1;
+    cl_int output;
+    size_t result_size = outputCount * sizeof(cl_int);
     cl_int result_init = 10;
 
     cl_int err;
 
 
-    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
+    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
     auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, nullptr, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
     kernel.setArg(0, inputBuffer);
-    kernel.setArg(1, 16);
+    kernel.setArg(1, inputCount);
     kernel.setArg(2, outputBuffer);
-    kernel.setArg(3, cl::Local(dataBufferSize));
+    kernel.setArg(3, cl::Local(inputSize));
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -56,55 +58,15 @@ void CGPUParticleSimulator::test()
     cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, input, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input, nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
 
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, output, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    qDebug() << output[0];
-
-
-
-    //-------------------------------------------------------------------------
-    //cl_int input[16] = { 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4 };
-    //size_t dataBufferSize = 16;
-
-    //cl_int output = 12;
-    //size_t result_size = 1;
-    //cl_int result_init = 12;
-
-    //cl_int err;
-
-    //cl::make_kernel<cl::Buffer&, cl_int, cl::Buffer&, cl::LocalSpaceArg& > global_atomic_reduce_sum = cl::make_kernel<cl::Buffer&, cl_int, cl::Buffer&, cl::LocalSpaceArg&>(m_cl_wrapper->getProgram(), "blelloch_scan", &err);
-
-    //auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, nullptr, &err);
-    //CLCommon::checkError(err, "inputBuffer creation");
-    //auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, result_size, &result_init, &err);
-    //CLCommon::checkError(err, "outputBuffer creation");
-
-    //cl::Event writeEvent;
-    //cl::Event kernelEvent;
-    //cl::Event readEvent;
-
-    //cl::NDRange local(16);
-    //cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
-    //cl::NDRange offset(0);
-
-
-    //// TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    //m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, input, nullptr, &writeEvent);
-
-    ////call kernel
-    //cl::EnqueueArgs args((cl::CommandQueue)(m_cl_wrapper->getQueue()), (cl::NDRange)global, (cl::NDRange)local);
-    //global_atomic_reduce_sum(args, inputBuffer, dataBufferSize, outputBuffer, cl::Local(dataBufferSize));
-
-    //m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, result_size, &output, nullptr, &readEvent);
-    //CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-
-    //qDebug() << output;
+    qDebug() << output;
 
 }
 

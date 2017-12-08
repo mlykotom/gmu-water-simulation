@@ -10,7 +10,7 @@ __kernel void blelloch_scan(__global int *input, int array_size, __global int *r
 //===========================================================================================  
 
     if((global_x  < array_size))
-        result[global_x] = 1000;
+        *result = 1000;
 
   //  atomic_add(&(result[0]), 10);
 
