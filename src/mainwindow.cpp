@@ -71,6 +71,7 @@ MainWindow::MainWindow(QWidget *parent) :
         QMessageBox message;
         message.setText(QString(exc.what()));
         message.exec();
+        exit(1);
     }
 }
 
