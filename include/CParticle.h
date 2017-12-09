@@ -18,8 +18,8 @@ public:
         cl_float3 position;
         cl_float3 velocity;
         cl_float3 acceleration;
-        cl_double density;
-        cl_double pressure;
+        cl_float density;
+        cl_float pressure;
     };
 
     explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));

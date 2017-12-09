@@ -2,12 +2,13 @@
 #include <cassert>
 #include "CCPUBruteParticleSimulator.h"
 
-static int workGroup = 256;
 
 CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *parent)
     : CBaseParticleSimulator(scene, parent)
 {
     CLPlatforms::printInfoAll();
+
+    gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 
     auto clDevice = CLPlatforms::getBestGPU();
     m_cl_wrapper = new CLWrapper(clDevice);
@@ -21,6 +22,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 
     m_integration_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
     m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
+    m_update_forces_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
 }
 
 void CCPUBruteParticleSimulator::setupScene()
@@ -97,45 +99,65 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
 
 void CCPUBruteParticleSimulator::updateForces()
 {
-    auto &particles = m_grid->at(0, 0, 0);
+//    for (int i = 0; i < particlesCount; ++i) {
+//        CParticle::Physics &particleCL = device_data[i];
+//
+//        QVector3D f_gravity = gravity * particleCL.density;
+//        QVector3D f_pressure, f_viscosity;
+//
+//        auto &neighborGridCellParticles = m_grid->at(0, 0, 0);
+//
+//        for (auto &neighbor : neighborGridCellParticles) {
+//            QVector3D distance = CParticle::diffPosition(particleCL.position, neighbor->m_physics->position);
+//            double radiusSquared = distance.lengthSquared();
+//
+//            if (radiusSquared <= CParticle::h * CParticle::h) {
+//                QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
+//                QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
+//
+//                if (particleCL.id != neighbor->m_physics->id) {
+//                    f_pressure += (particleCL.pressure / pow(particleCL.density, 2) + particleCL.pressure / pow(particleCL.density, 2)) * spikyGradient;
+//                    f_viscosity += CParticle::diffPosition(neighbor->m_physics->velocity, particleCL.velocity) * WviscosityLaplacian(radiusSquared) / particleCL.density;
+//                }
+//            }
+//        }
+//
+//        f_pressure *= -CParticle::mass * particleCL.density;
+//        f_viscosity *= CParticle::viscosity * CParticle::mass;
+//
+//        // ADD IN SPH FORCES
+//        QVector3D f_total = (f_pressure + f_viscosity + f_gravity) / particleCL.density;
+//        particleCL.acceleration = {f_total.x(), f_total.y(), f_total.z()};
+//    }
 
-    for (int i = 0; i < particles.size(); ++i) {
+    {
+        cl_uint arg = 0;
+        m_update_forces_kernel->setArg(arg++, outputBuffer);
+        m_update_forces_kernel->setArg(arg++, particlesCount);
+        m_update_forces_kernel->setArg(arg++, gravityCL);
+
+        cl::Event writeEvent;
+        cl::Event kernelEvent;
+        cl::Event readEvent;
+
+        cl::NDRange local = cl::NullRange;
+        cl::NDRange global(particlesCount);
+
+        m_cl_wrapper->getQueue().enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, global, local, nullptr, &kernelEvent);
+        m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &readEvent);
+
+        CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+    }
+
+    // collision force
+    for (int i = 0; i < particlesCount; ++i) {
         CParticle::Physics &particleCL = device_data[i];
-
-        QVector3D f_gravity = gravity * particleCL.density;
-        QVector3D f_pressure, f_viscosity;
-
-        auto &neighborGridCellParticles = m_grid->at(0, 0, 0);
-
-        for (auto &neighbor : neighborGridCellParticles) {
-            QVector3D distance = CParticle::diffPosition(particleCL.position, neighbor->m_physics->position);
-            double radiusSquared = distance.lengthSquared();
-
-            if (radiusSquared <= CParticle::h * CParticle::h) {
-                QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
-                QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
-
-                if (particleCL.id != neighbor->m_physics->id) {
-                    f_pressure += (particleCL.pressure / pow(particleCL.density, 2) + particleCL.pressure / pow(particleCL.density, 2)) * spikyGradient;
-                    f_viscosity += CParticle::diffPosition(neighbor->m_physics->velocity, particleCL.velocity) * WviscosityLaplacian(radiusSquared) / particleCL.density;
-                }
-            }
-        }
-
-        f_pressure *= -CParticle::mass * particleCL.density;
-        f_viscosity *= CParticle::viscosity * CParticle::mass;
-
-        // ADD IN SPH FORCES
-        QVector3D f_total = (f_pressure + f_viscosity + f_gravity) / particleCL.density;
-        // collision force
-
         QVector3D pos = CParticle::clFloatToVector(particleCL.position);
         QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
         QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
 
-        f_total += f_collision;
-
-        particleCL.acceleration = {f_total.x(), f_total.y(), f_total.z()};
+        particleCL.acceleration = {particleCL.acceleration.s[0] + f_collision.x(), particleCL.acceleration.s[1] + f_collision.y(), particleCL.acceleration.s[2] + f_collision.z()};
     }
 }
 
@@ -164,5 +186,10 @@ void CCPUBruteParticleSimulator::integrate()
         particle->updatePosition();
         particle->updateVelocity();
     }
+}
+void CCPUBruteParticleSimulator::toggleGravity()
+{
+    CBaseParticleSimulator::toggleGravity();
+    gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 }
 

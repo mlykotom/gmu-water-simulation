@@ -66,7 +66,7 @@ public:
     virtual void start();
 
     void toggleSimulation();
-    void toggleGravity();
+    virtual void toggleGravity();
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
