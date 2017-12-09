@@ -15,7 +15,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 
     m_cl_wrapper->loadProgram(
         {
-            APP_RESOURCES"/kernels/test.cl"
+            APP_RESOURCES"/kernels/sph.cl"
         }
     );
 
@@ -77,27 +77,6 @@ void CCPUBruteParticleSimulator::updateGrid()
 
 void CCPUBruteParticleSimulator::updateDensityPressure()
 {
-//    auto &particles = m_grid->at(0, 0, 0);
-//    for (int i = 0; i < particles.size(); ++i) {
-//        CParticle::Physics &particleCL = device_data[i];
-//
-//        particleCL.density = 0.0;
-//
-//        auto &neighborGridCellParticles = m_grid->at(0, 0, 0);
-//
-//        for (auto &neighbor : neighborGridCellParticles) {
-//            double radiusSquared = CParticle::diffPosition(particleCL.position, neighbor->m_physics->position).lengthSquared();
-//
-//            if (radiusSquared <= CParticle::h * CParticle::h) {
-//                particleCL.density += Wpoly6(radiusSquared);
-//            }
-//        }
-//
-//        double newDensity = particleCL.density * CParticle::mass;
-//        particleCL.density = newDensity;
-//        particleCL.pressure = CParticle::gas_stiffness * (newDensity - CParticle::rest_density);
-//    }
-
     cl_uint arg = 0;
     m_update_density_kernel->setArg(arg++, outputBuffer);
     m_update_density_kernel->setArg(arg++, particlesCount);
