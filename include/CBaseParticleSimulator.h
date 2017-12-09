@@ -57,7 +57,10 @@ protected:
 
 public:
     explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
-    ~CBaseParticleSimulator() override {}
+    ~CBaseParticleSimulator() override
+    {
+        delete m_grid;
+    }
 
     virtual void setupScene();
     virtual void start();

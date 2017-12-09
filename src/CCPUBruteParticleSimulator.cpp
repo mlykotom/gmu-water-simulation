@@ -71,6 +71,7 @@ void CCPUBruteParticleSimulator::setupScene()
 
 CCPUBruteParticleSimulator::~CCPUBruteParticleSimulator()
 {
+    delete[] device_data;
 }
 
 void CCPUBruteParticleSimulator::updateGrid()
@@ -186,10 +187,6 @@ void CCPUBruteParticleSimulator::updateForces()
 
 void CCPUBruteParticleSimulator::integrate()
 {
-    // TODO only one step
-    if (totalIteration > 5)
-        return;
-
     size_t dataBufferSize = particlesCount * sizeof(CParticle::Physics);
     cl::Buffer inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
     cl::Buffer outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
@@ -204,14 +201,8 @@ void CCPUBruteParticleSimulator::integrate()
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-//    CParticle::Physics *banan = new CParticle::Physics[particlesCount];
-
-//    CParticle::Physics *input_data = new CParticle::Physics[particlesCount]();
-
-    cl::NDRange local = 16; //cl::NullRange;//(16); //NULL
-    cl::NDRange global(CLCommon::alignTo(particlesCount, 16));
-
-//    cl::NDRange global(dataBufferSize);
+    cl::NDRange local = cl::NullRange;
+    cl::NDRange global(particlesCount);
 
     qDebug() << device_data[0].position.s[0] << device_data[0].position.s[1] << device_data[0].position.s[2];
 
@@ -222,7 +213,6 @@ void CCPUBruteParticleSimulator::integrate()
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     qDebug() << "new" << device_data[0].position.s[0] << device_data[0].position.s[1] << device_data[0].position.s[2];
-
 
     std::vector<CParticle *> &particles = m_grid->getData()[0];
     for (auto &particle : particles) {
