@@ -24,6 +24,8 @@ public:
     //TODO: TEST - DELETE
     virtual void test() override;
 
+private: //methods
+    std::vector<cl_int> scan(std::vector<cl_int> input);
 };
 
 

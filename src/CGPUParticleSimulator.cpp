@@ -22,26 +22,32 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 //    m_cl_wrapper->getKernel("matrix_add");
 }
 
-//TODO: TEST - DELETE
-void CGPUParticleSimulator::test()
+std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
-    cl::Kernel kernel = cl::Kernel( m_cl_wrapper->getKernel("blelloch_scan"));
+    size_t originalSize = input.size();
+    //find nearest power of 2 to given count
+    size_t countAsPowerOfTwo = pow(ceil(log2(originalSize)),2);
 
-    cl_int inputCount = 8;
-    cl_int input[8] = { 1,2,3,4,5,6,7,8 };
+    //resize and append 0s
+    input.resize(countAsPowerOfTwo, 0);
+
+    cl_int *input_array = input.data();
+    cl_int inputCount = input.size();
     size_t inputSize = inputCount * sizeof(cl_int);
 
-    cl_int outputCount = 8;
-    cl_int output[8];
-    size_t outputSize = outputCount * sizeof(cl_int);
-    cl_int result_init = 10;
+
+    std::vector<cl_int> output;
+    output.resize(inputCount, 0);
+
+    cl_int *output_array = output.data();
+
+    cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
 
     cl_int err;
 
-
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, &input, &err);
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, inputSize, input_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
     kernel.setArg(0, inputBuffer);
@@ -60,17 +66,56 @@ void CGPUParticleSimulator::test()
     cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input_array, nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
 
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, &output, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, inputSize, output_array, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    for(int i = 0; i < outputCount; ++i)
-        qDebug() << output[i];
 
+    input.resize(originalSize);
+    output.resize(originalSize);
+
+    return output;
+}
+
+//TODO: TEST - DELETE
+void CGPUParticleSimulator::test()
+{
+    std::vector<cl_int> input;
+
+    input.push_back(1);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
+
+    input.push_back(5);
+    input.push_back(6);
+    input.push_back(7); 
+    input.push_back(8);
+
+    input.push_back(1);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
+
+  //  input.push_back(5);
+    input.push_back(6);
+    input.push_back(7);
+    //input.push_back(8);
+
+
+    std::vector<cl_int> output =  scan(input);
+
+    for (cl_int i : output)
+        qDebug() << i;
+
+    return;
+
+
+    
 }
 
 void CGPUParticleSimulator::updateGrid()

@@ -21,10 +21,11 @@ __kernel void blelloch_scan(__global int *input, int array_size, __global int *r
         barrier(CLK_GLOBAL_MEM_FENCE);
     }
 
+
+
+    ////down sweep
     result[array_size - 1] = 0;
     barrier(CLK_GLOBAL_MEM_FENCE);
-
-    //sweepe-down
     for (int i = array_size; i > 1; i >>= 1)
     {
         int half_index = global_x - ( i >> 1);
