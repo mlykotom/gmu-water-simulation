@@ -46,9 +46,9 @@ protected:
 
     float dt;
     CGrid *m_grid;
-    QVector3D boxSize;
-    double surfaceThreshold;
-    unsigned int particlesCount = 0;
+    QVector3D m_boxSize;
+    double m_surfaceThreshold;
+    unsigned int m_particlesCount = 0;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
@@ -72,7 +72,7 @@ public:
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
-    unsigned long getParticlesCount() { return particlesCount; }
+    unsigned long getParticlesCount() { return m_particlesCount; }
 
     void step();
 

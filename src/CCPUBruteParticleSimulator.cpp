@@ -8,7 +8,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 {
     CLPlatforms::printInfoAll();
 
-    gravityCL = {gravity.x(), gravity.y(), gravity.z()};
+    m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 
     auto clDevice = CLPlatforms::getBestGPU();
     m_cl_wrapper = new CLWrapper(clDevice);
@@ -30,46 +30,46 @@ void CCPUBruteParticleSimulator::setupScene()
     auto &firstGridCell = m_grid->at(0, 0, 0);
     double halfParticle = CParticle::h / 2.0f;
 
-    int calculatedCount = (int) (ceil(boxSize.z() / halfParticle) * ceil(boxSize.y() / halfParticle) * ceil(boxSize.x() / 4 / halfParticle));
-    device_data = new CParticle::Physics[calculatedCount];
+    int calculatedCount = (int) (ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
+    m_device_data = new CParticle::Physics[calculatedCount];
 
-    QVector3D offset = -boxSize / 2.0f;
+    QVector3D offset = -m_boxSize / 2.0f;
 
-    for (float y = 0; y < boxSize.y(); y += halfParticle) {
-        for (float x = 0; x < boxSize.x() / 4.0; x += halfParticle) {
-            for (float z = 0; z < boxSize.z(); z += halfParticle) {
+    for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
+        for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
+            for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
 
                 CParticle::Physics p;
-                p.id = particlesCount;
+                p.id = m_particlesCount;
                 p.position = {x + offset.x(), y + offset.y(), z + offset.z()};
                 p.velocity = {0, 0, 0};
                 p.acceleration = {0, 0, 0};
                 p.density = 0.0;
                 p.pressure = 0;
-                device_data[particlesCount] = p;
+                m_device_data[m_particlesCount] = p;
 
-                auto particle = new CParticle(particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
-                particle->m_physics = &device_data[particlesCount];
+                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
+                particle->m_physics = &m_device_data[m_particlesCount];
 
                 firstGridCell.push_back(particle);
-                particlesCount++;
+                m_particlesCount++;
             }
         }
     }
 
-    assert(calculatedCount == particlesCount);
+    assert(calculatedCount == m_particlesCount);
 
-    dataBufferSize = particlesCount * sizeof(CParticle::Physics);
+    m_dataBufferSize = m_particlesCount * sizeof(CParticle::Physics);
 //    inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
-    outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
+    m_outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_dataBufferSize);
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
-    qDebug() << "simulating" << particlesCount << "particles";
+    qDebug() << "simulating" << m_particlesCount << "particles";
 }
 
 CCPUBruteParticleSimulator::~CCPUBruteParticleSimulator()
 {
-    delete[] device_data;
+    delete[] m_device_data;
 }
 
 void CCPUBruteParticleSimulator::updateGrid()
@@ -80,19 +80,19 @@ void CCPUBruteParticleSimulator::updateGrid()
 void CCPUBruteParticleSimulator::updateDensityPressure()
 {
     cl_uint arg = 0;
-    m_update_density_kernel->setArg(arg++, outputBuffer);
-    m_update_density_kernel->setArg(arg++, particlesCount);
+    m_update_density_kernel->setArg(arg++, m_outputBuffer);
+    m_update_density_kernel->setArg(arg++, m_particlesCount);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
     cl::NDRange local = cl::NullRange;
-    cl::NDRange global(particlesCount);
+    cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 }
@@ -100,26 +100,26 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
 void CCPUBruteParticleSimulator::updateForces()
 {
     cl_uint arg = 0;
-    m_update_forces_kernel->setArg(arg++, outputBuffer);
-    m_update_forces_kernel->setArg(arg++, particlesCount);
-    m_update_forces_kernel->setArg(arg++, gravityCL);
+    m_update_forces_kernel->setArg(arg++, m_outputBuffer);
+    m_update_forces_kernel->setArg(arg++, m_particlesCount);
+    m_update_forces_kernel->setArg(arg++, m_gravityCL);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
     cl::NDRange local = cl::NullRange;
-    cl::NDRange global(particlesCount);
+    cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     // collision force
-    for (int i = 0; i < particlesCount; ++i) {
-        CParticle::Physics &particleCL = device_data[i];
+    for (int i = 0; i < m_particlesCount; ++i) {
+        CParticle::Physics &particleCL = m_device_data[i];
         QVector3D pos = CParticle::clFloatToVector(particleCL.position);
         QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
         QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
@@ -131,8 +131,8 @@ void CCPUBruteParticleSimulator::updateForces()
 void CCPUBruteParticleSimulator::integrate()
 {
     cl_uint arg = 0;
-    m_integration_kernel->setArg(arg++, outputBuffer);
-    m_integration_kernel->setArg(arg++, particlesCount);
+    m_integration_kernel->setArg(arg++, m_outputBuffer);
+    m_integration_kernel->setArg(arg++, m_particlesCount);
     m_integration_kernel->setArg(arg++, dt);
 
     cl::Event writeEvent;
@@ -140,11 +140,11 @@ void CCPUBruteParticleSimulator::integrate()
     cl::Event readEvent;
 
     cl::NDRange local = cl::NullRange;
-    cl::NDRange global(particlesCount);
+    cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(outputBuffer, CL_FALSE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_FALSE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integration_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_FALSE, 0, dataBufferSize, device_data, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_FALSE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
@@ -157,6 +157,6 @@ void CCPUBruteParticleSimulator::integrate()
 void CCPUBruteParticleSimulator::setGravityVector(QVector3D newGravity)
 {
     CBaseParticleSimulator::setGravityVector(newGravity);
-    gravityCL = {gravity.x(), gravity.y(), gravity.z()};
+    m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 }
 

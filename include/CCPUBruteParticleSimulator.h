@@ -16,9 +16,9 @@ protected:
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
     std::shared_ptr<cl::Kernel> m_update_forces_kernel;
 
-    CParticle::Physics *device_data;
+    CParticle::Physics *m_device_data;
 
-    cl_float3 gravityCL;
+    cl_float3 m_gravityCL;
 public:
     explicit CCPUBruteParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
@@ -31,9 +31,8 @@ public:
 
     virtual void setGravityVector(QVector3D newGravity);
 
-    cl::Buffer outputBuffer;
-//    cl::Buffer inputBuffer;
-    size_t dataBufferSize;
+    cl::Buffer m_outputBuffer;
+    size_t m_dataBufferSize;
 };
 
 
