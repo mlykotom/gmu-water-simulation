@@ -18,8 +18,6 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
             APP_RESOURCES"/kernels/scan.cl"
         }
     );
-
-//    m_cl_wrapper->getKernel("matrix_add");
 }
 
 std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
