@@ -52,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
 //    doCalculation();
-
+//exit(0);
 
     try {
         //Particle simulator

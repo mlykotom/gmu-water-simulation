@@ -3,6 +3,7 @@
 
 #include "CLCommon.h"
 #include <fstream>
+#include <istream>
 #include <QDebug>
 
 class CLWrapper

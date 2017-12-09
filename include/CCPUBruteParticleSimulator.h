@@ -14,8 +14,11 @@ protected:
 
     std::shared_ptr<cl::Kernel> m_integration_kernel;
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
+    std::shared_ptr<cl::Kernel> m_update_forces_kernel;
 
     CParticle::Physics *device_data;
+
+    cl_float3 gravityCL;
 public:
     explicit CCPUBruteParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
@@ -24,9 +27,11 @@ public:
     void updateDensityPressure() override;
     void updateForces() override;
     void integrate() override;
-    virtual ~CCPUBruteParticleSimulator();
+    ~CCPUBruteParticleSimulator() override;
 
-//    cl::Buffer outputBuffer;
+    virtual void setGravityVector(QVector3D newGravity);
+
+    cl::Buffer outputBuffer;
 //    cl::Buffer inputBuffer;
     size_t dataBufferSize;
 };

@@ -14,19 +14,20 @@ public:
     // WARNING: must be same as in kernels
     struct Physics
     {
+        cl_uint id;
         cl_float3 position;
         cl_float3 velocity;
         cl_float3 acceleration;
-        cl_double density;
-        cl_double pressure;
+        cl_float density;
+        cl_float pressure;
     };
 
-    explicit CParticle(const unsigned long id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));
-    ~CParticle();
+    explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));
+    ~CParticle() override;
 
 public: //methods
 
-    const unsigned long getId() const { return m_id; }
+    unsigned int getId() const { return m_id; }
     QVector3D &position() { return m_position; }
     QVector3D &acceleration() { return m_acceleration; };
     QVector3D &velocity() { return m_velocity; };
@@ -91,7 +92,7 @@ private:
     Qt3DExtras::QSphereMesh *m_mesh;
     Qt3DExtras::QPhongMaterial *m_material;
 
-    const unsigned long m_id;
+    unsigned int m_id;
 
 };
 

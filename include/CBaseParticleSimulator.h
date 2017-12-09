@@ -48,7 +48,7 @@ protected:
     CGrid *m_grid;
     QVector3D boxSize;
     double surfaceThreshold;
-    unsigned long particlesCount = 0;
+    unsigned int particlesCount = 0;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
@@ -58,13 +58,17 @@ protected:
 
 public:
     explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
-    ~CBaseParticleSimulator() override {}
+    ~CBaseParticleSimulator() override
+    {
+        delete m_grid;
+    }
 
     virtual void setupScene();
     virtual void start();
 
     void toggleSimulation();
     void toggleGravity();
+    virtual void setGravityVector(QVector3D newGravity);
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();

@@ -7,8 +7,10 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
       dt(0.01),
       totalIteration(0),
       surfaceThreshold(0.01),
-      boxSize(QVector3D(0.3, 0.3, 0.3))
+//      boxSize(QVector3D(0.3, 0.3, 0.3))
 //      boxSize(QVector3D(0.4, 0.4, 0.4))
+      boxSize(QVector3D(0.5, 0.5, 0.5))
+//      boxSize(QVector3D(0.6, 0.6, 0.6))
 {
     QVector3D gridResolution(
         (int) ceil(boxSize.x() / CParticle::h),
@@ -69,11 +71,16 @@ void CBaseParticleSimulator::toggleSimulation()
 void CBaseParticleSimulator::toggleGravity()
 {
     if (gravity.length() > 0.0) {
-        gravity = QVector3D(0, 0, 0);
+        setGravityVector(QVector3D(0, 0, 0));
     }
     else {
-        gravity = QVector3D(0, GRAVITY_ACCELERATION, 0);
+        setGravityVector(QVector3D(0, GRAVITY_ACCELERATION, 0));
     }
+}
+
+void CBaseParticleSimulator::setGravityVector(QVector3D newGravity)
+{
+    gravity = newGravity;
 }
 
 void CBaseParticleSimulator::step()
@@ -133,6 +140,16 @@ void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 
         case Qt::Key_G:
             toggleGravity();
+            break;
+
+        case Qt::Key_O:
+            gravity.setX(gravity.x() - 1);
+            setGravityVector(gravity);
+            break;
+
+        case Qt::Key_P:
+            gravity.setX(gravity.x() + 1);
+            setGravityVector(gravity);
             break;
     }
 }
