@@ -4,7 +4,7 @@ std::string CLWrapper::readFile(std::string fileName)
 {
     auto fin = std::ifstream(fileName, std::ifstream::in | std::ifstream::binary);
     if (fin.bad() || fin.fail()) {
-        throw std::runtime_error("Couldn't open source file");
+        throw std::runtime_error("Couldn't open source file | readFile");
     }
 
     std::string content;

@@ -20,7 +20,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
     );
 
     m_integration_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
-    m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
+//    m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
 }
 
 void CCPUBruteParticleSimulator::setupScene()
@@ -57,10 +57,6 @@ void CCPUBruteParticleSimulator::setupScene()
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
     qDebug() << "simulating" << particlesCount << "particles";
-
-    dataBufferSize = particlesCount * sizeof(CParticle::Physics);
-    inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
-    outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
 }
 
 CCPUBruteParticleSimulator::~CCPUBruteParticleSimulator()
@@ -94,31 +90,35 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
         }
 
 //        particle->density() *= CParticle::mass;
-        particleCL.density *= CParticle::mass;
 //         p = k(density - density_rest)
 //        particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
-        particleCL.pressure = CParticle::gas_stiffness * (particleCL.density - CParticle::rest_density);
+
+        double newDensity = particleCL.density * CParticle::mass;
+        particleCL.density = newDensity;
+        particleCL.pressure = CParticle::gas_stiffness * (newDensity - CParticle::rest_density);
 
 //        qDebug() << particle->density() << particleCL.density << "|" << particle->pressure() << particleCL.pressure;
     }
 
-    m_update_density_kernel->setArg(0, outputBuffer);
-    m_update_density_kernel->setArg(1, inputBuffer);
-    m_update_density_kernel->setArg(2, dataBufferSize);
-
-    cl::Event writeEvent;
-    cl::Event kernelEvent;
-    cl::Event readEvent;
-
-    cl::NDRange local(16);
-    cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
-
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, device_data, nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, dataBufferSize, device_data, nullptr, &readEvent);
-
-    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+//    cl::Buffer beforeBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, dataBufferSize, device_data);
+////    cl::Buffer beforeBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, dataBufferSize, &device_data);
+//
+//    m_update_density_kernel->setArg(0, outputBuffer);
+//    m_update_density_kernel->setArg(1, beforeBuffer);
+//    m_update_density_kernel->setArg(2, dataBufferSize);
+//
+//    cl::Event writeEvent;
+//    cl::Event kernelEvent;
+//    cl::Event readEvent;
+//
+//    cl::NDRange local(16);
+//    cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
+//
+//    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
+//    m_cl_wrapper->getQueue().enqueueWriteBuffer(beforeBuffer, true, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+//    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
+//    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, dataBufferSize, device_data, nullptr, &readEvent);
+//    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 }
 
 void CCPUBruteParticleSimulator::updateForces()
@@ -176,24 +176,43 @@ void CCPUBruteParticleSimulator::updateForces()
 
 void CCPUBruteParticleSimulator::integrate()
 {
-    m_integration_kernel->setArg(0, outputBuffer);
-    m_integration_kernel->setArg(1, inputBuffer);
-    m_integration_kernel->setArg(2, dataBufferSize);
-    m_integration_kernel->setArg(3, dt);
+    // TODO only one step
+    if (totalIteration > 5)
+        return;
+
+    unsigned long dataBufferSize = particlesCount * sizeof(CParticle::Physics);
+    cl::Buffer inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
+    cl::Buffer outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
+
+    cl_uint arg = 0;
+    m_integration_kernel->setArg(arg++, outputBuffer);
+    m_integration_kernel->setArg(arg++, inputBuffer);
+    m_integration_kernel->setArg(arg++, dataBufferSize);
+    m_integration_kernel->setArg(arg++, dt);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-    cl::NDRange local(16);
+//    CParticle::Physics *banan = new CParticle::Physics[particlesCount];
+
+//    CParticle::Physics *input_data = new CParticle::Physics[particlesCount]();
+
+    cl::NDRange local = cl::NullRange;//(16); //NULL
     cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
 
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+//    cl::NDRange global(dataBufferSize);
+
+    qDebug() << device_data[0].position.s[0] << device_data[0].position.s[1] << device_data[0].position.s[2];
+
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, CL_FALSE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integration_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, dataBufferSize, device_data, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_FALSE, 0, dataBufferSize, device_data, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    qDebug() << "new" << device_data[0].position.s[0] << device_data[0].position.s[1] << device_data[0].position.s[2];
+
 
     std::vector<CParticle *> &particles = m_grid->getData()[0];
     for (auto &particle : particles) {

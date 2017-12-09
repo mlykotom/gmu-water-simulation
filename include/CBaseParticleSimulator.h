@@ -33,10 +33,12 @@ signals:
 private: //attributes
     QTimer m_timer;
     QElapsedTimer m_elapsed_timer;
-    unsigned long totalIteration;
     unsigned long iterationSincePaused;
 
 protected:
+    unsigned long totalIteration;   // TODO move to private
+
+
     CScene *m_scene;
     QVector3D gravity;
 
