@@ -99,56 +99,23 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
 
 void CCPUBruteParticleSimulator::updateForces()
 {
-//    for (int i = 0; i < particlesCount; ++i) {
-//        CParticle::Physics &particleCL = device_data[i];
-//
-//        QVector3D f_gravity = gravity * particleCL.density;
-//        QVector3D f_pressure, f_viscosity;
-//
-//        auto &neighborGridCellParticles = m_grid->at(0, 0, 0);
-//
-//        for (auto &neighbor : neighborGridCellParticles) {
-//            QVector3D distance = CParticle::diffPosition(particleCL.position, neighbor->m_physics->position);
-//            double radiusSquared = distance.lengthSquared();
-//
-//            if (radiusSquared <= CParticle::h * CParticle::h) {
-//                QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
-//                QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
-//
-//                if (particleCL.id != neighbor->m_physics->id) {
-//                    f_pressure += (particleCL.pressure / pow(particleCL.density, 2) + particleCL.pressure / pow(particleCL.density, 2)) * spikyGradient;
-//                    f_viscosity += CParticle::diffPosition(neighbor->m_physics->velocity, particleCL.velocity) * WviscosityLaplacian(radiusSquared) / particleCL.density;
-//                }
-//            }
-//        }
-//
-//        f_pressure *= -CParticle::mass * particleCL.density;
-//        f_viscosity *= CParticle::viscosity * CParticle::mass;
-//
-//        // ADD IN SPH FORCES
-//        QVector3D f_total = (f_pressure + f_viscosity + f_gravity) / particleCL.density;
-//        particleCL.acceleration = {f_total.x(), f_total.y(), f_total.z()};
-//    }
+    cl_uint arg = 0;
+    m_update_forces_kernel->setArg(arg++, outputBuffer);
+    m_update_forces_kernel->setArg(arg++, particlesCount);
+    m_update_forces_kernel->setArg(arg++, gravityCL);
 
-    {
-        cl_uint arg = 0;
-        m_update_forces_kernel->setArg(arg++, outputBuffer);
-        m_update_forces_kernel->setArg(arg++, particlesCount);
-        m_update_forces_kernel->setArg(arg++, gravityCL);
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
 
-        cl::Event writeEvent;
-        cl::Event kernelEvent;
-        cl::Event readEvent;
+    cl::NDRange local = cl::NullRange;
+    cl::NDRange global(particlesCount);
 
-        cl::NDRange local = cl::NullRange;
-        cl::NDRange global(particlesCount);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &readEvent);
 
-        m_cl_wrapper->getQueue().enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &writeEvent);
-        m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, global, local, nullptr, &kernelEvent);
-        m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, CL_TRUE, 0, dataBufferSize, device_data, nullptr, &readEvent);
-
-        CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-    }
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     // collision force
     for (int i = 0; i < particlesCount; ++i) {
