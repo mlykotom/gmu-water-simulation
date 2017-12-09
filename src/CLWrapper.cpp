@@ -4,7 +4,7 @@ std::string CLWrapper::readFile(std::string fileName)
 {
     auto fin = std::ifstream(fileName, std::ifstream::in | std::ifstream::binary);
     if (fin.bad() || fin.fail()) {
-        throw std::runtime_error("Couldn't open source file");
+        throw std::runtime_error("Couldn't open source file | readFile");
     }
 
     std::string content;
@@ -50,4 +50,12 @@ cl::Kernel CLWrapper::getKernel(const std::string &kernelName)
     cl::Kernel kernel(m_program, kernelName.c_str(), &error);
     CLCommon::checkError(error, "cl::Kernel");
     return kernel;
+}
+
+cl::Buffer CLWrapper::createBuffer(cl_mem_flags flags, size_t bufferSize, void *hostPtr)
+{
+    cl_int err;
+    auto inputBuffer = cl::Buffer(m_context, flags, bufferSize, hostPtr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    return inputBuffer;
 }

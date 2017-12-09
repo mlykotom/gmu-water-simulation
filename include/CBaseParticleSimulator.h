@@ -33,19 +33,22 @@ signals:
 private: //attributes
     QTimer m_timer;
     QElapsedTimer m_elapsed_timer;
-    unsigned long totalIteration;
     unsigned long iterationSincePaused;
 
 protected:
+    unsigned long totalIteration;   // TODO move to private
+
+
     CScene *m_scene;
     QVector3D gravity;
 
     QVector3D m_cellSize; // TODO is it anyhow useful?
 
-    double dt;
+    float dt;
     CGrid *m_grid;
     QVector3D boxSize;
     double surfaceThreshold;
+    unsigned long particlesCount = 0;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
@@ -65,6 +68,8 @@ public:
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
+    unsigned long getParticlesCount() { return particlesCount; }
+
     void step();
 
     // TODO  not sure if every implementation has it (or it should be static)

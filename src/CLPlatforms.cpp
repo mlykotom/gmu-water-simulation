@@ -68,16 +68,20 @@ void CLPlatforms::printInfoAll()
  */
 cl::Device CLPlatforms::getBestGPU()
 {
-    int platform_index, device_index;
+    int platform_index, device_index, device_type;
 #ifdef __APPLE__
     platform_index = 0;
-    device_index = 1;
+//    device_index = 1 ; //intel gpu
+//    device_index = 2 ; //+GPU amd
+    device_index = 2;
+    device_type = CL_DEVICE_TYPE_ALL;
 #else
     platform_index = 1;
     device_index = 0;
+    device_type = CL_DEVICE_TYPE_GPU;
 #endif
 
     cl::Platform platform = getAllPlatforms()[platform_index];
 
-    return getDevices(platform, CL_DEVICE_TYPE_GPU)[device_index];
+    return getDevices(platform, device_type)[device_index];
 }

@@ -131,7 +131,7 @@ public:
      * @param align_size
      * @return
      */
-    static inline unsigned int alignTo(unsigned int data, unsigned int align_size)
+    static inline size_t alignTo(size_t data, size_t align_size)
     {
         return ((data - 1 + align_size) / align_size) * align_size;
     }
