@@ -26,7 +26,7 @@ public:
     void integrate() override;
     virtual ~CCPUBruteParticleSimulator();
 
-//    cl::Buffer outputBuffer;
+    cl::Buffer outputBuffer;
 //    cl::Buffer inputBuffer;
     size_t dataBufferSize;
 };

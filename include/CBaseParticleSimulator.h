@@ -48,7 +48,7 @@ protected:
     CGrid *m_grid;
     QVector3D boxSize;
     double surfaceThreshold;
-    unsigned long particlesCount = 0;
+    unsigned int particlesCount = 0;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;

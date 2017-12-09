@@ -9,6 +9,7 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
       surfaceThreshold(0.01),
       boxSize(QVector3D(0.3, 0.3, 0.3))
 //      boxSize(QVector3D(0.4, 0.4, 0.4))
+//      boxSize(QVector3D(0.5, 0.5, 0.5))
 {
     QVector3D gridResolution(
         (int) ceil(boxSize.x() / CParticle::h),
