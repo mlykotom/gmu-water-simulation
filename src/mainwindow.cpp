@@ -11,6 +11,7 @@
 #include <CQt3DWindow.h>
 #include <include/CCPUBruteParticleSimulator.h>
 #include <include/CGPUParticleSimulator.h>
+#include <include/CCPUParticleSimulator.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -56,13 +57,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     try {
         //Particle simulator
-//        m_simulator = new CCPUParticleS imulator(m_scene, nullptr);
-        m_simulator = new CGPUParticleSimulator(m_scene);
-        //m_simulator = new CCPUBruteParticleSimulator(m_scene);
 
-//        m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
+        m_simulator = new CCPUParticleSimulator(m_scene);
 //        m_simulator = new CGPUParticleSimulator(m_scene);
-        m_simulator = new CCPUBruteParticleSimulator(m_scene);
+        //m_simulator = new CCPUBruteParticleSimulator(m_scene);
 		//m_simulator = new CGPUParticleSimulator(m_scene);
 
         

@@ -7,7 +7,7 @@
 class CCPUParticleSimulator: public CBaseParticleSimulator
 {
 public:
-    CCPUParticleSimulator(CScene *scene, QObject *parent);
+    CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
     void updateGrid() override;
     void updateDensityPressure() override;

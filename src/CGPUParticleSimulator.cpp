@@ -127,9 +127,9 @@ void CGPUParticleSimulator::updateGrid()
                 for (unsigned long p = 0; p < particles.size(); p++) {
                     CParticle *particle = particles[p];
 
-                    int newGridCellX = (int) floor((particle->position().x() + m_boxSize.x() / 2.0) / CParticle::h);
-                    int newGridCellY = (int) floor((particle->position().y() + m_boxSize.y() / 2.0) / CParticle::h);
-                    int newGridCellZ = (int) floor((particle->position().z() + m_boxSize.z() / 2.0) / CParticle::h);
+                    int newGridCellX = (int) floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
+                    int newGridCellY = (int) floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
+                    int newGridCellZ = (int) floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
                     //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
                     //cout << "particle position: " << particle->position() << endl;
                     //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
