@@ -187,9 +187,9 @@ void CCPUBruteParticleSimulator::integrate()
         particle->updateVelocity();
     }
 }
-void CCPUBruteParticleSimulator::toggleGravity()
+void CCPUBruteParticleSimulator::setGravityVector(QVector3D newGravity)
 {
-    CBaseParticleSimulator::toggleGravity();
+    CBaseParticleSimulator::setGravityVector(newGravity);
     gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 }
 

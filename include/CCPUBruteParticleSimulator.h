@@ -29,7 +29,7 @@ public:
     void integrate() override;
     ~CCPUBruteParticleSimulator() override;
 
-    void toggleGravity();
+    virtual void setGravityVector(QVector3D newGravity);
 
     cl::Buffer outputBuffer;
 //    cl::Buffer inputBuffer;

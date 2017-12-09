@@ -66,7 +66,8 @@ public:
     virtual void start();
 
     void toggleSimulation();
-    virtual void toggleGravity();
+    void toggleGravity();
+    virtual void setGravityVector(QVector3D newGravity);
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();

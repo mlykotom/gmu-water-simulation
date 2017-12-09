@@ -71,11 +71,16 @@ void CBaseParticleSimulator::toggleSimulation()
 void CBaseParticleSimulator::toggleGravity()
 {
     if (gravity.length() > 0.0) {
-        gravity = QVector3D(0, 0, 0);
+        setGravityVector(QVector3D(0, 0, 0));
     }
     else {
-        gravity = QVector3D(0, GRAVITY_ACCELERATION, 0);
+        setGravityVector(QVector3D(0, GRAVITY_ACCELERATION, 0));
     }
+}
+
+void CBaseParticleSimulator::setGravityVector(QVector3D newGravity)
+{
+    gravity = newGravity;
 }
 
 void CBaseParticleSimulator::step()
@@ -135,6 +140,16 @@ void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 
         case Qt::Key_G:
             toggleGravity();
+            break;
+
+        case Qt::Key_O:
+            gravity.setX(gravity.x() - 1);
+            setGravityVector(gravity);
+            break;
+
+        case Qt::Key_P:
+            gravity.setX(gravity.x() + 1);
+            setGravityVector(gravity);
             break;
     }
 }
