@@ -36,13 +36,23 @@ void CCPUBruteParticleSimulator::setupScene()
     for (float y = 0; y < boxSize.y(); y += halfParticle) {
         for (float x = 0; x < boxSize.x() / 4.0; x += halfParticle) {
             for (float z = 0; z < boxSize.z(); z += halfParticle) {
-                device_data[particlesCount] = CParticle::Physics{
-                    .position       = {x + offset.x(), y + offset.y(), z + offset.z()},
-                    .velocity       = {0, 0, 0},
-                    .acceleration   = {0, 0, 0},
-                    .density        = 0.0,
-                    .pressure       = 0
-                };
+
+                CParticle::Physics p;
+
+                p.position = { x + offset.x(), y + offset.y(), z + offset.z() };
+                p.velocity = { 0, 0, 0 };
+                p.acceleration = { 0, 0, 0 };
+                p.density = 0.0;
+                p.pressure = 0;
+                device_data[particlesCount] = p;
+
+                //device_data[particlesCount] = CParticle::Physics{
+                //    .position       = {x + offset.x(), y + offset.y(), z + offset.z()},
+                //    .velocity       = {0, 0, 0},
+                //    .acceleration   = {0, 0, 0},
+                //    .density        = 0.0,
+                //    .pressure       = 0
+                //};
 
                 auto particle = new CParticle(particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
                 particle->m_physics = &device_data[particlesCount];
@@ -180,14 +190,14 @@ void CCPUBruteParticleSimulator::integrate()
     if (totalIteration > 5)
         return;
 
-    unsigned long dataBufferSize = particlesCount * sizeof(CParticle::Physics);
+    size_t dataBufferSize = particlesCount * sizeof(CParticle::Physics);
     cl::Buffer inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
     cl::Buffer outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
 
     cl_uint arg = 0;
     m_integration_kernel->setArg(arg++, outputBuffer);
     m_integration_kernel->setArg(arg++, inputBuffer);
-    m_integration_kernel->setArg(arg++, dataBufferSize);
+    m_integration_kernel->setArg(arg++, particlesCount);
     m_integration_kernel->setArg(arg++, dt);
 
     cl::Event writeEvent;
@@ -198,8 +208,8 @@ void CCPUBruteParticleSimulator::integrate()
 
 //    CParticle::Physics *input_data = new CParticle::Physics[particlesCount]();
 
-    cl::NDRange local = cl::NullRange;//(16); //NULL
-    cl::NDRange global(CLCommon::alignTo(dataBufferSize, 16));
+    cl::NDRange local = 16; //cl::NullRange;//(16); //NULL
+    cl::NDRange global(CLCommon::alignTo(particlesCount, 16));
 
 //    cl::NDRange global(dataBufferSize);
 
