@@ -16,7 +16,7 @@ class CParticle: RenderableEntity
 public:
     // WARNING: must be same as in kernels
 
-//#pragma pack(push ,16) 
+#ifdef WIN32
     typedef __declspec(align(16)) struct sPhysics
     {
         cl_float3 position;
@@ -26,8 +26,17 @@ public:
         cl_float pressure;
         cl_uint id;
     }Physics;
-//#pragma pack(pop) 
-
+#else
+    typedef struct __attribute__((aligned(16))) sPhysics
+    {
+        cl_float3 position;
+        cl_float3 velocity;
+        cl_float3 acceleration;
+        cl_float density;
+        cl_float pressure;
+        cl_uint id;
+    }Physics;
+#endif
     explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));
     ~CParticle() override;
 
@@ -70,6 +79,11 @@ public: //methods
     static inline QVector3D clFloatToVector(cl_float3 vec)
     {
         return {vec.x, vec.y, vec.z};
+    }
+
+    static inline cl_float3 qVectortoClFloat(QVector3D vec)
+    {
+        return{ vec.x(), vec.y(), vec.z() };
     }
 
     static inline QVector3D diffPosition(cl_float3 a, cl_float3 b)

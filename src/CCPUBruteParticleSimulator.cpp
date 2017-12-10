@@ -118,13 +118,15 @@ void CCPUBruteParticleSimulator::updateForces()
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     // collision force
-    for (int i = 0; i < m_particlesCount; ++i) {
+    for (int i = 0; i < m_particlesCount; ++i) 
+    {
         CParticle::Physics &particleCL = m_device_data[i];
         QVector3D pos = CParticle::clFloatToVector(particleCL.position);
         QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
-        QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
 
-        particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
+        m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particleCL);
+        //QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
+        //particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
     }
 }
 
