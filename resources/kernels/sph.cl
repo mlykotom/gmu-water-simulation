@@ -8,14 +8,14 @@
 #pragma OPENCL EXTENSION cl_amd_printf : enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 
-typedef struct tag_ParticleCL
+typedef struct  __attribute__((aligned(16))) tag_ParticleCL
 {
-    ulong id;
     float3 position;
     float3 velocity;
     float3 acceleration;
     float density;
     float pressure;
+    uint id;
 } ParticleCL;
 
 __constant float mass = 0.02f; // kg
