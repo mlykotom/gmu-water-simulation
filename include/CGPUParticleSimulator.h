@@ -8,13 +8,12 @@
 
 class CGPUParticleSimulator: public CBaseParticleSimulator
 {
-protected:
-    CLWrapper *m_cl_wrapper;
-    std::shared_ptr<cl::Kernel> m_kernel;;
+
 
 public:
     explicit CGPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
+    void setupScene() override;
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
@@ -26,6 +25,12 @@ public:
 
 private: //methods
     std::vector<cl_int> scan(std::vector<cl_int> input);
+
+protected:
+    CLWrapper *m_cl_wrapper;
+    std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
+    CParticle::Physics *m_device_data;
+
 };
 
 

@@ -18,6 +18,9 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
             APP_RESOURCES"/kernels/scan.cl"
         }
     );
+
+    m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
+
 }
 
 std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
@@ -65,9 +68,7 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input_array, nullptr, &writeEvent);
-
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
-
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, inputSize, output_array, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
@@ -82,33 +83,38 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
 {
-    std::vector<cl_int> input;
+  //  std::vector<cl_int> input;
 
-    input.push_back(1);
-    input.push_back(2);
-    input.push_back(3);
-    input.push_back(4);
-
-    input.push_back(5);
-    input.push_back(6);
-    input.push_back(7); 
-    input.push_back(8);
-
-    input.push_back(1);
-    input.push_back(2);
-    input.push_back(3);
-    input.push_back(4);
+  //  input.push_back(1);
+  //  input.push_back(2);
+  //  input.push_back(3);
+  //  input.push_back(4);
 
   //  input.push_back(5);
-    input.push_back(6);
-    input.push_back(7);
-    //input.push_back(8);
+  //  input.push_back(6);
+  //  input.push_back(7); 
+  //  input.push_back(8);
+
+  //  input.push_back(1);
+  //  input.push_back(2);
+  //  input.push_back(3);
+  //  input.push_back(4);
+
+  ////  input.push_back(5);
+  //  input.push_back(6);
+  //  input.push_back(7);
+  //  //input.push_back(8);
 
 
-    std::vector<cl_int> output =  scan(input);
+  //  std::vector<cl_int> output =  scan(input);
 
-    for (cl_int i : output)
-        qDebug() << i;
+  //  for (cl_int i : output)
+  //      qDebug() << i;
+
+    setupScene();
+    updateGrid();
+
+
 
     return;
 
@@ -116,67 +122,165 @@ void CGPUParticleSimulator::test()
     
 }
 
-void CGPUParticleSimulator::updateGrid()
+void CGPUParticleSimulator::setupScene()
 {
-    for (int x = 0; x < m_grid->xRes(); x++) {
-        for (int y = 0; y < m_grid->yRes(); y++) {
-            for (int z = 0; z < m_grid->zRes(); z++) {
+    auto &firstGridCell = m_grid->at(0, 0, 0);
+    double halfParticle = CParticle::h / 2.0f;
 
-                std::vector<CParticle *> &particles = m_grid->at(x, y, z);
+    int calculatedCount = (int)(ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
+    m_device_data = new CParticle::Physics[calculatedCount];
 
-                for (unsigned long p = 0; p < particles.size(); p++) {
-                    CParticle *particle = particles[p];
+    QVector3D offset = -m_boxSize / 2.0f;
 
-                    int newGridCellX = (int) floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
-                    int newGridCellY = (int) floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
-                    int newGridCellZ = (int) floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
-                    //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
-                    //cout << "particle position: " << particle->position() << endl;
-                    //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
+    for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
+        for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
+            for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
 
-                    if (newGridCellX < 0) {
-                        newGridCellX = 0;
-                    }
-                    else if (newGridCellX >= m_grid->xRes()) {
-                        newGridCellX = m_grid->xRes() - 1;
-                    }
+                CParticle::Physics p;
+                p.id = m_particlesCount;
+                p.position = { x + offset.x(), y + offset.y(), z + offset.z() };
+                p.velocity = { 0, 0, 0 };
+                p.acceleration = { 0, 0, 0 };
+                p.density = 0.0;
+                p.pressure = 0;
+                m_device_data[m_particlesCount] = p;
 
-                    if (newGridCellY < 0) {
-                        newGridCellY = 0;
-                    }
-                    else if (newGridCellY >= m_grid->yRes()) {
-                        newGridCellY = m_grid->yRes() - 1;
-                    }
+                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
+                particle->m_physics = &m_device_data[m_particlesCount];
 
-                    if (newGridCellZ < 0) {
-                        newGridCellZ = 0;
-                    }
-                    else if (newGridCellZ >= m_grid->zRes()) {
-                        newGridCellZ = m_grid->zRes() - 1;
-                    }
-
-                    //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
-
-
-                    // check if particle has moved
-
-                    if (x != newGridCellX || y != newGridCellY || z != newGridCellZ) {
-
-                        // move the particle to the new grid cell
-
-                        std::vector<CParticle *> &what = m_grid->at(newGridCellX, newGridCellY, newGridCellZ);
-                        what.push_back(particle);
-                        // remove it from it's previous grid cell
-
-                        particles.at(p) = particles.back();
-                        particles.pop_back();
-
-                        p--; // important! make sure to redo this index, since a new particle will (probably) be there
-                    }
-                }
+                firstGridCell.push_back(particle);
+                m_particlesCount++;
             }
         }
     }
+
+
+
+    qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
+    qDebug() << "simulating" << m_particlesCount << "particles";
+}
+
+void CGPUParticleSimulator::updateGrid()
+{
+
+    //for (int i = 0; i < m_particlesCount; ++i)
+    //{
+    //    qDebug() << m_device_data[i].id;
+    //}
+
+
+    cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("update_grid_positions"));
+
+
+    size_t particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+
+    cl_float3 halfCellSize = { m_cellSize.x() / 2.0, m_cellSize.y() / 2.0, m_cellSize.z() / 2.0 };
+    cl_int3 gridSize = { m_grid->xRes(),m_grid->yRes() ,m_grid->zRes() };
+
+    std::vector<cl_int> output;
+   cl_int outputCount = gridSize.x * gridSize.y * gridSize.z;
+    output.resize(outputCount,0);
+    cl_int *output_array = output.data();
+    size_t outputSize = output.size() * sizeof(cl_int);
+
+    cl_int err;
+    cl_int initValue = 0;
+
+    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, &initValue, &err);
+    CLCommon::checkError(err, "outputBuffer creation");
+
+
+
+    cl_int arg = 0;
+    kernel.setArg(arg++, inputBuffer);
+    kernel.setArg(arg++, outputBuffer);
+    kernel.setArg(arg++, (cl_int)m_particlesCount);
+    kernel.setArg(arg++, gridSize);
+    kernel.setArg(arg++, halfCellSize);
+    kernel.setArg(arg++, (cl_float)CParticle::h);
+
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
+
+
+    cl::NDRange local(16);
+    //we need only half the threads of the input count
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange offset(0);
+
+
+    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, m_device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    for (cl_int i : output)
+        qDebug() << i;
+
+    //for (int x = 0; x < m_grid->xRes(); x++) {
+    //    for (int y = 0; y < m_grid->yRes(); y++) {
+    //        for (int z = 0; z < m_grid->zRes(); z++) {
+
+    //            std::vector<CParticle *> &particles = m_grid->at(x, y, z);
+
+    //            for (unsigned long p = 0; p < particles.size(); p++) {
+    //                CParticle *particle = particles[p];
+
+    //                int newGridCellX = (int) floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
+    //                int newGridCellY = (int) floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
+    //                int newGridCellZ = (int) floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
+    //                //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
+    //                //cout << "particle position: " << particle->position() << endl;
+    //                //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
+
+    //                if (newGridCellX < 0) {
+    //                    newGridCellX = 0;
+    //                }
+    //                else if (newGridCellX >= m_grid->xRes()) {
+    //                    newGridCellX = m_grid->xRes() - 1;
+    //                }
+
+    //                if (newGridCellY < 0) {
+    //                    newGridCellY = 0;
+    //                }
+    //                else if (newGridCellY >= m_grid->yRes()) {
+    //                    newGridCellY = m_grid->yRes() - 1;
+    //                }
+
+    //                if (newGridCellZ < 0) {
+    //                    newGridCellZ = 0;
+    //                }
+    //                else if (newGridCellZ >= m_grid->zRes()) {
+    //                    newGridCellZ = m_grid->zRes() - 1;
+    //                }
+
+    //                //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
+
+
+    //                // check if particle has moved
+
+    //                if (x != newGridCellX || y != newGridCellY || z != newGridCellZ) {
+
+    //                    // move the particle to the new grid cell
+
+    //                    std::vector<CParticle *> &what = m_grid->at(newGridCellX, newGridCellY, newGridCellZ);
+    //                    what.push_back(particle);
+    //                    // remove it from it's previous grid cell
+
+    //                    particles.at(p) = particles.back();
+    //                    particles.pop_back();
+
+    //                    p--; // important! make sure to redo this index, since a new particle will (probably) be there
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
 }
 
 void CGPUParticleSimulator::updateDensityPressure()

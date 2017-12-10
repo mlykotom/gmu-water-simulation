@@ -12,7 +12,7 @@ void CCPUParticleSimulator::updateGrid()
         for (int y = 0; y < m_grid->yRes(); y++) {
             for (int z = 0; z < m_grid->zRes(); z++) {
 
-                std::vector<CParticle *> &particles = m_grid->at(x, y, z);
+                std::vector<CParticle *> particles = m_grid->at(x, y, z);
 
                 for (unsigned long p = 0; p < particles.size(); p++) {
                     CParticle *particle = particles[p];
