@@ -8,19 +8,25 @@
 #include <CL/cl.hpp>
 #include "renderableentity.h"
 
+#include <stddef.h>  
+#include <stdio.h>  
+
 class CParticle: RenderableEntity
 {
 public:
     // WARNING: must be same as in kernels
-    struct Physics
+
+//#pragma pack(push ,16) 
+    typedef __declspec(align(16)) struct sPhysics
     {
-        cl_uint id;
         cl_float3 position;
         cl_float3 velocity;
         cl_float3 acceleration;
         cl_float density;
         cl_float pressure;
-    };
+        cl_uint id;
+    }Physics;
+//#pragma pack(pop) 
 
     explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));
     ~CParticle() override;

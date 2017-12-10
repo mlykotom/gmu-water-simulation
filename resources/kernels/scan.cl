@@ -44,23 +44,25 @@ __kernel void blelloch_scan(__global int *input, int array_size, __global int *r
 
 
 //TODO: move to another file
-typedef struct tag_ParticleCL
+//#pragma pack(push ,16) 
+typedef struct  __attribute__((aligned(16))) tag_ParticleCL
 {
-    ulong id;
     float3 position;
     float3 velocity;
     float3 acceleration;
     float density;
     float pressure;
+    uint id;
 } ParticleCL;
+//#pragma pack(pop) 
 
 __kernel void update_grid_positions(__global ParticleCL *particles, __global int *positions, int particles_count, int3 grid_size, float3 halfCellSize, float h)
 {
     int global_x = (int)get_global_id(0);
 
-    volatile __global int* counterPtr = positions;
-    barrier(CLK_GLOBAL_MEM_FENCE);
-    barrier(CLK_LOCAL_MEM_FENCE);
+    //volatile __global int* counterPtr = positions;
+    //barrier(CLK_GLOBAL_MEM_FENCE);
+    //barrier(CLK_LOCAL_MEM_FENCE);
 
     if (global_x < particles_count)
     {
@@ -71,7 +73,8 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         int y = (int) floor(newGridPosition.y);
         int z = (int) floor(newGridPosition.z);
 
-         printf("global index: %d, particle index: %d \n", global_x, particles[global_x].id);
+        // printf("global index: %d, particle index: %d \n", global_x, particles[global_x].id);
+        //return;
 
         //printf("x: %d, y: %d, z: %d  \n", x, y, z);
        // printf("global index: %d \n", global_x);
@@ -104,9 +107,9 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
 
         //A[depth][col][row]
         //(x*grid_size.y + y) * grid_size.z + z        
-        //int index = (x*grid_size.y + y) * grid_size.z + z;
+        int index = (z*grid_size.y + y) * grid_size.z + x;
 
-        int index = x + y * grid_size.y + z * grid_size.y * grid_size.z;
+        //int index = x + y * grid_size.y + z * grid_size.y * grid_size.z;
 
         bool b = ( (index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0) );
         //if (index < (grid_size.x*grid_size.y*grid_size.z) && index >= 0)
@@ -123,7 +126,7 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
 
         //}
 
-        printf("index: %d, x: %d, y: %d, z: %d  \n", index,x,y,z);
+        //printf("index: %d, x: %d, y: %d, z: %d  \n", index,x,y,z);
 
         if ((index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0))
         {

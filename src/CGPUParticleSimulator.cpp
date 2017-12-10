@@ -129,7 +129,7 @@ void CGPUParticleSimulator::setupScene()
 
     int calculatedCount = (int)(ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
     //m_device_data = new CParticle::Physics[calculatedCount];
-    m_clParticles.resize(calculatedCount);
+    m_clParticles.reserve(calculatedCount);
 
     QVector3D offset = -m_boxSize / 2.0f;
 
@@ -172,10 +172,13 @@ void CGPUParticleSimulator::updateGrid()
     //    qDebug() << m_device_data[i].position.x << m_device_data[i].position.y << m_device_data[i].position.z;
     //}
 
+    qDebug() << sizeof(m_clParticles.at(0));
+    qDebug() << sizeof(CParticle::Physics);
+    qDebug() << m_particlesCount << m_clParticles.size();
 
     cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("update_grid_positions"));
 
-    cl_int pariclesCount = m_clParticles.size();
+    cl_int pariclesCount = m_particlesCount;
     size_t particlesSize = pariclesCount * sizeof(CParticle::Physics);
 
     cl_float3 halfCellSize = { m_cellSize.x() / 2.0, m_cellSize.y() / 2.0, m_cellSize.z() / 2.0 };
