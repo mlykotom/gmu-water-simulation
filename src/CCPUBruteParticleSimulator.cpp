@@ -124,7 +124,7 @@ void CCPUBruteParticleSimulator::updateForces()
         QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
         QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
 
-        particleCL.acceleration = {particleCL.acceleration.s[0] + f_collision.x(), particleCL.acceleration.s[1] + f_collision.y(), particleCL.acceleration.s[2] + f_collision.z()};
+        particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
     }
 }
 

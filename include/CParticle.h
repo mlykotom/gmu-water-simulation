@@ -48,18 +48,18 @@ public: //methods
 
     void updatePosition()
     {
-        m_position.setX(m_physics->position.s[0]);
-        m_position.setY(m_physics->position.s[1]);
-        m_position.setZ(m_physics->position.s[2]);
+        m_position.setX(m_physics->position.x);
+        m_position.setY(m_physics->position.y);
+        m_position.setZ(m_physics->position.z);
 
         m_transform->setTranslation(m_position);
     }
 
     void updateVelocity()
     {
-        m_velocity.setX(m_physics->velocity.s[0]);
-        m_velocity.setY(m_physics->velocity.s[1]);
-        m_velocity.setZ(m_physics->velocity.s[2]);
+        m_velocity.setX(m_physics->velocity.x);
+        m_velocity.setY(m_physics->velocity.y);
+        m_velocity.setZ(m_physics->velocity.z);
     }
 
     inline QVector3D diffPosition(CParticle *otherParticle)
@@ -69,7 +69,7 @@ public: //methods
 
     static inline QVector3D clFloatToVector(cl_float3 vec)
     {
-        return {vec.s[0], vec.s[1], vec.s[2]};
+        return {vec.x, vec.y, vec.z};
     }
 
     static inline QVector3D diffPosition(cl_float3 a, cl_float3 b)
