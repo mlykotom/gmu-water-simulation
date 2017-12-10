@@ -107,9 +107,9 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
 
         //A[depth][col][row]
         //(x*grid_size.y + y) * grid_size.z + z        
-        int index = (z*grid_size.y + y) * grid_size.z + x;
+        //int index = (z*grid_size.y + y) * grid_size.z + x;
 
-        //int index = x + y * grid_size.y + z * grid_size.y * grid_size.z;
+        int index = x + y * grid_size.x + z * grid_size.x * grid_size.y;
 
         bool b = ( (index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0) );
         //if (index < (grid_size.x*grid_size.y*grid_size.z) && index >= 0)
