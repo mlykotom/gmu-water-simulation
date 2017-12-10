@@ -58,10 +58,12 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
 {
     int global_x = (int)get_global_id(0);
 
+    volatile __global int* counterPtr = positions;
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
+
     if (global_x < particles_count)
     {
-       // int3 newGridPosition = (int3)floor((particles[global_x].position + halfCellSize) / h);
-
         //this division is really bad...
         float3 newGridPosition = (particles[global_x].position + halfCellSize) / h;
 
@@ -69,7 +71,11 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         int y = (int) floor(newGridPosition.y);
         int z = (int) floor(newGridPosition.z);
 
-        //printf("pos: %d, &d, %d", x, y, z);
+         printf("global index: %d, particle index: %d \n", global_x, particles[global_x].id);
+
+        //printf("x: %d, y: %d, z: %d  \n", x, y, z);
+       // printf("global index: %d \n", global_x);
+       // printf("pos: %d, %d, %d \n", particles[global_x].position.x, particles[global_x].position.y, particles[global_x].position.z);
 
         if (x < 0) {
             x = 0;
@@ -92,9 +98,44 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
             z = grid_size.z - 1;
         }
 
-
+  
         //todo: nahradit atomic_inc
-       // atomic_add(&positions[x + y * grid_size.y + z * grid_size.y * grid_size.z], 1);
+        //atomic_add(&positions[x + y * grid_size.y + z * grid_size.y * grid_size.z], 1);
 
+        //A[depth][col][row]
+        //(x*grid_size.y + y) * grid_size.z + z        
+        //int index = (x*grid_size.y + y) * grid_size.z + z;
+
+        int index = x + y * grid_size.y + z * grid_size.y * grid_size.z;
+
+        bool b = ( (index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0) );
+        //if (index < (grid_size.x*grid_size.y*grid_size.z) && index >= 0)
+        //{
+        //    //atomic_add(&positions[0], 1);
+        //    positions[0] = 1;
+        //}
+
+        //if (global_x % 2)
+        //if (b)
+        //if((global_x < (grid_size.x * grid_size.y * grid_size.z)) && (global_x >= 0))
+        //{
+        //    atomic_inc(&positions[global_x]);
+
+        //}
+
+        printf("index: %d, x: %d, y: %d, z: %d  \n", index,x,y,z);
+
+        if ((index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0))
+        {
+            atomic_inc(&positions[index]);
+
+        }
+
+
+        //atomic_add(&positions[0], 1);
+       // positions[0] = grid_size.x * grid_size.y * grid_size.z;
     }
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
 }

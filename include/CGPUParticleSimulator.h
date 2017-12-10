@@ -29,8 +29,8 @@ private: //methods
 protected:
     CLWrapper *m_cl_wrapper;
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
-    CParticle::Physics *m_device_data;
-
+    //CParticle::Physics *m_device_data ;
+    std::vector<CParticle::Physics> m_clParticles;
 };
 
 

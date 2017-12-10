@@ -128,7 +128,8 @@ void CGPUParticleSimulator::setupScene()
     double halfParticle = CParticle::h / 2.0f;
 
     int calculatedCount = (int)(ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
-    m_device_data = new CParticle::Physics[calculatedCount];
+    //m_device_data = new CParticle::Physics[calculatedCount];
+    m_clParticles.resize(calculatedCount);
 
     QVector3D offset = -m_boxSize / 2.0f;
 
@@ -143,10 +144,13 @@ void CGPUParticleSimulator::setupScene()
                 p.acceleration = { 0, 0, 0 };
                 p.density = 0.0;
                 p.pressure = 0;
-                m_device_data[m_particlesCount] = p;
+                //m_device_data[m_particlesCount] = p;
+
+                m_clParticles.push_back(p);
 
                 auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
-                particle->m_physics = &m_device_data[m_particlesCount];
+               // particle->m_physics = &m_device_data[m_particlesCount];
+                particle->m_physics = &m_clParticles.back();
 
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
@@ -165,30 +169,29 @@ void CGPUParticleSimulator::updateGrid()
 
     //for (int i = 0; i < m_particlesCount; ++i)
     //{
-    //    qDebug() << m_device_data[i].id;
+    //    qDebug() << m_device_data[i].position.x << m_device_data[i].position.y << m_device_data[i].position.z;
     //}
 
 
     cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("update_grid_positions"));
 
-
-    size_t particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    cl_int pariclesCount = m_clParticles.size();
+    size_t particlesSize = pariclesCount * sizeof(CParticle::Physics);
 
     cl_float3 halfCellSize = { m_cellSize.x() / 2.0, m_cellSize.y() / 2.0, m_cellSize.z() / 2.0 };
     cl_int3 gridSize = { m_grid->xRes(),m_grid->yRes() ,m_grid->zRes() };
 
     std::vector<cl_int> output;
-   cl_int outputCount = gridSize.x * gridSize.y * gridSize.z;
+    cl_int outputCount = m_grid->getCellCount();
     output.resize(outputCount,0);
     cl_int *output_array = output.data();
-    size_t outputSize = output.size() * sizeof(cl_int);
+    size_t outputSize = outputCount * sizeof(cl_int);
 
     cl_int err;
-    cl_int initValue = 0;
 
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
     CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, &initValue, &err);
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
 
@@ -196,7 +199,7 @@ void CGPUParticleSimulator::updateGrid()
     cl_int arg = 0;
     kernel.setArg(arg++, inputBuffer);
     kernel.setArg(arg++, outputBuffer);
-    kernel.setArg(arg++, (cl_int)m_particlesCount);
+    kernel.setArg(arg++, (cl_int)pariclesCount);
     kernel.setArg(arg++, gridSize);
     kernel.setArg(arg++, halfCellSize);
     kernel.setArg(arg++, (cl_float)CParticle::h);
@@ -208,12 +211,12 @@ void CGPUParticleSimulator::updateGrid()
 
     cl::NDRange local(16);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange global(CLCommon::alignTo(pariclesCount, 16));
     cl::NDRange offset(0);
 
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, m_device_data, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, m_clParticles.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
 
