@@ -32,7 +32,6 @@ MainWindow::MainWindow(QWidget *parent) :
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
     m_mainView->setRootEntity(rootEntity);
 
-
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
     m_mainView->registerAspect(input);
 
@@ -52,17 +51,11 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
-//    doCalculation();
-//exit(0);
-
     try {
-        //Particle simulator
-
         //m_simulator = new CCPUParticleSimulator(m_scene);
         m_simulator = new CCPUBruteParticleSimulator(m_scene);
 		//m_simulator = new CGPUParticleSimulator(m_scene);
 
-        
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 

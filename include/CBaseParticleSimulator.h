@@ -34,9 +34,9 @@ private: //attributes
     QTimer m_timer;
     QElapsedTimer m_elapsed_timer;
     unsigned long iterationSincePaused;
+    unsigned long totalIteration;
 
 protected:
-    unsigned long totalIteration;   // TODO move to private
 
 
     CScene *m_scene;
@@ -81,7 +81,6 @@ public:
     QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
     QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
     double WviscosityLaplacian(double radiusSquared);
-
 
     //TODO: DELETE
     virtual void test() {}

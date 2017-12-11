@@ -155,11 +155,11 @@ void CCollisionGeometry::inverseBoundingBoxBounce(CParticle::Physics &particle)
 
         if (d > 0.0) {
             // This is an alernate way of calculating collisions of particles against walls, but produces some jitter at boundaries
-            pos += d * inverseNormal;
-            velocity -= QVector3D::dotProduct(CParticle::clFloatToVector(particle.velocity), inverseNormal) * 1.9 * inverseNormal;
+//            pos += d * inverseNormal;
+//            velocity -= QVector3D::dotProduct(CParticle::clFloatToVector(particle.velocity), inverseNormal) * 1.9 * inverseNormal;
 
-            //acc += WALL_K * inverseNormal * d;
-            //acc += WALL_DAMPING * QVector3D::dotProduct(CParticle::clFloatToVector(particle.velocity), inverseNormal) * inverseNormal;
+            acc += WALL_K * inverseNormal * d;
+            acc += WALL_DAMPING * QVector3D::dotProduct(CParticle::clFloatToVector(particle.velocity), inverseNormal) * inverseNormal;
             
             //particle.position = {
             //    (wall.second.x() == 0 ? particle.position.x : wall.second.x()),
@@ -170,13 +170,13 @@ void CCollisionGeometry::inverseBoundingBoxBounce(CParticle::Physics &particle)
 
     }
 
-    //cl_float3 cl_acc = CParticle::qVectortoClFloat(acc);
-    //particle.acceleration = {cl_acc.x + particle.acceleration.x, cl_acc.y + particle.acceleration.y, cl_acc.z + particle.acceleration.z };
+    cl_float3 cl_acc = CParticle::qVectortoClFloat(acc);
+    particle.acceleration = {cl_acc.x + particle.acceleration.x, cl_acc.y + particle.acceleration.y, cl_acc.z + particle.acceleration.z };
 
-    cl_float3 cl_velocity = CParticle::qVectortoClFloat(velocity);
-    cl_float3 cl_pos = CParticle::qVectortoClFloat(pos);
+//    cl_float3 cl_velocity = CParticle::qVectortoClFloat(velocity);
+//    cl_float3 cl_pos = CParticle::qVectortoClFloat(pos);
 
-    particle.velocity = { cl_velocity.x + particle.velocity.x, cl_velocity.y + particle.velocity.y, cl_velocity.z + particle.velocity.z };
-    particle.position = { cl_pos.x + particle.position.x, cl_pos.y + particle.position.y, cl_pos.z + particle.position.z };
+//    particle.velocity = { cl_velocity.x + particle.velocity.x, cl_velocity.y + particle.velocity.y, cl_velocity.z + particle.velocity.z };
+//    particle.position = { cl_pos.x + particle.position.x, cl_pos.y + particle.position.y, cl_pos.z + particle.position.z };
 
 }

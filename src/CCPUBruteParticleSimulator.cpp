@@ -8,6 +8,10 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 {
     CLPlatforms::printInfoAll();
 
+    m_systemParams.poly6_constant = 315.0f / (64.0f * M_PI * pow(CParticle::h, 9));
+    m_systemParams.spiky_constant = -45.0f / (M_PI * pow(CParticle::h, 6));
+    m_systemParams.viscosity_constant = 45.0f / (M_PI * pow(CParticle::h, 6));
+
     m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 
     auto clDevice = CLPlatforms::getBestGPU();
@@ -82,6 +86,7 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
     cl_uint arg = 0;
     m_update_density_kernel->setArg(arg++, m_outputBuffer);
     m_update_density_kernel->setArg(arg++, m_particlesCount);
+    m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -103,6 +108,8 @@ void CCPUBruteParticleSimulator::updateForces()
     m_update_forces_kernel->setArg(arg++, m_outputBuffer);
     m_update_forces_kernel->setArg(arg++, m_particlesCount);
     m_update_forces_kernel->setArg(arg++, m_gravityCL);
+    m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
+    m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -118,8 +125,7 @@ void CCPUBruteParticleSimulator::updateForces()
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     // collision force
-    for (int i = 0; i < m_particlesCount; ++i) 
-    {
+    for (int i = 0; i < m_particlesCount; ++i) {
         CParticle::Physics &particleCL = m_device_data[i];
         QVector3D pos = CParticle::clFloatToVector(particleCL.position);
         QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
