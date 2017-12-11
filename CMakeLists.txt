@@ -31,7 +31,7 @@ include( ${GMU_CMAKE_MODULE_PATH}/ApplicationMacros.cmake )
 #enabling C++ 11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)       #on mac this adds flag -std=c++11 instead of -std=gnu++11
+set(CMAKE_CXX_EXTENSIONS ON)       #on mac this adds flag -std=c++11 instead of -std=gnu++11
 
 # adds current source/build directories to module's includes
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
