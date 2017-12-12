@@ -25,56 +25,57 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 
 std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
-    size_t originalSize = input.size();
+    cl_int originalSize = input.size();
     //find nearest power of 2 to given count
-    size_t countAsPowerOfTwo = pow(ceil(log2(originalSize)),2);
+    //qDebug() << ceil(log2(originalSize));
+    //qDebug() << pow(ceil(log2(originalSize)), 2);
+    cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
 
     //resize and append 0s
-    input.resize(countAsPowerOfTwo, 0);
+    //input.resize(countAsPowerOfTwo, 0);
 
-    cl_int *input_array = input.data();
-    cl_int inputCount = input.size();
-    size_t inputSize = inputCount * sizeof(cl_int);
+    //cl_int *input_array = input.data();
+    //cl_int inputCount = input.size();
+    //size_t inputSize = inputCount * sizeof(cl_int);
 
-
-    std::vector<cl_int> output;
-    output.resize(inputCount, 0);
-
+   
+    std::vector<cl_int> output(input.begin(),input.end());
+    output.resize(countAsPowerOfTwo, 0);
+   // cl_int outputCount = output.size();
+    size_t outputSize = countAsPowerOfTwo * sizeof(cl_int);
     cl_int *output_array = output.data();
 
     cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
 
     cl_int err;
 
-    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
-    CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, inputSize, input_array, &err);
+    //auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
+    //CLCommon::checkError(err, "inputBuffer creation");
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    kernel.setArg(0, inputBuffer);
-    kernel.setArg(1, inputCount);
-    kernel.setArg(2, outputBuffer);
-    kernel.setArg(3, cl::Local(inputSize));
+    kernel.setArg(0, outputBuffer);
+    kernel.setArg(1, countAsPowerOfTwo);
+
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
 
-    cl::NDRange local(16);
+    cl::NDRange local(256);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(inputCount, 16));
+    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, 256));
     cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input_array, nullptr, &writeEvent);
+   // m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input_array, nullptr, &writeEvent);
+    
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, inputSize, output_array, nullptr, &readEvent);
-
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-
-    input.resize(originalSize);
+   // input.resize(originalSize);
     output.resize(originalSize);
 
     return output;
@@ -85,24 +86,24 @@ void CGPUParticleSimulator::test()
 {
   //  std::vector<cl_int> input;
 
-  //  input.push_back(1);
-  //  input.push_back(2);
-  //  input.push_back(3);
-  //  input.push_back(4);
+  //  input.push_back(256);
+  //  input.push_back(0);
+  //  input.push_back(0);
+  //  input.push_back(0);
 
-  //  input.push_back(5);
-  //  input.push_back(6);
-  //  input.push_back(7); 
-  //  input.push_back(8);
+  //  input.push_back(0);
+  //  input.push_back(64);
+  //  input.push_back(0); 
+  //  input.push_back(0);
 
-  //  input.push_back(1);
-  //  input.push_back(2);
-  //  input.push_back(3);
-  //  input.push_back(4);
+  //  input.push_back(0);
+  //  input.push_back(0);
+  //  input.push_back(0);
+  //  input.push_back(0);
 
   ////  input.push_back(5);
-  //  input.push_back(6);
-  //  input.push_back(7);
+  //  input.push_back(256);
+  //  input.push_back(0);
   //  //input.push_back(8);
 
 
@@ -113,11 +114,39 @@ void CGPUParticleSimulator::test()
 
     setupScene();
     updateGrid();
+    m_gridScan = scan(m_gridVector);
+
+    ////sort indices
+    //// initialize original index locations
+    //m_sortedIndices.clear();
+    //m_sortedIndices.resize(m_clParticles.size());
+    //std::iota(m_sortedIndices.begin(), m_sortedIndices.end(), 0);
+
+    //// sort indexes, smallest cell index first
+    //sort(m_sortedIndices.begin(), m_sortedIndices.end(),
+    //    [this](cl_int i1, cl_int i2) {return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
 
 
 
-    return;
 
+    //for (auto p : m_clParticles)
+    //    qDebug() << p.cell_id;
+
+    //qDebug() << "==============================";
+
+    //for (cl_int i : m_sortedIndices)
+    //    qDebug() << m_clParticles[i].cell_id;
+    //qDebug() << "==============================";
+
+
+    for (cl_int i : m_gridVector)
+        qDebug() << i;
+
+    qDebug() << "==============================";
+
+    for (cl_int i : m_gridScan)
+        qDebug() << i;
+    qDebug() << "==============================";
 
     
 }
@@ -175,10 +204,11 @@ void CGPUParticleSimulator::updateGrid()
     cl_float3 halfCellSize = { m_cellSize.x() / 2.0, m_cellSize.y() / 2.0, m_cellSize.z() / 2.0 };
     cl_int3 gridSize = { m_grid->xRes(),m_grid->yRes() ,m_grid->zRes() };
 
-    std::vector<cl_int> output;
+   // std::vector<cl_int> output;
     cl_int outputCount = m_grid->getCellCount();
-    output.resize(outputCount,0);
-    cl_int *output_array = output.data();
+    m_gridVector.clear();
+    m_gridVector.resize(outputCount,0);
+    cl_int *output_array = m_gridVector.data();
     size_t outputSize = outputCount * sizeof(cl_int);
 
     CParticle::Physics *input_array = m_clParticles.data();
@@ -210,9 +240,6 @@ void CGPUParticleSimulator::updateGrid()
     cl::NDRange global(CLCommon::alignTo(pariclesCount, 16));
     cl::NDRange offset(0);
 
-    for (auto p : m_clParticles)
-        qDebug() << p.cell_id;
-
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
@@ -221,24 +248,7 @@ void CGPUParticleSimulator::updateGrid()
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    for (auto p : m_clParticles)
-        qDebug() << p.cell_id;
 
-    //for (cl_int i : output)
-    //    qDebug() << i;
-
-   
-    // initialize original index locations
-    std::vector<size_t> idx(m_clParticles.size());
-    std::iota(idx.begin(), idx.end(), 0);
-
-    // sort indexes, smallest cell index first
-    sort(idx.begin(), idx.end(),
-        [ this ](size_t i1, size_t i2) {return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
-
-    for (int index : idx)
-        qDebug() << m_clParticles[index].cell_id;
-    //return idx;
 
 }
 
