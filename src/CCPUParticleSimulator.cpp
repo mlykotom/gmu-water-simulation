@@ -95,7 +95,8 @@ void CCPUParticleSimulator::updateDensityPressure()
 
                                 auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
                                 for (auto &neighbor : neighborGridCellParticles) {
-                                    double radiusSquared = particle->diffPosition(neighbor).lengthSquared();
+                                    QVector3D distance = (particle->position() - neighbor->position());
+                                    double radiusSquared = distance.lengthSquared();
 
                                     if (radiusSquared <= CParticle::h * CParticle::h) {
                                         particle->density() += Wpoly6(radiusSquared);

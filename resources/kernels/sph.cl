@@ -3,6 +3,7 @@
 #define __global
 #define __local
 #define __constant
+#define __private
 #endif
 
 #pragma OPENCL EXTENSION cl_amd_printf : enable
@@ -44,6 +45,42 @@ float WviscosityLaplacian(float radiusSquared, float viscosity_constant)
 __kernel void density_pressure_step(__global ParticleCL *output, int size, float poly6_constant)
 {
     int global_x = (int) get_global_id(0);
+    int local_x = (int) get_local_id(0);
+
+//    __local float local_density;
+//    if (local_x == 0) {
+//        local_density = 0.0f;
+//    }
+//    barrier(CLK_LOCAL_MEM_FENCE);
+
+
+    if (global_x < size) {
+        output[global_x].density = 0.0;
+
+        // for all neighbors particles
+        for (int i = 0; i < size; i++) {
+            float3 distance = output[global_x].position - output[i].position;
+            float radiusSquared = dot(distance, distance);
+
+            if (radiusSquared <= particle_h2) {
+                output[global_x].density += Wpoly6(radiusSquared, poly6_constant);
+//                local_density += Wpoly6(radiusSquared, poly6_constant);
+//                barrier(CLK_LOCAL_MEM_FENCE);
+            }
+        }
+
+//        local_density *= particle_mass;
+        output[global_x].density *= particle_mass;
+//        barrier(CLK_LOCAL_MEM_FENCE);
+
+//        output[global_x].density = local_density;
+        output[global_x].pressure = gas_stiffness * (output[global_x].density - rest_density);
+    }
+}
+
+__kernel void GLOBAL_density_pressure_step(__global ParticleCL *output, int size, float poly6_constant)
+{
+    int global_x = (int) get_global_id(0);
 
     if (global_x < size) {
         output[global_x].density = 0.0;
@@ -59,6 +96,8 @@ __kernel void density_pressure_step(__global ParticleCL *output, int size, float
         }
 
         output[global_x].density *= particle_mass;
+
+
         output[global_x].pressure = gas_stiffness * (output[global_x].density - rest_density);
     }
 }
@@ -75,37 +114,40 @@ __kernel void forces_step(__global ParticleCL *output, int size, float3 gravity,
             float3 distance = output[global_x].position - output[i].position;
             float radiusSquared = dot(distance, distance);
 
-            if (radiusSquared <= particle_h2) {
+            if (radiusSquared <= particle_h2 && output[global_x].id != output[i].id) {
                 float3 spikyGradient = WspikyGradient(distance, radiusSquared, spiky_constant);
                 float viscosityLaplacian = WviscosityLaplacian(radiusSquared, viscosity_constant);
 
-                if (output[global_x].id != output[i].id) {
-                    f_pressure += output[global_x].pressure / pow(output[global_x].density, 2) + output[global_x].pressure / pow(output[global_x].density, 2) * spikyGradient;
-                    f_viscosity += (output[i].velocity - output[global_x].velocity) * viscosityLaplacian / output[global_x].density;
-                }
+                f_pressure += output[global_x].pressure / pow(output[global_x].density, 2) + output[global_x].pressure / pow(output[global_x].density, 2) * spikyGradient;
+                f_viscosity += (output[i].velocity - output[global_x].velocity) * viscosityLaplacian / output[global_x].density;
             }
         }
 
         f_pressure *= -particle_mass * output[global_x].density;
         f_viscosity *= viscosity * particle_mass;
 
-        float3 f_total = (f_pressure + f_viscosity + f_gravity) / output[global_x].density;
-
-        output[global_x].acceleration = f_total;
+        output[global_x].acceleration = (f_pressure + f_viscosity + f_gravity) / output[global_x].density;
     }
 }
 
+/**
+ * Verlet integration
+ * http://archive.gamedev.net/archive/reference/programming/features/verlet/
+ * @param output
+ * @param size
+ * @param dt
+ */
 __kernel void integration_step(__global ParticleCL *output, int size, float dt)
 {
     int global_x = (int) get_global_id(0);
 
     if (global_x < size) {
-// alternative, but particle doesn't have force for now
-//        particles[i].velocity += dt * particles[i].force / particles[i].density;
-//        particles[i].position += dt * particles[i].velocity;
+        __private ParticleCL tmp_particle = output[global_x];
+        __private float3 newPosition = tmp_particle.position + (tmp_particle.velocity * dt) + (tmp_particle.acceleration * dt * dt);
 
-        float3 newPosition = output[global_x].position + (output[global_x].velocity * dt) + (output[global_x].acceleration * dt * dt);
-        output[global_x].velocity = (newPosition - output[global_x].position) / dt;
-        output[global_x].position = newPosition;
+        tmp_particle.velocity = (newPosition - tmp_particle.position) / dt;
+        tmp_particle.position = newPosition;
+
+        output[global_x] = tmp_particle;
     }
 }

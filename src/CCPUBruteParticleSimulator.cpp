@@ -64,7 +64,6 @@ void CCPUBruteParticleSimulator::setupScene()
     assert(calculatedCount == m_particlesCount);
 
     m_dataBufferSize = m_particlesCount * sizeof(CParticle::Physics);
-//    inputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, dataBufferSize);
     m_outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_dataBufferSize);
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
