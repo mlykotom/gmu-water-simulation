@@ -45,36 +45,25 @@ float WviscosityLaplacian(float radiusSquared, float viscosity_constant)
 __kernel void density_pressure_step(__global ParticleCL *output, int size, float poly6_constant)
 {
     int global_x = (int) get_global_id(0);
-    int local_x = (int) get_local_id(0);
-
-//    __local float local_density;
-//    if (local_x == 0) {
-//        local_density = 0.0f;
-//    }
-//    barrier(CLK_LOCAL_MEM_FENCE);
-
 
     if (global_x < size) {
-        output[global_x].density = 0.0;
+        __private ParticleCL thisParticle = output[global_x];
+        thisParticle.density = 0.0f;
 
         // for all neighbors particles
         for (int i = 0; i < size; i++) {
-            float3 distance = output[global_x].position - output[i].position;
+            float3 distance = thisParticle.position - output[i].position;
             float radiusSquared = dot(distance, distance);
 
             if (radiusSquared <= particle_h2) {
-                output[global_x].density += Wpoly6(radiusSquared, poly6_constant);
-//                local_density += Wpoly6(radiusSquared, poly6_constant);
-//                barrier(CLK_LOCAL_MEM_FENCE);
+                thisParticle.density += Wpoly6(radiusSquared, poly6_constant);
             }
         }
 
-//        local_density *= particle_mass;
-        output[global_x].density *= particle_mass;
-//        barrier(CLK_LOCAL_MEM_FENCE);
+        thisParticle.density *= particle_mass;
+        thisParticle.pressure = gas_stiffness * (thisParticle.density - rest_density);
 
-//        output[global_x].density = local_density;
-        output[global_x].pressure = gas_stiffness * (output[global_x].density - rest_density);
+        output[global_x] = thisParticle;
     }
 }
 
@@ -106,27 +95,27 @@ __kernel void forces_step(__global ParticleCL *output, int size, float3 gravity,
 {
     int global_x = (int) get_global_id(0);
     if (global_x < size) {
-        float3 f_gravity = gravity * output[global_x].density;
-        float3 f_pressure, f_viscosity;
+        __private ParticleCL thisParticle = output[global_x];
+        __private float3 f_pressure, f_viscosity;
 
         // for all neighbors particles
         for (int i = 0; i < size; i++) {
-            float3 distance = output[global_x].position - output[i].position;
+            float3 distance = thisParticle.position - output[i].position;
             float radiusSquared = dot(distance, distance);
 
-            if (radiusSquared <= particle_h2 && output[global_x].id != output[i].id) {
+            if (radiusSquared <= particle_h2 && thisParticle.id != output[i].id) {
                 float3 spikyGradient = WspikyGradient(distance, radiusSquared, spiky_constant);
                 float viscosityLaplacian = WviscosityLaplacian(radiusSquared, viscosity_constant);
 
-                f_pressure += output[global_x].pressure / pow(output[global_x].density, 2) + output[global_x].pressure / pow(output[global_x].density, 2) * spikyGradient;
-                f_viscosity += (output[i].velocity - output[global_x].velocity) * viscosityLaplacian / output[global_x].density;
+                f_pressure += thisParticle.pressure / pow(thisParticle.density, 2) + thisParticle.pressure / pow(thisParticle.density, 2) * spikyGradient;
+                f_viscosity += (output[i].velocity - thisParticle.velocity) * viscosityLaplacian / thisParticle.density;
             }
         }
 
-        f_pressure *= -particle_mass * output[global_x].density;
+        f_pressure *= -particle_mass * thisParticle.density;
         f_viscosity *= viscosity * particle_mass;
 
-        output[global_x].acceleration = (f_pressure + f_viscosity + f_gravity) / output[global_x].density;
+        output[global_x].acceleration = (f_pressure + f_viscosity + gravity * thisParticle.density) / thisParticle.density;
     }
 }
 
