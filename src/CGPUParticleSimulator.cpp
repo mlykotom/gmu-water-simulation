@@ -27,55 +27,62 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
     cl_int originalSize = input.size();
     //find nearest power of 2 to given count
-    //qDebug() << ceil(log2(originalSize));
-    //qDebug() << pow(ceil(log2(originalSize)), 2);
     cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
-
-    //resize and append 0s
-    //input.resize(countAsPowerOfTwo, 0);
-
-    //cl_int *input_array = input.data();
-    //cl_int inputCount = input.size();
-    //size_t inputSize = inputCount * sizeof(cl_int);
-
    
     std::vector<cl_int> output(input.begin(),input.end());
+    //resize and append 0s
     output.resize(countAsPowerOfTwo, 0);
-   // cl_int outputCount = output.size();
     size_t outputSize = countAsPowerOfTwo * sizeof(cl_int);
     cl_int *output_array = output.data();
 
-    cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
+   // cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
+    cl::Kernel kernelReduce = cl::Kernel(m_cl_wrapper->getKernel("reduce"));
+    cl::Kernel kernelDownSweep = cl::Kernel(m_cl_wrapper->getKernel("down_sweep"));
 
     cl_int err;
 
-    //auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
     //CLCommon::checkError(err, "inputBuffer creation");
     auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    kernel.setArg(0, outputBuffer);
-    kernel.setArg(1, countAsPowerOfTwo);
+    kernelReduce.setArg(0, outputBuffer);
+    kernelReduce.setArg(1, countAsPowerOfTwo);
+    //kernelReduce.setArg(2, cl::Local(sizeof(cl_int) * countAsPowerOfTwo));
 
+    kernelDownSweep.setArg(0, outputBuffer);
+    kernelDownSweep.setArg(1, countAsPowerOfTwo);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-
-    cl::NDRange local(256);
+    cl_int localWokrgroupSize = 4;
+    cl::NDRange local(localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, 256));
-    cl::NDRange offset(0);
+    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
 
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-   // m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input_array, nullptr, &writeEvent);
-    
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
+    int levels = log2(countAsPowerOfTwo);
+    int offset = 1;
+    for (cl_int i = 0; i  < levels;  ++i)
+    {
+        kernelReduce.setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernelReduce, 0, global, local, nullptr, &kernelEvent);
+        offset <<= 1;
+    }
+
+    offset = countAsPowerOfTwo;
+    for (cl_int i = 0; i < levels; ++i)
+    {
+        kernelDownSweep.setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernelDownSweep, 0, global, local, nullptr, &kernelEvent);
+        offset >>= 1;
+    }
+
+
+
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-   // input.resize(originalSize);
     output.resize(originalSize);
 
     return output;
@@ -84,33 +91,51 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
 {
-  //  std::vector<cl_int> input;
+    //std::vector<cl_int> input;
 
-  //  input.push_back(256);
-  //  input.push_back(0);
-  //  input.push_back(0);
-  //  input.push_back(0);
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
 
-  //  input.push_back(0);
-  //  input.push_back(64);
-  //  input.push_back(0); 
-  //  input.push_back(0);
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7); 
+    //input.push_back(8);
 
-  //  input.push_back(0);
-  //  input.push_back(0);
-  //  input.push_back(0);
-  //  input.push_back(0);
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
 
-  ////  input.push_back(5);
-  //  input.push_back(256);
-  //  input.push_back(0);
-  //  //input.push_back(8);
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
+
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
+
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
+
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
+
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
 
 
-  //  std::vector<cl_int> output =  scan(input);
+    //std::vector<cl_int> output =  scan(input);
 
-  //  for (cl_int i : output)
-  //      qDebug() << i;
 
     setupScene();
     updateGrid();

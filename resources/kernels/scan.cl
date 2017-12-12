@@ -2,12 +2,51 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 
-__kernel void blelloch_scan(__global int *result, int array_size)
+__kernel void reduce(__global int *result, int array_size, int offset)
 {
     int global_x = (int)get_global_id(0);
     int global_w = (int)get_global_size(0);
     int local_x = (int)get_local_id(0);
     int local_w = (int)get_local_size(0);
+    int group_x = (int)get_group_id(0);
+    //===========================================================================================  
+
+    if (((global_x + 1) % (offset << 1) == 0) && (global_x < array_size) && (global_x - offset >= 0))
+        result[global_x] = result[global_x] + result[global_x - offset];
+
+    if (global_x == global_w - 1)
+    {
+        result[array_size - 1] = 0;
+    }
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
+}
+
+__kernel void down_sweep(__global int *result, int array_size, int offset)
+{
+    int global_x = (int)get_global_id(0);
+    int global_w = (int)get_global_size(0);
+    //=========================================================================================== 
+
+    if (((global_x + 1) % offset == 0) && (global_x < array_size))
+    {
+        int half_index = global_x - (offset >> 1);
+
+        int tmp = result[global_x];
+        result[global_x] += result[half_index];
+        result[half_index] = tmp;
+    }
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
+}
+
+
+__kernel void blelloch_scan(__global int *result, int array_size)
+{
+    int global_x = (int)get_global_id(0);
+    int global_w = (int)get_global_size(0);
     //===========================================================================================  
 
     //Reduce
