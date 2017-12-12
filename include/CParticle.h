@@ -28,6 +28,7 @@ public:
         cl_float density;
         cl_float pressure;
         cl_uint id;
+        cl_uint cell_id;
     } Physics;
 
     explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));

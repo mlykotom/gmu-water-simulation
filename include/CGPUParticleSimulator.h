@@ -31,6 +31,9 @@ protected:
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     //CParticle::Physics *m_device_data ;
     std::vector<CParticle::Physics> m_clParticles;
+    std::vector<cl_int> m_gridVector;
+    std::vector<cl_int> m_sortedIndices;
+    std::vector<cl_int> m_gridScan;
 };
 
 

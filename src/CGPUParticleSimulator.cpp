@@ -25,56 +25,64 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 
 std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
-    size_t originalSize = input.size();
+    cl_int originalSize = input.size();
     //find nearest power of 2 to given count
-    size_t countAsPowerOfTwo = pow(ceil(log2(originalSize)),2);
-
+    cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
+   
+    std::vector<cl_int> output(input.begin(),input.end());
     //resize and append 0s
-    input.resize(countAsPowerOfTwo, 0);
-
-    cl_int *input_array = input.data();
-    cl_int inputCount = input.size();
-    size_t inputSize = inputCount * sizeof(cl_int);
-
-
-    std::vector<cl_int> output;
-    output.resize(inputCount, 0);
-
+    output.resize(countAsPowerOfTwo, 0);
+    size_t outputSize = countAsPowerOfTwo * sizeof(cl_int);
     cl_int *output_array = output.data();
 
-    cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
+   // cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
+    cl::Kernel kernelReduce = cl::Kernel(m_cl_wrapper->getKernel("reduce"));
+    cl::Kernel kernelDownSweep = cl::Kernel(m_cl_wrapper->getKernel("down_sweep"));
 
     cl_int err;
 
-    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, inputSize, nullptr, &err);
-    CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, inputSize, input_array, &err);
+    //CLCommon::checkError(err, "inputBuffer creation");
+    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    kernel.setArg(0, inputBuffer);
-    kernel.setArg(1, inputCount);
-    kernel.setArg(2, outputBuffer);
-    kernel.setArg(3, cl::Local(inputSize));
+    kernelReduce.setArg(0, outputBuffer);
+    kernelReduce.setArg(1, countAsPowerOfTwo);
+    //kernelReduce.setArg(2, cl::Local(sizeof(cl_int) * countAsPowerOfTwo));
+
+    kernelDownSweep.setArg(0, outputBuffer);
+    kernelDownSweep.setArg(1, countAsPowerOfTwo);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-
-    cl::NDRange local(16);
+    cl_int localWokrgroupSize = 4;
+    cl::NDRange local(localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(inputCount, 16));
-    cl::NDRange offset(0);
+    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
 
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, inputSize, input_array, nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, inputSize, output_array, nullptr, &readEvent);
+    int levels = log2(countAsPowerOfTwo);
+    int offset = 1;
+    for (cl_int i = 0; i  < levels;  ++i)
+    {
+        kernelReduce.setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernelReduce, 0, global, local, nullptr, &kernelEvent);
+        offset <<= 1;
+    }
 
+    offset = countAsPowerOfTwo;
+    for (cl_int i = 0; i < levels; ++i)
+    {
+        kernelDownSweep.setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernelDownSweep, 0, global, local, nullptr, &kernelEvent);
+        offset >>= 1;
+    }
+
+
+
+    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-
-    input.resize(originalSize);
     output.resize(originalSize);
 
     return output;
@@ -83,41 +91,87 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 //TODO: TEST - DELETE
 void CGPUParticleSimulator::test()
 {
-  //  std::vector<cl_int> input;
+    //std::vector<cl_int> input;
 
-  //  input.push_back(1);
-  //  input.push_back(2);
-  //  input.push_back(3);
-  //  input.push_back(4);
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
 
-  //  input.push_back(5);
-  //  input.push_back(6);
-  //  input.push_back(7); 
-  //  input.push_back(8);
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7); 
+    //input.push_back(8);
 
-  //  input.push_back(1);
-  //  input.push_back(2);
-  //  input.push_back(3);
-  //  input.push_back(4);
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
 
-  ////  input.push_back(5);
-  //  input.push_back(6);
-  //  input.push_back(7);
-  //  //input.push_back(8);
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
+
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
+
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
+
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
+
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
 
 
-  //  std::vector<cl_int> output =  scan(input);
+    //std::vector<cl_int> output =  scan(input);
 
-  //  for (cl_int i : output)
-  //      qDebug() << i;
 
     setupScene();
     updateGrid();
+    m_gridScan = scan(m_gridVector);
+
+    ////sort indices
+    //// initialize original index locations
+    //m_sortedIndices.clear();
+    //m_sortedIndices.resize(m_clParticles.size());
+    //std::iota(m_sortedIndices.begin(), m_sortedIndices.end(), 0);
+
+    //// sort indexes, smallest cell index first
+    //sort(m_sortedIndices.begin(), m_sortedIndices.end(),
+    //    [this](cl_int i1, cl_int i2) {return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
 
 
 
-    return;
 
+    //for (auto p : m_clParticles)
+    //    qDebug() << p.cell_id;
+
+    //qDebug() << "==============================";
+
+    //for (cl_int i : m_sortedIndices)
+    //    qDebug() << m_clParticles[i].cell_id;
+    //qDebug() << "==============================";
+
+
+    for (cl_int i : m_gridVector)
+        qDebug() << i;
+
+    qDebug() << "==============================";
+
+    for (cl_int i : m_gridScan)
+        qDebug() << i;
+    qDebug() << "==============================";
 
     
 }
@@ -167,15 +221,6 @@ void CGPUParticleSimulator::setupScene()
 void CGPUParticleSimulator::updateGrid()
 {
 
-    //for (int i = 0; i < m_particlesCount; ++i)
-    //{
-    //    qDebug() << m_device_data[i].position.x << m_device_data[i].position.y << m_device_data[i].position.z;
-    //}
-
-    qDebug() << sizeof(m_clParticles.at(0));
-    qDebug() << sizeof(CParticle::Physics);
-    qDebug() << m_particlesCount << m_clParticles.size();
-
     cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("update_grid_positions"));
 
     cl_int pariclesCount = m_particlesCount;
@@ -184,11 +229,14 @@ void CGPUParticleSimulator::updateGrid()
     cl_float3 halfCellSize = { m_cellSize.x() / 2.0, m_cellSize.y() / 2.0, m_cellSize.z() / 2.0 };
     cl_int3 gridSize = { m_grid->xRes(),m_grid->yRes() ,m_grid->zRes() };
 
-    std::vector<cl_int> output;
+   // std::vector<cl_int> output;
     cl_int outputCount = m_grid->getCellCount();
-    output.resize(outputCount,0);
-    cl_int *output_array = output.data();
+    m_gridVector.clear();
+    m_gridVector.resize(outputCount,0);
+    cl_int *output_array = m_gridVector.data();
     size_t outputSize = outputCount * sizeof(cl_int);
+
+    CParticle::Physics *input_array = m_clParticles.data();
 
     cl_int err;
 
@@ -217,76 +265,16 @@ void CGPUParticleSimulator::updateGrid()
     cl::NDRange global(CLCommon::alignTo(pariclesCount, 16));
     cl::NDRange offset(0);
 
-
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    for (cl_int i : output)
-        qDebug() << i;
-
-    //for (int x = 0; x < m_grid->xRes(); x++) {
-    //    for (int y = 0; y < m_grid->yRes(); y++) {
-    //        for (int z = 0; z < m_grid->zRes(); z++) {
-
-    //            std::vector<CParticle *> &particles = m_grid->at(x, y, z);
-
-    //            for (unsigned long p = 0; p < particles.size(); p++) {
-    //                CParticle *particle = particles[p];
-
-    //                int newGridCellX = (int) floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
-    //                int newGridCellY = (int) floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
-    //                int newGridCellZ = (int) floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
-    //                //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
-    //                //cout << "particle position: " << particle->position() << endl;
-    //                //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
-
-    //                if (newGridCellX < 0) {
-    //                    newGridCellX = 0;
-    //                }
-    //                else if (newGridCellX >= m_grid->xRes()) {
-    //                    newGridCellX = m_grid->xRes() - 1;
-    //                }
-
-    //                if (newGridCellY < 0) {
-    //                    newGridCellY = 0;
-    //                }
-    //                else if (newGridCellY >= m_grid->yRes()) {
-    //                    newGridCellY = m_grid->yRes() - 1;
-    //                }
-
-    //                if (newGridCellZ < 0) {
-    //                    newGridCellZ = 0;
-    //                }
-    //                else if (newGridCellZ >= m_grid->zRes()) {
-    //                    newGridCellZ = m_grid->zRes() - 1;
-    //                }
-
-    //                //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
 
 
-    //                // check if particle has moved
-
-    //                if (x != newGridCellX || y != newGridCellY || z != newGridCellZ) {
-
-    //                    // move the particle to the new grid cell
-
-    //                    std::vector<CParticle *> &what = m_grid->at(newGridCellX, newGridCellY, newGridCellZ);
-    //                    what.push_back(particle);
-    //                    // remove it from it's previous grid cell
-
-    //                    particles.at(p) = particles.back();
-    //                    particles.pop_back();
-
-    //                    p--; // important! make sure to redo this index, since a new particle will (probably) be there
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
 }
 
 void CGPUParticleSimulator::updateDensityPressure()
