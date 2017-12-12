@@ -77,12 +77,12 @@ cl::Device CLPlatforms::getBestGPU()
     device_type = CL_DEVICE_TYPE_ALL;
 #else
     //nvidia GPU
-    platform_index = 1;
-    device_index = 0;
+    //platform_index = 1;
+    //device_index = 0;
 
     //intel CPU
-    //platform_index = 0;
-    //device_index = 1;
+    platform_index = 0;
+    device_index = 1;
     device_type = CL_DEVICE_TYPE_ALL;
 #endif
 

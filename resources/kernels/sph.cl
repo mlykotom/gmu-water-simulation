@@ -16,6 +16,8 @@ typedef struct  __attribute__((aligned(16))) tag_ParticleCL
     float density;
     float pressure;
     uint id;
+    uint cell_id;
+
 } ParticleCL;
 
 __constant float mass = 0.02f; // kg

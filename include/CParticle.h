@@ -25,6 +25,8 @@ public:
         cl_float density;
         cl_float pressure;
         cl_uint id;
+        cl_uint cell_id;
+
     }Physics;
 #else
     typedef struct __attribute__((aligned(16))) sPhysics

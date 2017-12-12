@@ -53,6 +53,7 @@ typedef struct  __attribute__((aligned(16))) tag_ParticleCL
     float density;
     float pressure;
     uint id;
+    uint cell_id;
 } ParticleCL;
 //#pragma pack(pop) 
 
@@ -72,13 +73,6 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         int x = (int) floor(newGridPosition.x);
         int y = (int) floor(newGridPosition.y);
         int z = (int) floor(newGridPosition.z);
-
-        // printf("global index: %d, particle index: %d \n", global_x, particles[global_x].id);
-        //return;
-
-        //printf("x: %d, y: %d, z: %d  \n", x, y, z);
-       // printf("global index: %d \n", global_x);
-       // printf("pos: %d, %d, %d \n", particles[global_x].position.x, particles[global_x].position.y, particles[global_x].position.z);
 
         if (x < 0) {
             x = 0;
@@ -101,42 +95,14 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
             z = grid_size.z - 1;
         }
 
-  
-        //todo: nahradit atomic_inc
-        //atomic_add(&positions[x + y * grid_size.y + z * grid_size.y * grid_size.z], 1);
+        int cell_index = x + y * grid_size.x + z * grid_size.x * grid_size.y;
 
-        //A[depth][col][row]
-        //(x*grid_size.y + y) * grid_size.z + z        
-        //int index = (z*grid_size.y + y) * grid_size.z + x;
-
-        int index = x + y * grid_size.x + z * grid_size.x * grid_size.y;
-
-        bool b = ( (index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0) );
-        //if (index < (grid_size.x*grid_size.y*grid_size.z) && index >= 0)
-        //{
-        //    //atomic_add(&positions[0], 1);
-        //    positions[0] = 1;
-        //}
-
-        //if (global_x % 2)
-        //if (b)
-        //if((global_x < (grid_size.x * grid_size.y * grid_size.z)) && (global_x >= 0))
-        //{
-        //    atomic_inc(&positions[global_x]);
-
-        //}
-
-        //printf("index: %d, x: %d, y: %d, z: %d  \n", index,x,y,z);
-
-        if ((index < (grid_size.x * grid_size.y * grid_size.z)) && (index >= 0))
+        if ((cell_index < (grid_size.x * grid_size.y * grid_size.z)) && (cell_index >= 0))
         {
-            atomic_inc(&positions[index]);
-
+            atomic_inc(&positions[cell_index]);
+            particles[global_x].cell_id = cell_index;
         }
 
-
-        //atomic_add(&positions[0], 1);
-       // positions[0] = grid_size.x * grid_size.y * grid_size.z;
     }
 
     barrier(CLK_GLOBAL_MEM_FENCE);
