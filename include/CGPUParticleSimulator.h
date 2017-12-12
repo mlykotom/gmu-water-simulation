@@ -31,6 +31,7 @@ protected:
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_reduceKernel;
     std::shared_ptr<cl::Kernel> m_downSweepKernel;
+    std::shared_ptr<cl::Kernel> m_densityPresureStepKernel;
 
     std::vector<CParticle::Physics> m_clParticles;
     std::vector<cl_int> m_gridVector;

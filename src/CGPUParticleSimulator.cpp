@@ -22,6 +22,7 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
     m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
     m_reduceKernel                  = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
     m_downSweepKernel               = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
+    m_densityPresureStepKernel      = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
 
 }
 
@@ -279,47 +280,100 @@ void CGPUParticleSimulator::updateGrid()
 
 void CGPUParticleSimulator::updateDensityPressure()
 {
-    for (int x = 0; x < m_grid->xRes(); x++) {
-        for (int y = 0; y < m_grid->yRes(); y++) {
-            for (int z = 0; z < m_grid->zRes(); z++) {
+    size_t particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    size_t scanSize = m_gridScan.size() * sizeof(int);
+    size_t indicesSize = m_sortedIndices.size() * sizeof(int);
 
-                auto &particles = m_grid->at(x, y, z);
-                for (auto &particle : particles) {
+    cl_int3 gridSize = { m_grid->xRes(), m_grid->yRes(), m_grid->zRes() };
 
-                    particle->density() = 0.0;
 
-                    // neighbors
-                    for (int offsetX = -1; offsetX <= 1; offsetX++) {
-                        if (x + offsetX < 0) continue;
-                        if (x + offsetX >= m_grid->xRes()) break;
 
-                        for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                            if (y + offsetY < 0) continue;
-                            if (y + offsetY >= m_grid->yRes()) break;
+    CParticle::Physics *particles_array = m_clParticles.data();
+    int *scan_array = m_gridScan.data();
+    int *indices_array = m_sortedIndices.data();
 
-                            for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
-                                if (z + offsetZ < 0) continue;
-                                if (z + offsetZ >= m_grid->zRes()) break;
+    cl_int err;
 
-                                auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
-                                for (auto &neighbor : neighborGridCellParticles) {
-                                    double radiusSquared = particle->diffPosition(neighbor).lengthSquared();
+    auto particlesBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto scanBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, scanSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto indicesBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, indicesSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
 
-                                    if (radiusSquared <= CParticle::h * CParticle::h) {
-                                        particle->density() += Wpoly6(radiusSquared);
-                                    }
-                                }
-                            }
-                        }
-                    }
 
-                    particle->density() *= CParticle::mass;
-                    // p = k(density - density_rest)
-                    particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
-                }
-            }
-        }
-    }
+
+    cl_int arg = 0;
+    m_densityPresureStepKernel->setArg(arg++, particlesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, scanBuffer);
+    m_densityPresureStepKernel->setArg(arg++, indicesBuffer);
+
+    m_densityPresureStepKernel->setArg(arg++, (cl_int)m_particlesCount);
+    m_densityPresureStepKernel->setArg(arg++, gridSize);
+
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
+
+
+    cl::NDRange local(16);
+    //we need only half the threads of the input count
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange offset(0);
+
+    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(particlesBuffer, true, 0, particlesSize, particles_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(scanBuffer, true, 0, scanSize, scan_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(indicesBuffer, true, 0, indicesSize, indices_array, nullptr, &writeEvent);
+
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, global, local, nullptr, &kernelEvent);
+
+    m_cl_wrapper->getQueue().enqueueReadBuffer(particlesBuffer, true, 0, particlesSize, particles_array, nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+
+    //for (int x = 0; x < m_grid->xRes(); x++) {
+    //    for (int y = 0; y < m_grid->yRes(); y++) {
+    //        for (int z = 0; z < m_grid->zRes(); z++) {
+
+    //            auto &particles = m_grid->at(x, y, z);
+    //            for (auto &particle : particles) {
+
+    //                particle->density() = 0.0;
+
+    //                // neighbors
+    //                for (int offsetX = -1; offsetX <= 1; offsetX++) {
+    //                    if (x + offsetX < 0) continue;
+    //                    if (x + offsetX >= m_grid->xRes()) break;
+
+    //                    for (int offsetY = -1; offsetY <= 1; offsetY++) {
+    //                        if (y + offsetY < 0) continue;
+    //                        if (y + offsetY >= m_grid->yRes()) break;
+
+    //                        for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
+    //                            if (z + offsetZ < 0) continue;
+    //                            if (z + offsetZ >= m_grid->zRes()) break;
+
+    //                            auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
+    //                            for (auto &neighbor : neighborGridCellParticles) {
+    //                                double radiusSquared = particle->diffPosition(neighbor).lengthSquared();
+
+    //                                if (radiusSquared <= CParticle::h * CParticle::h) {
+    //                                    particle->density() += Wpoly6(radiusSquared);
+    //                                }
+    //                            }
+    //                        }
+    //                    }
+    //                }
+
+    //                particle->density() *= CParticle::mass;
+    //                // p = k(density - density_rest)
+    //                particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
+    //            }
+    //        }
+    //    }
+    //}
 }
 
 void CGPUParticleSimulator::updateForces()

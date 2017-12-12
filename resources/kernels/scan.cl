@@ -97,9 +97,9 @@ typedef struct  __attribute__((aligned(16))) tag_ParticleCL
 //#pragma pack(pop) 
 
 
-
-__constant float mass = 0.02f; // kg
-__constant float h = 0.0457f;                //0.25 //0.02 //0.045
+__constant float particle_mass = 0.02f; // kg
+__constant float particle_h = 0.0457f;                //0.25 //0.02 //0.045
+__constant float particle_h2 = 0.00208849f;                //0.25 //0.02 //0.045
 __constant float viscosity = 3.5f;           // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
 __constant float gas_stiffness = 3.0f;       //20.0 // 461.5  // Nm/kg is gas constant of water vapor
 __constant float rest_density = 998.29f;     // kg/m^3 is rest density of water particle
@@ -115,7 +115,7 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
     if (global_x < particles_count)
     {
         //this division is really bad...
-        float3 newGridPosition = (particles[global_x].position + halfCellSize) / h;
+        float3 newGridPosition = (particles[global_x].position + halfCellSize) / particle_h;
 
         int x = (int) floor(newGridPosition.x);
         int y = (int) floor(newGridPosition.y);
@@ -155,33 +155,25 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-                                             // TODO static things
 float Wpoly6(double radiusSquared)
 {
-    double coefficient = 315.0 / (64.0 * M_PI * pow(h, 9)); // TODO static / one-time
-    double hSquared = h * h;
+    float coefficient = 315.0 / (64.0 * M_PI * pow(particle_h, 9)); // TODO static / one-time
 
-    return coefficient * pow(hSquared - radiusSquared, 3);
+    return coefficient * pow(particle_h2 - radiusSquared, 3);
 }
 
-float3 WspikyGradient(float3 diffPosition, float radiusSquared)
+float3 WspikyGradient(float3 diffPosition, float radiusSquared, float spiky_constant)
 {
-    float coefficient = -45.0 / (M_PI * pow(h, 6));  // TODO static / one-time
     float radius = sqrt(radiusSquared);
-    float powCounted = pow(h - radius, 2);
-
-    return coefficient * powCounted * diffPosition / radius;
+    return spiky_constant * pow(particle_h - radius, 2) * diffPosition / radius;
 }
 
-float WviscosityLaplacian(double radiusSquared)
+float WviscosityLaplacian(float radiusSquared, float viscosity_constant)
 {
-    double coefficient = 45.0 / (M_PI * pow(h, 6)); // TODO static / one-time
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * (h - radius);
+    return viscosity_constant * (particle_h - sqrt(radiusSquared));
 }
 
-__kernel void density_pressure_step(__global ParticleCL *particles, int *scan, int *sorted_indices, int size, int3 grid_size)
+__kernel void density_pressure_step(__global ParticleCL *particles, __global int *scan_array, __global int *sorted_indices, int size, int3 grid_size)
 {
     int global_x = (int)get_global_id(0);
 
@@ -189,23 +181,32 @@ __kernel void density_pressure_step(__global ParticleCL *particles, int *scan, i
         particles[global_x].density = 0.0;
 
         // for all neighbors particles
-        for (int offsetX = -1; offsetX <= 1; offsetX++) {
+        for (int offsetX = -1; offsetX <= 1; offsetX++) 
+        {
+            int z = particles[global_x].cell_id / grid_size.z;
+            int zRest = particles[global_x].cell_id - z * grid_size.z;
+            int y = zRest / grid_size.y;
+            int yRest = zRest - y * grid_size.y;
+            int x = yRest;
+
             if (x + offsetX < 0) continue;
             if (x + offsetX >= grid_size.x) break;
 
-            for (int offsetY = -1; offsetY <= 1; offsetY++) {
+            for (int offsetY = -1; offsetY <= 1; offsetY++) 
+            {
                 if (y + offsetY < 0) continue;
                 if (y + offsetY >= grid_size.y) break;
 
-                for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                for (int offsetZ = -1; offsetZ <= 1; offsetZ++)
+                {
                     if (z + offsetZ < 0) continue;
                     if (z + offsetZ >= grid_size.z) break;
 
 
-                    int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grixSize.x + +offsetZ* grixSize.x*grixSize.y;
+                    int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grid_size.x + +offsetZ* grid_size.x*grid_size.y;
 
-                    int particlesIndexFrom = scan[gridIndex];
-                    int particlesIndexto = scan[gridIndex + 1] - scan[gridIndex];
+                    int particlesIndexFrom = scan_array[gridIndex];
+                    int particlesIndexTo = scan_array[gridIndex + 1] - scan_array[gridIndex];
 
                     //sorted_indices[particlesIndexFrom];
                     //sorted_indices[particlesIndexTo];
@@ -218,13 +219,16 @@ __kernel void density_pressure_step(__global ParticleCL *particles, int *scan, i
                         float3 distance = particles[global_x].position - particles[sorted_indices[i]].position;
                         float radiusSquared = dot(distance, distance);
 
-                        if (radiusSquared <= h * h) {
+                        if (radiusSquared <= particle_h2)
+                        {
                             particles[global_x].density += Wpoly6(radiusSquared);
                         }
                     }
+                }
+            }
         }
 
-        particles[global_x].density *= mass;
+        particles[global_x].density *= particle_mass;
         particles[global_x].pressure = gas_stiffness * (particles[global_x].density - rest_density);
     }
 }
