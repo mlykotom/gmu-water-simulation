@@ -20,6 +20,8 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
     );
 
     m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
+    m_reduceKernel                  = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
+    m_downSweepKernel               = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
 
 }
 
@@ -36,8 +38,8 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
     cl_int *output_array = output.data();
 
    // cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
-    cl::Kernel kernelReduce = cl::Kernel(m_cl_wrapper->getKernel("reduce"));
-    cl::Kernel kernelDownSweep = cl::Kernel(m_cl_wrapper->getKernel("down_sweep"));
+    //cl::Kernel kernelReduce = cl::Kernel(m_cl_wrapper->getKernel("reduce"));
+    //cl::Kernel kernelDownSweep = cl::Kernel(m_cl_wrapper->getKernel("down_sweep"));
 
     cl_int err;
 
@@ -45,18 +47,18 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
     auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    kernelReduce.setArg(0, outputBuffer);
-    kernelReduce.setArg(1, countAsPowerOfTwo);
+    m_reduceKernel->setArg(0, outputBuffer);
+    m_reduceKernel->setArg(1, countAsPowerOfTwo);
     //kernelReduce.setArg(2, cl::Local(sizeof(cl_int) * countAsPowerOfTwo));
 
-    kernelDownSweep.setArg(0, outputBuffer);
-    kernelDownSweep.setArg(1, countAsPowerOfTwo);
+    m_downSweepKernel->setArg(0, outputBuffer);
+    m_downSweepKernel->setArg(1, countAsPowerOfTwo);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-    cl_int localWokrgroupSize = 4;
+    cl_int localWokrgroupSize = 32;
     cl::NDRange local(localWokrgroupSize);
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
@@ -65,16 +67,16 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
     int offset = 1;
     for (cl_int i = 0; i  < levels;  ++i)
     {
-        kernelReduce.setArg(2, offset);
-        m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernelReduce, 0, global, local, nullptr, &kernelEvent);
+        m_reduceKernel->setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
         offset <<= 1;
     }
 
     offset = countAsPowerOfTwo;
     for (cl_int i = 0; i < levels; ++i)
     {
-        kernelDownSweep.setArg(2, offset);
-        m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernelDownSweep, 0, global, local, nullptr, &kernelEvent);
+        m_downSweepKernel->setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
         offset >>= 1;
     }
 
@@ -139,19 +141,7 @@ void CGPUParticleSimulator::test()
 
     setupScene();
     updateGrid();
-    m_gridScan = scan(m_gridVector);
-
-    ////sort indices
-    //// initialize original index locations
-    //m_sortedIndices.clear();
-    //m_sortedIndices.resize(m_clParticles.size());
-    //std::iota(m_sortedIndices.begin(), m_sortedIndices.end(), 0);
-
-    //// sort indexes, smallest cell index first
-    //sort(m_sortedIndices.begin(), m_sortedIndices.end(),
-    //    [this](cl_int i1, cl_int i2) {return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
-
-
+   
 
 
     //for (auto p : m_clParticles)
@@ -220,9 +210,6 @@ void CGPUParticleSimulator::setupScene()
 
 void CGPUParticleSimulator::updateGrid()
 {
-
-    cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("update_grid_positions"));
-
     cl_int pariclesCount = m_particlesCount;
     size_t particlesSize = pariclesCount * sizeof(CParticle::Physics);
 
@@ -248,12 +235,12 @@ void CGPUParticleSimulator::updateGrid()
 
 
     cl_int arg = 0;
-    kernel.setArg(arg++, inputBuffer);
-    kernel.setArg(arg++, outputBuffer);
-    kernel.setArg(arg++, (cl_int)pariclesCount);
-    kernel.setArg(arg++, gridSize);
-    kernel.setArg(arg++, halfCellSize);
-    kernel.setArg(arg++, (cl_float)CParticle::h);
+    m_updateParticlePositionsKernel->setArg(arg++, inputBuffer);
+    m_updateParticlePositionsKernel->setArg(arg++, outputBuffer);
+    m_updateParticlePositionsKernel->setArg(arg++, (cl_int)pariclesCount);
+    m_updateParticlePositionsKernel->setArg(arg++, gridSize);
+    m_updateParticlePositionsKernel->setArg(arg++, halfCellSize);
+    //m_updateParticlePositionsKernel->setArg(arg++, (cl_float)CParticle::h);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -267,12 +254,25 @@ void CGPUParticleSimulator::updateGrid()
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
+    //scan grid
+    //TODO: remove this parameters
+    m_gridScan = scan(m_gridVector);
+
+    //sort indices
+    // initialize original index locations
+    m_sortedIndices.clear();
+    m_sortedIndices.resize(m_clParticles.size());
+    std::iota(m_sortedIndices.begin(), m_sortedIndices.end(), 0);
+
+    //// sort indexes, smallest cell index first
+    sort(m_sortedIndices.begin(), m_sortedIndices.end(),
+        [this](cl_int i1, cl_int i2) {return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
 
 
 }

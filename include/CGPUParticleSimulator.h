@@ -29,7 +29,9 @@ private: //methods
 protected:
     CLWrapper *m_cl_wrapper;
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
-    //CParticle::Physics *m_device_data ;
+    std::shared_ptr<cl::Kernel> m_reduceKernel;
+    std::shared_ptr<cl::Kernel> m_downSweepKernel;
+
     std::vector<CParticle::Physics> m_clParticles;
     std::vector<cl_int> m_gridVector;
     std::vector<cl_int> m_sortedIndices;
