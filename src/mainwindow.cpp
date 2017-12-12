@@ -19,13 +19,18 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
+    this->setCentralWidget(this->ui->mainWidget);
 
     m_mainView = new CQt3DWindow();
-    //m_mainView->setKeyboardGrabEnabled(false);
 
     QWidget *container = QWidget::createWindowContainer(m_mainView);
+    QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    sizePolicy.setHorizontalStretch(0);
+    sizePolicy.setVerticalStretch(0);
+    sizePolicy.setHeightForWidth(container->sizePolicy().hasHeightForWidth());
+    container->setSizePolicy(sizePolicy);
 
-    this->setCentralWidget(container);
+    this->ui->verticalLayout->replaceWidget(ui->centralWidget, container);
 
     // Scene
     m_scene = new CScene();
@@ -34,7 +39,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
     m_mainView->registerAspect(input);
-
 
     // Scene Camera
     Qt3DRender::QCamera *basicCamera = m_mainView->camera();
@@ -54,15 +58,24 @@ MainWindow::MainWindow(QWidget *parent) :
     try {
         //m_simulator = new CCPUParticleSimulator(m_scene);
         m_simulator = new CCPUBruteParticleSimulator(m_scene);
-		//m_simulator = new CGPUParticleSimulator(m_scene);
+        //m_simulator = new CGPUParticleSimulator(m_scene);
 
+        connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
         m_simulator->setupScene();
-		//m_simulator->test();
+        //m_simulator->test();
         // Set root object of the scene
         m_mainView->setRootEntity(rootEntity);
+
+        ui->particlesCountWidget->setText(QString::number(m_simulator->getParticlesCount()));
+        ui->gridSizeWidget->setText(QString("%1 x %2 x %3").arg(
+            QString::number(m_simulator->getGridSizeX()),
+            QString::number(m_simulator->getGridSizeY()),
+            QString::number(m_simulator->getGridSizeZ())
+        ));
+
     }
     catch (CLException &exc) {
         qDebug() << exc.what();
@@ -82,11 +95,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    QString text = QString("%1 | %2").arg(
-        QString::number(m_simulator->getParticlesCount()),
-        QString::number(m_simulator->getFps())
-    );
-
-    this->ui->iterationWidget->setText(text);
+    ui->fpsWidget->setText(QString::number(m_simulator->getFps()));
+    ui->iterationWidget->setText(QString::number(iteration));
 }
-

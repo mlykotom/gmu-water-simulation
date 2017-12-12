@@ -73,7 +73,9 @@ public:
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
-
+    int getGridSizeX() { return m_grid->xRes(); }
+    int getGridSizeY() { return m_grid->yRes(); }
+    int getGridSizeZ() { return m_grid->zRes(); }
     void step();
 
     // TODO  not sure if every implementation has it (or it should be static)

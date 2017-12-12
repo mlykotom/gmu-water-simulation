@@ -62,8 +62,14 @@ private:
 
     CBaseParticleSimulator *m_simulator;
     CLWrapper *m_cl_wrapper;
+
+signals:
+    void keyPressed(Qt::Key key);
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
+    void keyPressEvent(QKeyEvent *event){
+        emit keyPressed((Qt::Key)event->key());
+    }
 };
 
 #endif // MAINWINDOW_H
