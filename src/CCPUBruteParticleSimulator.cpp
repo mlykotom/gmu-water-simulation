@@ -8,9 +8,9 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 {
     CLPlatforms::printInfoAll();
 
-    m_systemParams.poly6_constant = 315.0f / (64.0f * M_PI * pow(CParticle::h, 9));
-    m_systemParams.spiky_constant = -45.0f / (M_PI * pow(CParticle::h, 6));
-    m_systemParams.viscosity_constant = 45.0f / (M_PI * pow(CParticle::h, 6));
+    m_systemParams.poly6_constant = static_cast<cl_float>(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
+    m_systemParams.spiky_constant = static_cast<cl_float>(-45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.viscosity_constant = static_cast<cl_float>(45.0f / (M_PI * pow(CParticle::h, 6)));
 
     m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 
@@ -78,6 +78,9 @@ CCPUBruteParticleSimulator::~CCPUBruteParticleSimulator()
 void CCPUBruteParticleSimulator::updateGrid()
 {
     // don't need to update the grid, since everything is in one cell
+    cl::Event writeEvent;
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
+
 }
 
 void CCPUBruteParticleSimulator::updateDensityPressure()
@@ -87,18 +90,12 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
     m_update_density_kernel->setArg(arg++, m_particlesCount);
     m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
 
-    cl::Event writeEvent;
     cl::Event kernelEvent;
-    cl::Event readEvent;
 
     cl::NDRange local = cl::NullRange;
     cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
-
-    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 }
 
 void CCPUBruteParticleSimulator::updateForces()
@@ -110,17 +107,15 @@ void CCPUBruteParticleSimulator::updateForces()
     m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
     m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 
-    cl::Event writeEvent;
-    cl::Event kernelEvent;
-    cl::Event readEvent;
+    cl::Event kernelEvent, readEvent, writeEventAfterCollision;
 
     cl::NDRange local = cl::NullRange;
     cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
 
+    // need to read buffer and wait until finish because of collision computations
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     // collision force
@@ -133,6 +128,9 @@ void CCPUBruteParticleSimulator::updateForces()
         //QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
         //particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
     }
+
+    // need to write buffer because previous step has
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_FALSE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEventAfterCollision);
 }
 
 void CCPUBruteParticleSimulator::integrate()
@@ -142,14 +140,11 @@ void CCPUBruteParticleSimulator::integrate()
     m_integration_kernel->setArg(arg++, m_particlesCount);
     m_integration_kernel->setArg(arg++, dt);
 
-    cl::Event writeEvent;
-    cl::Event kernelEvent;
-    cl::Event readEvent;
+    cl::Event kernelEvent, readEvent;
 
     cl::NDRange local = cl::NullRange;
     cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_FALSE, 0, m_dataBufferSize, m_device_data, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integration_kernel, 0, global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_outputBuffer, CL_FALSE, 0, m_dataBufferSize, m_device_data, nullptr, &readEvent);
 
