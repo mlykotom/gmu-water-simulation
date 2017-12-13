@@ -98,7 +98,7 @@ __kernel void forces_step(__global ParticleCL *output, int size, float3 gravity,
     int global_x = (int) get_global_id(0);
     if (global_x < size) {
         __private ParticleCL thisParticle = output[global_x];
-        __private float3 f_pressure, f_viscosity;
+        __private float3 f_pressure = 0.0f, f_viscosity = 0.0f;
 
         // for all neighbors particles
         for (int i = 0; i < size; i++) {
