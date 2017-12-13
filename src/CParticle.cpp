@@ -1,6 +1,6 @@
 #include "CParticle.h"
 
-CParticle::CParticle(const unsigned long id, Qt3DCore::QEntity * rootEntity, QVector3D initialPosition)
+CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D initialPosition)
     : RenderableEntity(rootEntity),
     m_id(id),
     m_position(initialPosition), 

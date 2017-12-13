@@ -24,7 +24,7 @@ public: //methods
     std::vector<CParticle *> *getData() const { return m_data; }
     std::vector<CParticle *> &at(int x, int y, int z)
     {
-        return m_data[x + y * m_ResY + z * m_ResZ * m_ResY];
+        return m_data[x + y * m_ResX + z * m_ResX * m_ResY];
     }
 
     const int xRes() const { return m_ResX; }

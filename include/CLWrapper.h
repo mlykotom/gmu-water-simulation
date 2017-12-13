@@ -3,6 +3,7 @@
 
 #include "CLCommon.h"
 #include <fstream>
+#include <istream>
 #include <QDebug>
 
 class CLWrapper
@@ -17,10 +18,12 @@ private:
 
 public:
     explicit CLWrapper(cl::Device device)
+        :m_device(device)
     {
         // init device
-        m_device = std::move(device);
+        //m_device = std::move(device);
 
+        
         // init context
         cl_int err;
         m_context = cl::Context(m_device, nullptr, nullptr, nullptr, &err);
@@ -33,7 +36,6 @@ public:
 
     virtual ~CLWrapper()
     {
-//        cl::flush();
 //        cl::finish();
     }
 
@@ -44,6 +46,8 @@ public:
 
     void loadProgram(std::vector<std::string> kernelFiles);
     cl::Kernel getKernel(const std::string &kernelName);
+
+    cl::Buffer createBuffer(cl_mem_flags flags, size_t bufferSize, void *hostPtr = nullptr);
 };
 
 #endif //WATERSURFACESIMULATION_CLWRAPPER_H

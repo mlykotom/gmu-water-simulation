@@ -31,7 +31,7 @@ include( ${GMU_CMAKE_MODULE_PATH}/ApplicationMacros.cmake )
 #enabling C++ 11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)       #on mac this adds flag -std=c++11 instead of -std=gnu++11
+set(CMAKE_CXX_EXTENSIONS ON)       #on mac this adds flag -std=c++11 instead of -std=gnu++11
 
 # adds current source/build directories to module's includes
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -82,10 +82,12 @@ ADD_LIBS(
 	OpenCL::OpenCL
 )
 
-find_package(OpenMP)
-if (OPENMP_FOUND)
-	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+if( APPLE )
+    find_package(OpenMP)
+    if (OPENMP_FOUND)
+	    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -Wno-ignored-attributes")
+	    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -Wno-ignored-attributes")
+    endif()
 endif()
 
 if( WIN32 )

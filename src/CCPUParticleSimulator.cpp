@@ -1,6 +1,6 @@
 #include "CCPUParticleSimulator.h"
 
-CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr)
+CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, QObject *parent)
     : CBaseParticleSimulator(scene, parent)
 {
 
@@ -17,9 +17,9 @@ void CCPUParticleSimulator::updateGrid()
                 for (unsigned long p = 0; p < particles.size(); p++) {
                     CParticle *particle = particles[p];
 
-                    int newGridCellX = (int) floor((particle->position().x() + boxSize.x() / 2.0) / CParticle::h);
-                    int newGridCellY = (int) floor((particle->position().y() + boxSize.y() / 2.0) / CParticle::h);
-                    int newGridCellZ = (int) floor((particle->position().z() + boxSize.z() / 2.0) / CParticle::h);
+                    int newGridCellX = (int)floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
+                    int newGridCellY = (int)floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
+                    int newGridCellZ = (int)floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
                     //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
                     //cout << "particle position: " << particle->position() << endl;
                     //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
@@ -95,7 +95,8 @@ void CCPUParticleSimulator::updateDensityPressure()
 
                                 auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
                                 for (auto &neighbor : neighborGridCellParticles) {
-                                    double radiusSquared = particle->diffPosition(neighbor).lengthSquared();
+                                    QVector3D distance = (particle->position() - neighbor->position());
+                                    double radiusSquared = distance.lengthSquared();
 
                                     if (radiusSquared <= CParticle::h * CParticle::h) {
                                         particle->density() += Wpoly6(radiusSquared);
@@ -112,6 +113,7 @@ void CCPUParticleSimulator::updateDensityPressure()
             }
         }
     }
+
 }
 
 void CCPUParticleSimulator::updateForces()
@@ -146,7 +148,7 @@ void CCPUParticleSimulator::updateForces()
                                     double radiusSquared = distance.lengthSquared();
 
                                     if (radiusSquared <= CParticle::h * CParticle::h) {
-                                        QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
+                                        //QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
                                         QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
 
                                         if (particle->getId() != neighbor->getId()) {
@@ -171,6 +173,7 @@ void CCPUParticleSimulator::updateForces()
             }
         }
     }
+
 }
 
 void CCPUParticleSimulator::integrate()

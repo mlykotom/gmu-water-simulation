@@ -5,11 +5,13 @@
 #include <Qt3DExtras/QFirstPersonCameraController>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "ocl_test.h"
 
 //local includes
 #include <CQt3DWindow.h>
 #include <include/CCPUBruteParticleSimulator.h>
-//#include <include/CGPUParticleSimulator.h>
+#include <include/CGPUParticleSimulator.h>
+#include <include/CCPUParticleSimulator.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -17,23 +19,26 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
+    this->setCentralWidget(this->ui->mainWidget);
 
     m_mainView = new CQt3DWindow();
-    //m_mainView->setKeyboardGrabEnabled(false);
 
     QWidget *container = QWidget::createWindowContainer(m_mainView);
+    QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    sizePolicy.setHorizontalStretch(0);
+    sizePolicy.setVerticalStretch(0);
+    sizePolicy.setHeightForWidth(container->sizePolicy().hasHeightForWidth());
+    container->setSizePolicy(sizePolicy);
 
-    this->setCentralWidget(container);
+    this->ui->verticalLayout->replaceWidget(ui->centralWidget, container);
 
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
     m_mainView->setRootEntity(rootEntity);
 
-
     Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
     m_mainView->registerAspect(input);
-
 
     // Scene Camera
     Qt3DRender::QCamera *basicCamera = m_mainView->camera();
@@ -51,25 +56,33 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
     try {
-        //Particle simulator
-//        m_simulator = new CCPUParticleSimulator(m_scene, nullptr);
-//        m_simulator = new CGPUParticleSimulator(m_scene);
-        m_simulator = new CCPUBruteParticleSimulator(m_scene);
+        m_simulator = new CCPUParticleSimulator(m_scene);
+        //m_simulator = new CCPUBruteParticleSimulator(m_scene);
+        //m_simulator = new CGPUParticleSimulator(m_scene);
 
-//        this->ui->particlesCountWidget->setText(QString("Particles: %1").arg(123));
-
+        connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
+        m_simulator->setupScene();
+        //m_simulator->test();
         // Set root object of the scene
         m_mainView->setRootEntity(rootEntity);
+
+        ui->particlesCountWidget->setText(QString::number(m_simulator->getParticlesCount()));
+        ui->gridSizeWidget->setText(QString("%1 x %2 x %3").arg(
+            QString::number(m_simulator->getGridSizeX()),
+            QString::number(m_simulator->getGridSizeY()),
+            QString::number(m_simulator->getGridSizeZ())
+        ));
+
     }
     catch (CLException &exc) {
         qDebug() << exc.what();
-        // TODO alert message?
-//        QMessageBox message;
-//        message.setText(QString(exc.what()));
-//        message.show();
+        QMessageBox message;
+        message.setText(QString(exc.what()));
+        message.exec();
+        exit(1);
     }
 }
 
@@ -82,6 +95,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    this->ui->iterationWidget->setText(QString::number(m_simulator->getFps()));
+    ui->fpsWidget->setText(QString::number(m_simulator->getFps()));
+    ui->iterationWidget->setText(QString::number(iteration));
 }
-

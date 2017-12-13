@@ -14,6 +14,8 @@
 //std
 #include <limits>
 
+//local
+#include <CParticle.h>
 
 struct sVertex
 {
@@ -133,6 +135,7 @@ public:
 
     QVector3D inverseBounce(QVector3D pos, QVector3D velocity);
     QVector3D inverseBoundingBoxBounce(QVector3D &pos, QVector3D &velocity);
+    void inverseBoundingBoxBounce(CParticle::Physics &particle);
 
 private: //methods
     void init();

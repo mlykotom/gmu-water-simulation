@@ -1,4 +1,5 @@
-#include <OpenCL/cl.hpp>
+//#include <OpenCL/cl.hpp>
+#include <CL/cl.hpp>
 #include <qplatformdefs.h>
 #include <include/CLCommon.h>
 #include <include/CLWrapper.h>
@@ -33,42 +34,20 @@ void doCalculation()
 {
     auto m_cl_wrapper = new CLWrapper(CLPlatforms::getBestGPU());
 
-
-//    m_cl_wrapper->loadProgram(
-//        {
-//            APP_RESOURCES"/kernels/test_matrix_add.cl"
-//        }
-//    );
+    m_cl_wrapper->loadProgram(
+        {
+            APP_RESOURCES"/kernels/matrix_add.cl"
+        }
+    );
 
     cl_int err_msg;
 
-    cl::Buffer a_buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
-
-    if (err_msg) {
-        CLCommon::checkError(err_msg, "Buffer A");
-    }
-
-    cl::Buffer b_buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
-
-    if (err_msg) {
-        CLCommon::checkError(err_msg, "Buffer B");
-    }
-
-    cl::Buffer c_buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H, NULL, &err_msg);
-
-    if (err_msg) {
-        CLCommon::checkError(err_msg, "Buffer C");
-    }
+    cl::Buffer a_buffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H);
+    cl::Buffer b_buffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H);
+    cl::Buffer c_buffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, sizeof(cl_int) * MATRIX_W * MATRIX_H);
 
     cl_int matrix_width = MATRIX_W;
     cl_int matrix_height = MATRIX_H;
-
-    //===========================================================================================
-    /* ======================================================
-    * TODO 4. Cast
-    * nastavit parametry spusteni
-    * =======================================================
-    */
 
     cl::Kernel kernel = m_cl_wrapper->getKernel("matrix_add");
 
@@ -86,16 +65,6 @@ void doCalculation()
     CLCommon::checkError(err_msg, "clCreateUserEvent kernel_event");
     cl::UserEvent c_event(m_cl_wrapper->getContext(), &err_msg);
     CLCommon::checkError(err_msg, "clCreateUserEvent c_event");
-
-    //===========================================================================================
-    /* ======================================================
-    * TODO 5. Cast
-    * velikost skupiny, kopirovat data na gpu, spusteni kernelu, kopirovani dat zpet
-    * pro zarovnání muzete pouzit funkci alignTo(co, na_nasobek_ceho)
-    * jako vystupni event kopirovani nastavte prepripravene eventy a_event b_event c_event
-    * vystupni event kernelu kernel_event
-    * =======================================================
-    */
 
     double gpu_start = CLCommon::getTime();
 

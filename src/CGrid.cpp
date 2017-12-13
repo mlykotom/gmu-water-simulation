@@ -10,7 +10,7 @@ CGrid::CGrid(QVector3D size, QVector3D resolution, Qt3DCore::QNode * parent)
     : RenderableEntity(parent),
     m_material(new Qt3DExtras::QPhongMaterial()),
     m_meshRenderer(new Qt3DRender::QGeometryRenderer()),
-    m_ResX(resolution.x()), 
+    m_ResX(resolution.x()),
     m_ResY(resolution.y()),
     m_ResZ(resolution.z())
 {
@@ -54,7 +54,7 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 {
     //Translation
     m_transform->setScale(4.0f);
-    m_transform->setTranslation(QVector3D(0, 0, -10.0f)); 
+    m_transform->setTranslation(QVector3D(0, 0, -10.0f));
 
     //Cuboid geometry
     m_geometry = new Qt3DExtras::QCuboidGeometry(this);
@@ -87,5 +87,5 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 }
 CGrid::~CGrid()
 {
-    //delete[] m_data;
+    delete[] m_data;
 }

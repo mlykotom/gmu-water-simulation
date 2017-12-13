@@ -25,7 +25,7 @@ private slots:
     void doWork();
 
 public slots:
-    void onKeyPressed(Qt::Key key);
+    virtual void onKeyPressed(Qt::Key key);
 
 signals:
     void iterationChanged(unsigned long iteration);
@@ -33,37 +33,61 @@ signals:
 private: //attributes
     QTimer m_timer;
     QElapsedTimer m_elapsed_timer;
-    unsigned long totalIteration;
     unsigned long iterationSincePaused;
+    unsigned long totalIteration;
 
 protected:
+
+#ifdef WIN32
+    typedef __declspec(align(16)) struct sSystemParams
+#else
+    typedef struct __attribute__((aligned(16))) sSystemParams
+#endif
+    {
+        cl_float poly6_constant;
+        cl_float spiky_constant;
+        cl_float viscosity_constant;
+    } SystemParams;
+
     CScene *m_scene;
     QVector3D gravity;
 
     QVector3D m_cellSize; // TODO is it anyhow useful?
 
-    double dt;
+    cl_float dt;
     CGrid *m_grid;
-    QVector3D boxSize;
-    double surfaceThreshold;
+    std::vector<CParticle*> m_particles;
+    QVector3D m_boxSize;
+    cl_float m_surfaceThreshold;
+    cl_int m_particlesCount = 0;
+    SystemParams m_systemParams;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
     virtual void updateForces() = 0;
     virtual void integrate() = 0;
 
+
 public:
     explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
-    ~CBaseParticleSimulator() override {}
+    ~CBaseParticleSimulator() override
+    {
+        delete m_grid;
+    }
 
     virtual void setupScene();
     virtual void start();
 
     void toggleSimulation();
     void toggleGravity();
+    virtual void setGravityVector(QVector3D newGravity);
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
+    unsigned long getParticlesCount() { return m_particlesCount; }
+    int getGridSizeX() { return m_grid->xRes(); }
+    int getGridSizeY() { return m_grid->yRes(); }
+    int getGridSizeZ() { return m_grid->zRes(); }
     void step();
 
     // TODO  not sure if every implementation has it (or it should be static)
@@ -71,6 +95,9 @@ public:
     QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
     QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
     double WviscosityLaplacian(double radiusSquared);
+
+    //TODO: DELETE
+    virtual void test() {}
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H
