@@ -42,9 +42,6 @@ void CGPUParticleSimulator::setupKernels()
     //grid vector and grid scan needs to be power of two so that the blelloch scan can work
     m_gridCountToPowerOfTwo = qNextPowerOfTwo(m_grid->getCellCount());
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
-    m_gridScan.resize(m_gridCountToPowerOfTwo, 0);
-
-
 
     m_sortedIndices.clear();
     m_sortedIndices.resize(m_clParticles.size());
@@ -54,9 +51,6 @@ void CGPUParticleSimulator::setupKernels()
 
     m_gridVectorSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
     m_gridBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));;
-
-    m_scanSize = (cl_int)m_gridScan.size() * sizeof(cl_int);
-    m_scanBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_scanSize);
 
     m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
     m_indicesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize));
@@ -80,7 +74,7 @@ void CGPUParticleSimulator::setupKernels()
 
     arg = 0;
     m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_scanBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_gridBuffer);
     m_densityPresureStepKernel->setArg(arg++, m_indicesBuffer);
     m_densityPresureStepKernel->setArg(arg++, m_particlesCount);
     m_densityPresureStepKernel->setArg(arg++, m_gridSize);
@@ -88,7 +82,7 @@ void CGPUParticleSimulator::setupKernels()
 
     arg = 0;
     m_forceStepKernel->setArg(arg++, m_particlesBuffer);
-    m_forceStepKernel->setArg(arg++, m_scanBuffer);
+    m_forceStepKernel->setArg(arg++, m_gridBuffer);
     m_forceStepKernel->setArg(arg++, m_indicesBuffer);
     m_forceStepKernel->setArg(arg++, m_particlesCount);
     m_forceStepKernel->setArg(arg++, m_gridSize);
@@ -102,11 +96,11 @@ void CGPUParticleSimulator::setupKernels()
     m_integrationStepKernel->setArg(arg++, dt);
 
     arg = 0;
-    m_reduceKernel->setArg(arg++, m_scanBuffer);
+    m_reduceKernel->setArg(arg++, m_gridBuffer);
     m_reduceKernel->setArg(arg++, m_gridCountToPowerOfTwo);
 
     arg = 0;
-    m_downSweepKernel->setArg(arg++, m_scanBuffer);
+    m_downSweepKernel->setArg(arg++, m_gridBuffer);
     m_downSweepKernel->setArg(arg++, m_gridCountToPowerOfTwo);
 }
 
@@ -214,22 +208,13 @@ void CGPUParticleSimulator::setupScene()
 
 void CGPUParticleSimulator::scanGrid()
 {
-    m_gridScan.clear();
-    m_gridScan.resize(m_gridCountToPowerOfTwo, 0);
-
-
-
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-    cl_int localWokrgroupSize = 32;
-    cl::NDRange local(localWokrgroupSize);
+    cl::NDRange local(m_localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(m_gridCountToPowerOfTwo, localWokrgroupSize));
-
-    //Todo - do this in kernel
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, CL_FALSE, 0, m_scanSize, m_gridVector.data(), nullptr, &writeEvent);
+    cl::NDRange global(CLCommon::alignTo(m_gridCountToPowerOfTwo, m_localWokrgroupSize));
 
     int levels = log2(m_gridCountToPowerOfTwo);
     int offset = 1;
@@ -248,9 +233,7 @@ void CGPUParticleSimulator::scanGrid()
         offset >>= 1;
     }
 
-  //  m_cl_wrapper->getQueue().enqueueReadBuffer(m_scanBuffer, true, 0, m_scanSize, m_gridScan.data(), nullptr, &readEvent);
    // CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-
 }
 
 void CGPUParticleSimulator::updateGrid()
@@ -258,8 +241,6 @@ void CGPUParticleSimulator::updateGrid()
     m_gridVector.clear();
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
 
-    cl_int *output_array = m_gridVector.data();
-    CParticle::Physics *input_array = m_clParticles.data();
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -272,11 +253,10 @@ void CGPUParticleSimulator::updateGrid()
     cl::NDRange offset(0);
 
     //Todo - do this in kernel
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, output_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, output_array, nullptr, &readEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, input_array, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
@@ -306,14 +286,8 @@ void CGPUParticleSimulator::updateDensityPressure()
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
 
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
-  //  m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, CL_FALSE, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, CL_FALSE, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
-
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, global, local, nullptr, &kernelEvent);
-
-  //  m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
@@ -328,13 +302,7 @@ void CGPUParticleSimulator::updateForces()
 
 
     cl::NDRange local(m_localWokrgroupSize);
-    //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
-
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
-    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, true, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
-    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, true, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, global, local, nullptr, &kernelEvent);
 
