@@ -178,23 +178,13 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 
     if (global_x < size) 
     {
-
-        int gird_array_size = grid_size.x * grid_size.y *grid_size.z;
-
         particles[global_x].density = 0.0;
 
-        //int z = particles[global_x].cell_id / grid_size.z;
-        //int zRest = particles[global_x].cell_id - z * grid_size.z;
-        //int y = zRest / grid_size.y;
-        //int yRest = zRest - y * grid_size.y;
-        //int x = yRest;
+        int gird_array_size = grid_size.x * grid_size.y *grid_size.z;
 
         int x = particles[global_x].grid_position.x;
         int y = particles[global_x].grid_position.y;
         int z = particles[global_x].grid_position.z;
-
-
-      //  printf("cell pos: %d, %d, %d | %d, %d, %d \n", x, y, z, particles[global_x].grid_position.x, particles[global_x].grid_position.y, particles[global_x].grid_position.z);
 
         // for all neighbors particles
         for (int offsetX = -1; offsetX <= 1; offsetX++) 
@@ -214,17 +204,9 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 
 
                     int gridIndex = x + offsetX + ( (offsetY + y)* grid_size.x) + ((offsetZ+z)* grid_size.x*grid_size.y);
-
                     int particlesIndexFrom = scan_array[gridIndex];
-                  //  int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - particlesIndexFrom) : (particlesIndexFrom - size);
                     int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] ) : (size);
 
-                    //sorted_indices[particlesIndexFrom];
-                    //sorted_indices[particlesIndexTo];
-                   //   printf("id: %d | from-to: %d, %d \n",global_x, particlesIndexFrom, particlesIndexTo);
-
-
-                //    auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
                     for (int i = particlesIndexFrom; i < particlesIndexTo; ++i)
                     {
 
@@ -243,6 +225,10 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
         particles[global_x].density *= particle_mass;
         particles[global_x].pressure = gas_stiffness * (particles[global_x].density - rest_density);
     }
+
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
 }
 
 
@@ -258,11 +244,6 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
 
         int gird_array_size = grid_size.x * grid_size.y *grid_size.z;
 
-        //int z = particles[global_x].cell_id / grid_size.z;
-        //int zRest = particles[global_x].cell_id - z * grid_size.z;
-        //int y = zRest / grid_size.y;
-        //int yRest = zRest - y * grid_size.y;
-        //int x = yRest;
         int x = particles[global_x].grid_position.x;
         int y = particles[global_x].grid_position.y;
         int z = particles[global_x].grid_position.z;
@@ -283,17 +264,11 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
                     if (z + offsetZ < 0) continue;
                     if (z + offsetZ >= grid_size.z) break;
 
-                    int gridIndex = x + offsetX + ((offsetY + y)* grid_size.x) + ((offsetZ + z)* grid_size.x*grid_size.y);
 
+                    int gridIndex = x + offsetX + ((offsetY + y)* grid_size.x) + ((offsetZ + z)* grid_size.x*grid_size.y);
                     int particlesIndexFrom = scan_array[gridIndex];
-                    //int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - particlesIndexFrom) : (particlesIndexFrom - size);
                     int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1]) : (size);
 
-                    //sorted_indices[particlesIndexFrom];
-                    //sorted_indices[particlesIndexTo];
-
-
-                    //    auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
                     for (int i = particlesIndexFrom; i < particlesIndexTo; ++i)
                     {
 
@@ -317,8 +292,15 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
         f_pressure *= -particle_mass * thisParticle.density;
         f_viscosity *= viscosity * particle_mass;
 
+        
         particles[global_x].acceleration = (f_pressure + f_viscosity + gravity * thisParticle.density) / thisParticle.density;
+
+        //printf("updating acceleration of %d to %d \n", global_x, particles[global_x].acceleration);
+
     }
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
 }
 
 

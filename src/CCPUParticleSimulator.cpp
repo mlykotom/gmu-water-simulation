@@ -113,6 +113,9 @@ void CCPUParticleSimulator::updateDensityPressure()
             }
         }
     }
+
+    for (auto p : m_particles)
+        qDebug() << p->density();
 }
 
 void CCPUParticleSimulator::updateForces()
@@ -147,7 +150,7 @@ void CCPUParticleSimulator::updateForces()
                                     double radiusSquared = distance.lengthSquared();
 
                                     if (radiusSquared <= CParticle::h * CParticle::h) {
-                                        QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
+                                        //QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
                                         QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
 
                                         if (particle->getId() != neighbor->getId()) {
@@ -163,15 +166,33 @@ void CCPUParticleSimulator::updateForces()
                     f_pressure *= -CParticle::mass * particle->density();
                     f_viscosity *= CParticle::viscosity * CParticle::mass;
 
-                    // ADD IN SPH FORCES
+                    //// ADD IN SPH FORCES
                     particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
-                    // collision force
-                    particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
+                    //// collision force
+                    //particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
 
                 }
             }
         }
     }
+
+    qDebug() << "Before";
+
+    for (auto p : m_particles)
+        qDebug() << p->acceleration();
+
+    for (auto particle : m_particles)
+    {
+        particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
+
+    }
+
+    qDebug() << "After";
+
+    for (auto p : m_particles)
+        qDebug() << p->acceleration();
+    qDebug() << "==============================";
+
 }
 
 void CCPUParticleSimulator::integrate()

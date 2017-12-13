@@ -56,6 +56,7 @@ protected:
 
     cl_float dt;
     CGrid *m_grid;
+    std::vector<CParticle*> m_particles;
     QVector3D m_boxSize;
     cl_float m_surfaceThreshold;
     cl_int m_particlesCount = 0;

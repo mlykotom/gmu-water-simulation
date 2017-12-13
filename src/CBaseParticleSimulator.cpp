@@ -43,10 +43,18 @@ void CBaseParticleSimulator::setupScene()
 //        for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += halfParticle) {
 //            for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += halfParticle) {
                 auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x, y, z));
+                m_particles.push_back(particle);
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
+
+                if (m_particlesCount > 4)
+                    break;
             }
+            if (m_particlesCount > 4)
+                break;
         }
+        if (m_particlesCount > 4)
+            break;
     }
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
