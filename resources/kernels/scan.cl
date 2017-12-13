@@ -89,6 +89,7 @@ typedef struct  __attribute__((aligned(16))) tag_ParticleCL
     float3 position;
     float3 velocity;
     float3 acceleration;
+    int3 grid_position;
     float density;
     float pressure;
     uint id;
@@ -139,11 +140,15 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         }
 
         int cell_index = x + y * grid_size.x + z * grid_size.x * grid_size.y;
+       // printf("pos: %d, %d, %d | %d, %d, %d \n", x, y, z, particles[global_x].grid_position.x, particles[global_x].grid_position.y, particles[global_x].grid_position.z);
 
         if ((cell_index < (grid_size.x * grid_size.y * grid_size.z)) && (cell_index >= 0))
         {
             atomic_inc(&positions[cell_index]);
             particles[global_x].cell_id = cell_index;
+           // particles[global_x].grid_position = {x,y,z};
+            particles[global_x].grid_position.xyz = (int3)(x, y, z);
+
         }
 
     }
@@ -171,14 +176,25 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 {
     int global_x = (int)get_global_id(0);
 
-    if (global_x < size) {
+    if (global_x < size) 
+    {
+
+        int gird_array_size = grid_size.x * grid_size.y *grid_size.z;
+
         particles[global_x].density = 0.0;
 
-        int z = particles[global_x].cell_id / grid_size.z;
-        int zRest = particles[global_x].cell_id - z * grid_size.z;
-        int y = zRest / grid_size.y;
-        int yRest = zRest - y * grid_size.y;
-        int x = yRest;
+        //int z = particles[global_x].cell_id / grid_size.z;
+        //int zRest = particles[global_x].cell_id - z * grid_size.z;
+        //int y = zRest / grid_size.y;
+        //int yRest = zRest - y * grid_size.y;
+        //int x = yRest;
+
+        int x = particles[global_x].grid_position.x;
+        int y = particles[global_x].grid_position.y;
+        int z = particles[global_x].grid_position.z;
+
+
+      //  printf("cell pos: %d, %d, %d | %d, %d, %d \n", x, y, z, particles[global_x].grid_position.x, particles[global_x].grid_position.y, particles[global_x].grid_position.z);
 
         // for all neighbors particles
         for (int offsetX = -1; offsetX <= 1; offsetX++) 
@@ -200,7 +216,7 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
                     int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grid_size.x + +offsetZ* grid_size.x*grid_size.y;
 
                     int particlesIndexFrom = scan_array[gridIndex];
-                    int particlesIndexTo = scan_array[gridIndex + 1] - scan_array[gridIndex];
+                    int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - scan_array[gridIndex]) : size;
 
                     //sorted_indices[particlesIndexFrom];
                     //sorted_indices[particlesIndexTo];
@@ -238,11 +254,16 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
         __private ParticleCL thisParticle = particles[global_x];
         __private float3 f_pressure = 0.0f, f_viscosity = 0.0f;
 
-        int z = particles[global_x].cell_id / grid_size.z;
-        int zRest = particles[global_x].cell_id - z * grid_size.z;
-        int y = zRest / grid_size.y;
-        int yRest = zRest - y * grid_size.y;
-        int x = yRest;
+        int gird_array_size = grid_size.x * grid_size.y *grid_size.z;
+
+        //int z = particles[global_x].cell_id / grid_size.z;
+        //int zRest = particles[global_x].cell_id - z * grid_size.z;
+        //int y = zRest / grid_size.y;
+        //int yRest = zRest - y * grid_size.y;
+        //int x = yRest;
+        int x = particles[global_x].grid_position.x;
+        int y = particles[global_x].grid_position.y;
+        int z = particles[global_x].grid_position.z;
 
         // for all neighbors particles
         for (int offsetX = -1; offsetX <= 1; offsetX++)
@@ -264,7 +285,7 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
                     int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grid_size.x + +offsetZ* grid_size.x*grid_size.y;
 
                     int particlesIndexFrom = scan_array[gridIndex];
-                    int particlesIndexTo = scan_array[gridIndex + 1] - scan_array[gridIndex];
+                    int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - scan_array[gridIndex]) : size;
 
                     //sorted_indices[particlesIndexFrom];
                     //sorted_indices[particlesIndexTo];

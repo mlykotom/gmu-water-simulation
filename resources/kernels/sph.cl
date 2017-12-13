@@ -14,6 +14,7 @@ typedef struct __attribute__((aligned(16))) tag_ParticleCL
     float3 position;
     float3 velocity;
     float3 acceleration;
+    int3 grid_position;
     float density;
     float pressure;
     uint id;

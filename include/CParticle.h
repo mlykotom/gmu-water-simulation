@@ -25,6 +25,7 @@ public:
         cl_float3 position;
         cl_float3 velocity;
         cl_float3 acceleration;
+        cl_int3 grid_position;
         cl_float density;
         cl_float pressure;
         cl_uint id;
