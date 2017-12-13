@@ -205,8 +205,15 @@ void CGPUParticleSimulator::setupScene()
 
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
+
+                if (m_particlesCount > 4)
+                    break;
             }
+            if (m_particlesCount > 4)
+                break;
         }
+        if (m_particlesCount > 4)
+            break;
     }
 
     m_gridVector.clear();
@@ -273,6 +280,7 @@ void CGPUParticleSimulator::updateGrid()
 
     //scan grid
     //TODO: remove this parameters
+    m_gridScan.clear();
     m_gridScan = scan(m_gridVector);
 
     //sort indices
@@ -297,7 +305,7 @@ void CGPUParticleSimulator::updateDensityPressure()
     m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
     m_densityPresureStepKernel->setArg(arg++, m_scanBuffer);
     m_densityPresureStepKernel->setArg(arg++, m_indicesBuffer);
-    m_densityPresureStepKernel->setArg(arg++, (cl_int)m_particlesCount);
+    m_densityPresureStepKernel->setArg(arg++, m_particlesCount);
     m_densityPresureStepKernel->setArg(arg++, m_gridSize);
 
     m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
@@ -310,7 +318,6 @@ void CGPUParticleSimulator::updateDensityPressure()
     cl::NDRange local(16);
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
-    cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
@@ -403,6 +410,13 @@ void CGPUParticleSimulator::integrate()
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    //all particles are in cell 0 on CPU
+    std::vector<CParticle *> &particles = m_grid->getData()[0];
+    for (auto &particle : particles) {
+        particle->updatePosition();
+        particle->updateVelocity();
+    }
 
 }
 

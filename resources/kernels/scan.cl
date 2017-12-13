@@ -213,13 +213,15 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
                     if (z + offsetZ >= grid_size.z) break;
 
 
-                    int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grid_size.x + +offsetZ* grid_size.x*grid_size.y;
+                    int gridIndex = x + offsetX + ( (offsetY + y)* grid_size.x) + ((offsetZ+z)* grid_size.x*grid_size.y);
 
                     int particlesIndexFrom = scan_array[gridIndex];
-                    int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - scan_array[gridIndex]) : size;
+                  //  int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - particlesIndexFrom) : (particlesIndexFrom - size);
+                    int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] ) : (size);
 
                     //sorted_indices[particlesIndexFrom];
                     //sorted_indices[particlesIndexTo];
+                   //   printf("id: %d | from-to: %d, %d \n",global_x, particlesIndexFrom, particlesIndexTo);
 
 
                 //    auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
@@ -281,11 +283,11 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
                     if (z + offsetZ < 0) continue;
                     if (z + offsetZ >= grid_size.z) break;
 
-
-                    int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grid_size.x + +offsetZ* grid_size.x*grid_size.y;
+                    int gridIndex = x + offsetX + ((offsetY + y)* grid_size.x) + ((offsetZ + z)* grid_size.x*grid_size.y);
 
                     int particlesIndexFrom = scan_array[gridIndex];
-                    int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - scan_array[gridIndex]) : size;
+                    //int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1] - particlesIndexFrom) : (particlesIndexFrom - size);
+                    int particlesIndexTo = (gridIndex + 1) < gird_array_size ? (scan_array[gridIndex + 1]) : (size);
 
                     //sorted_indices[particlesIndexFrom];
                     //sorted_indices[particlesIndexTo];
