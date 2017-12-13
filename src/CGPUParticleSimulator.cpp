@@ -5,7 +5,8 @@
 #include <CL/cl.hpp>
 
 CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
-    : CBaseParticleSimulator(scene, parent)
+    : CBaseParticleSimulator(scene, parent),
+    m_localWokrgroupSize(64)
 {
     CLPlatforms::printInfoAll();
 
@@ -19,17 +20,80 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
         }
     );
 
-    m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
-    m_reduceKernel                  = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
-    m_downSweepKernel               = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
-    m_densityPresureStepKernel      = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
-    m_forceStepKernel               = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
-    m_integrationStepKernel         = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
 
     m_gridSize = { m_grid->xRes(), m_grid->yRes(), m_grid->zRes() };
     m_gravityCL = { gravity.x(), gravity.y(), gravity.z() };
 
 
+}
+
+void CGPUParticleSimulator::setupKernels()
+{
+    //create kernels
+    m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
+    m_reduceKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
+    m_downSweepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
+    m_densityPresureStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
+    m_forceStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
+    m_integrationStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
+
+    //prepare buffers
+    m_gridVector.clear();
+    m_gridVector.resize(m_grid->getCellCount(), 0);
+    m_sortedIndices.clear();
+    m_sortedIndices.resize(m_clParticles.size());
+
+    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    m_particlesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize));
+
+    m_gridVectorSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
+    m_gridBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));;
+
+    m_scanSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
+    m_scanBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_scanSize);
+
+    m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
+    m_indicesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize));
+
+    //write buffers on GPU
+    cl::Event writeEvent;
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+
+
+    cl_float3 halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
+
+    //setup kernels arguments
+    cl_int arg = 0;
+
+    m_updateParticlePositionsKernel->setArg(arg++, m_particlesBuffer);
+    m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
+    m_updateParticlePositionsKernel->setArg(arg++, m_particlesCount);
+    m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
+    m_updateParticlePositionsKernel->setArg(arg++, halfCellSize);
+
+
+    arg = 0;
+    m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_scanBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_indicesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_particlesCount);
+    m_densityPresureStepKernel->setArg(arg++, m_gridSize);
+    m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
+
+    arg = 0;
+    m_forceStepKernel->setArg(arg++, m_particlesBuffer);
+    m_forceStepKernel->setArg(arg++, m_scanBuffer);
+    m_forceStepKernel->setArg(arg++, m_indicesBuffer);
+    m_forceStepKernel->setArg(arg++, m_particlesCount);
+    m_forceStepKernel->setArg(arg++, m_gridSize);
+    m_forceStepKernel->setArg(arg++, m_gravityCL);
+    m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
+    m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
+
+    arg = 0;
+    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
+    m_integrationStepKernel->setArg(arg++, m_particlesCount);
+    m_integrationStepKernel->setArg(arg++, dt);
 }
 
 std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
@@ -204,25 +268,7 @@ void CGPUParticleSimulator::setupScene()
         }
     }
 
-    m_gridVector.clear();
-    m_gridVector.resize(m_grid->getCellCount(), 0);
-    m_sortedIndices.clear();
-    m_sortedIndices.resize(m_clParticles.size());
-
-    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
-    m_particlesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize));
-
-    m_gridVectorSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
-    m_gridBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));;
-
-    m_scanSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
-    m_scanBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_scanSize);
-
-    m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
-    m_indicesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize));
-
-    cl::Event writeEvent;
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    setupKernels();
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
     qDebug() << "simulating" << m_particlesCount << "particles";
@@ -230,32 +276,20 @@ void CGPUParticleSimulator::setupScene()
 
 void CGPUParticleSimulator::updateGrid()
 {
-    cl_float3 halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
-
     m_gridVector.clear();
     m_gridVector.resize(m_grid->getCellCount(), 0);
 
     cl_int *output_array = m_gridVector.data();
     CParticle::Physics *input_array = m_clParticles.data();
 
-    cl_int err;  
-
-    cl_int arg = 0;
-    m_updateParticlePositionsKernel->setArg(arg++, m_particlesBuffer);
-    m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
-    m_updateParticlePositionsKernel->setArg(arg++, m_particlesCount);
-    m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
-    m_updateParticlePositionsKernel->setArg(arg++, halfCellSize);
-    //m_updateParticlePositionsKernel->setArg(arg++, (cl_float)CParticle::h);
-
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
 
-    cl::NDRange local(16);
+    cl::NDRange local(m_localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
     cl::NDRange offset(0);
 
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, output_array, nullptr, &writeEvent);
@@ -285,25 +319,14 @@ void CGPUParticleSimulator::updateGrid()
 
 void CGPUParticleSimulator::updateDensityPressure()
 {
-    cl_int err;
-
-    cl_int arg = 0;
-    m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_scanBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_indicesBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_particlesCount);
-    m_densityPresureStepKernel->setArg(arg++, m_gridSize);
-
-    m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
-
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
 
-    cl::NDRange local(16);
+    cl::NDRange local(m_localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
@@ -320,27 +343,15 @@ void CGPUParticleSimulator::updateDensityPressure()
 
 void CGPUParticleSimulator::updateForces()
 {
-    cl_int err;
-
-    cl_int arg = 0;
-    m_forceStepKernel->setArg(arg++, m_particlesBuffer);
-    m_forceStepKernel->setArg(arg++, m_scanBuffer);
-    m_forceStepKernel->setArg(arg++, m_indicesBuffer);
-    m_forceStepKernel->setArg(arg++, m_particlesCount);
-    m_forceStepKernel->setArg(arg++, m_gridSize);
-
-    m_forceStepKernel->setArg(arg++, m_gravityCL);
-    m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
-    m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
 
-    cl::NDRange local(16);
+    cl::NDRange local(m_localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
@@ -375,19 +386,15 @@ void CGPUParticleSimulator::test(double dt, QVector3D position, QVector3D veloci
 
 void CGPUParticleSimulator::integrate()
 {
-    cl_uint arg = 0;
-    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
-    m_integrationStepKernel->setArg(arg++, m_particlesCount);
-    m_integrationStepKernel->setArg(arg++, dt);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
 
-    cl::NDRange local(16);
+    cl::NDRange local(m_localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
 
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, global, local, nullptr, &kernelEvent);

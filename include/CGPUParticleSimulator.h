@@ -25,11 +25,13 @@ public:
 
 private: //methods
     std::vector<cl_int> scan(std::vector<cl_int> input);
+    void setupKernels();
 
 protected: //methods
     void setGravityVector(QVector3D newGravity) override;
 
 protected:
+    cl_int m_localWokrgroupSize;
     CLWrapper *m_cl_wrapper;
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_reduceKernel;
