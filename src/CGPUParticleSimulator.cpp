@@ -28,7 +28,7 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
 
 std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
-    cl_int originalSize = input.size();
+    cl_int originalSize = (cl_int)input.size();
     //find nearest power of 2 to given count
     cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
    
@@ -214,7 +214,7 @@ void CGPUParticleSimulator::updateGrid()
     cl_int pariclesCount = m_particlesCount;
     size_t particlesSize = pariclesCount * sizeof(CParticle::Physics);
 
-    cl_float3 halfCellSize = { m_cellSize.x() / 2.0, m_cellSize.y() / 2.0, m_cellSize.z() / 2.0 };
+    cl_float3 halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
     cl_int3 gridSize = { m_grid->xRes(),m_grid->yRes() ,m_grid->zRes() };
 
    // std::vector<cl_int> output;
@@ -444,7 +444,7 @@ void CGPUParticleSimulator::test(double dt, QVector3D position, QVector3D veloci
 
 void CGPUParticleSimulator::integrate()
 {
-    for (unsigned int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
+    for (int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
         std::vector<CParticle *> &particles = m_grid->getData()[gridCellIndex];
 
         for (auto &particle : particles) {

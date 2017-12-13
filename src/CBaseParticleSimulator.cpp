@@ -4,9 +4,9 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
     : QObject(parent),
       gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
       m_scene(scene),
-      dt(0.01),
+      dt(0.01f),
       totalIteration(0),
-      m_surfaceThreshold(0.01),
+      m_surfaceThreshold(0.01f),
 //      m_boxSize(QVector3D(0.3, 0.3, 0.3))
       //m_boxSize(QVector3D(0.4, 0.4, 0.4))
       m_boxSize(QVector3D(0.5, 0.5, 0.5))

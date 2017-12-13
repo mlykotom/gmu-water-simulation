@@ -75,7 +75,7 @@ public: //methods
         return {vec.x, vec.y, vec.z};
     }
 
-    static inline cl_float3 qVectortoClFloat(QVector3D vec)
+    static inline cl_float3 QVectorToClFloat(QVector3D vec)
     {
         return {vec.x(), vec.y(), vec.z()};
     }
@@ -88,11 +88,11 @@ public: //methods
 
 //TODOL urobit getre a settre
 public: //attributes
-    static constexpr double h = 0.0457;    //0.25    //0.02 //0.045
-    static constexpr double viscosity = 3.5; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
-    static constexpr double mass = 0.02; // kg
-    static constexpr double gas_stiffness = 3.0; //20.0 // 461.5  // Nm/kg is gas constant of water vapor
-    static constexpr double rest_density = 998.29; // kg/m^3 is rest density of water particle
+    static constexpr float h = 0.0457f;    //0.25    //0.02 //0.045
+    static constexpr float viscosity = 3.5f; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
+    static constexpr float mass = 0.02f; // kg
+    static constexpr float gas_stiffness = 3.0f; //20.0 // 461.5  // Nm/kg is gas constant of water vapor
+    static constexpr float rest_density = 998.29f; // kg/m^3 is rest density of water particle
 
     const Physics *m_physics;
 private:

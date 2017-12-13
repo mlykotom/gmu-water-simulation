@@ -8,9 +8,9 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 {
     CLPlatforms::printInfoAll();
 
-    m_systemParams.poly6_constant = static_cast<cl_float>(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
-    m_systemParams.spiky_constant = static_cast<cl_float>(-45.0f / (M_PI * pow(CParticle::h, 6)));
-    m_systemParams.viscosity_constant = static_cast<cl_float>(45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.poly6_constant = (cl_float)(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
+    m_systemParams.spiky_constant = (cl_float)(-45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.viscosity_constant = (cl_float)(45.0f / (M_PI * pow(CParticle::h, 6)));
 
     m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 

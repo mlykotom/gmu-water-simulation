@@ -44,11 +44,11 @@ protected:
 
     QVector3D m_cellSize; // TODO is it anyhow useful?
 
-    float dt;
+    cl_float dt;
     CGrid *m_grid;
     QVector3D m_boxSize;
-    double m_surfaceThreshold;
-    unsigned int m_particlesCount = 0;
+    cl_float m_surfaceThreshold;
+    cl_int m_particlesCount = 0;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;

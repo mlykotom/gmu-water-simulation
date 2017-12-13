@@ -170,7 +170,7 @@ void CCollisionGeometry::inverseBoundingBoxBounce(CParticle::Physics &particle)
 
     }
 
-    cl_float3 cl_acc = CParticle::qVectortoClFloat(acc);
+    cl_float3 cl_acc = CParticle::QVectorToClFloat(acc);
     particle.acceleration = {cl_acc.x + particle.acceleration.x, cl_acc.y + particle.acceleration.y, cl_acc.z + particle.acceleration.z };
 
 //    cl_float3 cl_velocity = CParticle::qVectortoClFloat(velocity);
