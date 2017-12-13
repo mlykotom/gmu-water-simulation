@@ -209,6 +209,22 @@ void CGPUParticleSimulator::setupScene()
         }
     }
 
+    m_gridVector.clear();
+    m_gridVector.resize(m_grid->getCellCount(), 0);
+    m_sortedIndices.clear();
+    m_sortedIndices.resize(m_clParticles.size());
+
+    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    m_particlesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize));
+
+    m_gridVectorSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
+    m_gridBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));;
+
+    m_scanSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
+    m_scanBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_scanSize);
+
+    m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
+    m_indicesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize));
 
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
@@ -217,33 +233,34 @@ void CGPUParticleSimulator::setupScene()
 
 void CGPUParticleSimulator::updateGrid()
 {
-    cl_int pariclesCount = m_particlesCount;
-    size_t particlesSize = pariclesCount * sizeof(CParticle::Physics);
-
     cl_float3 halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
 
    // std::vector<cl_int> output;
-    cl_int outputCount = m_grid->getCellCount();
-    m_gridVector.clear();
-    m_gridVector.resize(outputCount,0);
-    cl_int *output_array = m_gridVector.data();
-    size_t outputSize = outputCount * sizeof(cl_int);
+    //cl_int outputCount = m_grid->getCellCount();
+    //m_gridVector.clear();
+    //m_gridVector.resize(outputCount,0);
+    //cl_int *output_array = m_gridVector.data();
+    //size_t outputSize = outputCount * sizeof(cl_int);
 
+    m_gridVector.clear();
+    m_gridVector.resize(m_grid->getCellCount(), 0);
+
+    cl_int *output_array = m_gridVector.data();
     CParticle::Physics *input_array = m_clParticles.data();
 
     cl_int err;
 
-    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
-    CLCommon::checkError(err, "inputBuffer creation");
-    auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
-    CLCommon::checkError(err, "outputBuffer creation");
+    //auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
+    //CLCommon::checkError(err, "inputBuffer creation");
+    //auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
+    //CLCommon::checkError(err, "outputBuffer creation");
 
-
+    
 
     cl_int arg = 0;
-    m_updateParticlePositionsKernel->setArg(arg++, inputBuffer);
-    m_updateParticlePositionsKernel->setArg(arg++, outputBuffer);
-    m_updateParticlePositionsKernel->setArg(arg++, (cl_int)pariclesCount);
+    m_updateParticlePositionsKernel->setArg(arg++, m_particlesBuffer);
+    m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
+    m_updateParticlePositionsKernel->setArg(arg++, m_particlesCount);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
     m_updateParticlePositionsKernel->setArg(arg++, halfCellSize);
     //m_updateParticlePositionsKernel->setArg(arg++, (cl_float)CParticle::h);
@@ -255,14 +272,16 @@ void CGPUParticleSimulator::updateGrid()
 
     cl::NDRange local(16);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(pariclesCount, 16));
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
     cl::NDRange offset(0);
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, input_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, true, 0, m_gridVectorSize, output_array, nullptr, &writeEvent);
+
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, particlesSize, input_array, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, true, 0, m_gridVectorSize, output_array, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, input_array, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
@@ -273,7 +292,6 @@ void CGPUParticleSimulator::updateGrid()
     //sort indices
     // initialize original index locations
     m_sortedIndices.clear();
-    m_sortedIndices.resize(m_clParticles.size());
     std::iota(m_sortedIndices.begin(), m_sortedIndices.end(), 0);
 
     //// sort indexes, smallest cell index first
@@ -286,8 +304,8 @@ void CGPUParticleSimulator::updateGrid()
 void CGPUParticleSimulator::updateDensityPressure()
 {
     size_t particlesSize = m_particlesCount * sizeof(CParticle::Physics);
-    size_t scanSize = m_gridScan.size() * sizeof(int);
-    size_t indicesSize = m_sortedIndices.size() * sizeof(int);
+    size_t scanSize = m_gridScan.size() * sizeof(cl_int);
+    size_t indicesSize = m_sortedIndices.size() * sizeof(cl_int);
 
     cl_int3 gridSize = { m_grid->xRes(), m_grid->yRes(), m_grid->zRes() };
 
@@ -445,6 +463,7 @@ void CGPUParticleSimulator::integrate()
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
 
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(particlesBuffer, true, 0, particlesSize, particles_array, nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(particlesBuffer, CL_FALSE, 0, particlesSize, particles_array, nullptr, &readEvent);
 

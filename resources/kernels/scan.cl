@@ -108,10 +108,6 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
 {
     int global_x = (int)get_global_id(0);
 
-    //volatile __global int* counterPtr = positions;
-    //barrier(CLK_GLOBAL_MEM_FENCE);
-    //barrier(CLK_LOCAL_MEM_FENCE);
-
     if (global_x < particles_count)
     {
         //this division is really bad...
