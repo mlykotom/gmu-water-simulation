@@ -26,17 +26,25 @@ public:
 private: //methods
     std::vector<cl_int> scan(std::vector<cl_int> input);
 
+protected: //methods
+    void setGravityVector(QVector3D newGravity) override;
+
 protected:
     CLWrapper *m_cl_wrapper;
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_reduceKernel;
     std::shared_ptr<cl::Kernel> m_downSweepKernel;
     std::shared_ptr<cl::Kernel> m_densityPresureStepKernel;
+    std::shared_ptr<cl::Kernel> m_forceStepKernel;
+    std::shared_ptr<cl::Kernel> m_integrationStepKernel;
 
     std::vector<CParticle::Physics> m_clParticles;
     std::vector<cl_int> m_gridVector;
     std::vector<cl_int> m_sortedIndices;
     std::vector<cl_int> m_gridScan;
+    cl_int3 m_gridSize;
+    cl_float3 m_gravityCL;
+
 };
 
 

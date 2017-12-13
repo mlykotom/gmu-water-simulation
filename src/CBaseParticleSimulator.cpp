@@ -12,6 +12,11 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
       m_boxSize(QVector3D(0.5, 0.5, 0.5))
 //      m_boxSize(QVector3D(0.6, 0.6, 0.6))
 {
+
+    m_systemParams.poly6_constant = (cl_float)(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
+    m_systemParams.spiky_constant = (cl_float)(-45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.viscosity_constant = (cl_float)(45.0f / (M_PI * pow(CParticle::h, 6)));
+
     QVector3D gridResolution(
         (int) ceil(m_boxSize.x() / CParticle::h),
         (int) ceil(m_boxSize.y() / CParticle::h),

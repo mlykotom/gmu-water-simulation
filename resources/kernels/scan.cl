@@ -155,11 +155,9 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-float Wpoly6(double radiusSquared)
+float Wpoly6(double radiusSquared, float poly6_constant)
 {
-    float coefficient = 315.0 / (64.0 * M_PI * pow(particle_h, 9)); // TODO static / one-time
-
-    return coefficient * pow(particle_h2 - radiusSquared, 3);
+    return poly6_constant * pow(particle_h2 - radiusSquared, 3);
 }
 
 float3 WspikyGradient(float3 diffPosition, float radiusSquared, float spiky_constant)
@@ -173,22 +171,22 @@ float WviscosityLaplacian(float radiusSquared, float viscosity_constant)
     return viscosity_constant * (particle_h - sqrt(radiusSquared));
 }
 
-__kernel void density_pressure_step(__global ParticleCL *particles, __global int *scan_array, __global int *sorted_indices, int size, int3 grid_size)
+__kernel void density_pressure_step(__global ParticleCL *particles, __global int *scan_array, __global int *sorted_indices, int size, int3 grid_size, float poly6_constant)
 {
     int global_x = (int)get_global_id(0);
 
     if (global_x < size) {
         particles[global_x].density = 0.0;
 
+        int z = particles[global_x].cell_id / grid_size.z;
+        int zRest = particles[global_x].cell_id - z * grid_size.z;
+        int y = zRest / grid_size.y;
+        int yRest = zRest - y * grid_size.y;
+        int x = yRest;
+
         // for all neighbors particles
         for (int offsetX = -1; offsetX <= 1; offsetX++) 
         {
-            int z = particles[global_x].cell_id / grid_size.z;
-            int zRest = particles[global_x].cell_id - z * grid_size.z;
-            int y = zRest / grid_size.y;
-            int yRest = zRest - y * grid_size.y;
-            int x = yRest;
-
             if (x + offsetX < 0) continue;
             if (x + offsetX >= grid_size.x) break;
 
@@ -221,7 +219,7 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 
                         if (radiusSquared <= particle_h2)
                         {
-                            particles[global_x].density += Wpoly6(radiusSquared);
+                            particles[global_x].density += Wpoly6(radiusSquared, poly6_constant);
                         }
                     }
                 }
@@ -230,5 +228,99 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 
         particles[global_x].density *= particle_mass;
         particles[global_x].pressure = gas_stiffness * (particles[global_x].density - rest_density);
+    }
+}
+
+
+__kernel void forces_step(__global ParticleCL *particles, __global int *scan_array, __global int *sorted_indices, int size, int3 grid_size, 
+                            float3 gravity, float spiky_constant, float viscosity_constant)
+{
+    int global_x = (int)get_global_id(0);
+
+    if (global_x < size)
+    {
+        __private ParticleCL thisParticle = particles[global_x];
+        __private float3 f_pressure = 0.0f, f_viscosity = 0.0f;
+
+        int z = particles[global_x].cell_id / grid_size.z;
+        int zRest = particles[global_x].cell_id - z * grid_size.z;
+        int y = zRest / grid_size.y;
+        int yRest = zRest - y * grid_size.y;
+        int x = yRest;
+
+        // for all neighbors particles
+        for (int offsetX = -1; offsetX <= 1; offsetX++)
+        {
+            if (x + offsetX < 0) continue;
+            if (x + offsetX >= grid_size.x) break;
+
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            {
+                if (y + offsetY < 0) continue;
+                if (y + offsetY >= grid_size.y) break;
+
+                for (int offsetZ = -1; offsetZ <= 1; offsetZ++)
+                {
+                    if (z + offsetZ < 0) continue;
+                    if (z + offsetZ >= grid_size.z) break;
+
+
+                    int gridIndex = particles[global_x].cell_id + offsetX + offsetY* grid_size.x + +offsetZ* grid_size.x*grid_size.y;
+
+                    int particlesIndexFrom = scan_array[gridIndex];
+                    int particlesIndexTo = scan_array[gridIndex + 1] - scan_array[gridIndex];
+
+                    //sorted_indices[particlesIndexFrom];
+                    //sorted_indices[particlesIndexTo];
+
+
+                    //    auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
+                    for (int i = particlesIndexFrom; i < particlesIndexTo; ++i)
+                    {
+
+                        float3 distance = thisParticle.position - particles[sorted_indices[i]].position;
+                        float radiusSquared = dot(distance, distance);
+
+                        if (radiusSquared <= particle_h2 && thisParticle.id != particles[sorted_indices[i]].id)
+                        {
+                            float3 spikyGradient = WspikyGradient(distance, radiusSquared, spiky_constant);
+                            float viscosityLaplacian = WviscosityLaplacian(radiusSquared, viscosity_constant);
+
+                            f_pressure += thisParticle.pressure / pow(thisParticle.density, 2) + thisParticle.pressure / pow(thisParticle.density, 2) * spikyGradient;
+                            f_viscosity += (particles[sorted_indices[i]].velocity - thisParticle.velocity) * viscosityLaplacian / thisParticle.density;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        f_pressure *= -particle_mass * thisParticle.density;
+        f_viscosity *= viscosity * particle_mass;
+
+        particles[global_x].acceleration = (f_pressure + f_viscosity + gravity * thisParticle.density) / thisParticle.density;
+    }
+}
+
+
+/**
+* Verlet integration
+* http://archive.gamedev.net/archive/reference/programming/features/verlet/
+* @param output
+* @param size
+* @param dt
+*/
+__kernel void integration_step(__global ParticleCL *output, int size, float dt)
+{
+    int global_x = (int)get_global_id(0);
+
+    if (global_x < size) {
+        __private ParticleCL tmp_particle = output[global_x];
+        __private float3 newPosition = tmp_particle.position + (tmp_particle.velocity * dt) + (tmp_particle.acceleration * dt * dt);
+
+        tmp_particle.velocity = (newPosition - tmp_particle.position) / dt;
+        tmp_particle.position = newPosition;
+
+        output[global_x] = tmp_particle;
     }
 }

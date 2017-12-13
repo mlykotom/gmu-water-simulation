@@ -38,6 +38,16 @@ private: //attributes
 
 protected:
 
+#ifdef WIN32
+    typedef __declspec(align(16)) struct sSystemParams
+#else
+    typedef struct __attribute__((aligned(16))) sSystemParams
+#endif
+    {
+        cl_float poly6_constant;
+        cl_float spiky_constant;
+        cl_float viscosity_constant;
+    } SystemParams;
 
     CScene *m_scene;
     QVector3D gravity;
@@ -49,6 +59,7 @@ protected:
     QVector3D m_boxSize;
     cl_float m_surfaceThreshold;
     cl_int m_particlesCount = 0;
+    SystemParams m_systemParams;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;

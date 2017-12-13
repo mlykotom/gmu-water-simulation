@@ -57,8 +57,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     try {
         //m_simulator = new CCPUParticleSimulator(m_scene);
-        m_simulator = new CCPUBruteParticleSimulator(m_scene);
-        //m_simulator = new CGPUParticleSimulator(m_scene);
+        //m_simulator = new CCPUBruteParticleSimulator(m_scene);
+        m_simulator = new CGPUParticleSimulator(m_scene);
 
         connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);

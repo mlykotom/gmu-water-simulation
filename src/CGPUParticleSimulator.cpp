@@ -23,6 +23,12 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
     m_reduceKernel                  = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
     m_downSweepKernel               = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
     m_densityPresureStepKernel      = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
+    m_forceStepKernel               = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
+    m_integrationStepKernel         = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
+
+    m_gridSize = { m_grid->xRes(), m_grid->yRes(), m_grid->zRes() };
+    m_gravityCL = { gravity.x(), gravity.y(), gravity.z() };
+
 
 }
 
@@ -215,7 +221,6 @@ void CGPUParticleSimulator::updateGrid()
     size_t particlesSize = pariclesCount * sizeof(CParticle::Physics);
 
     cl_float3 halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
-    cl_int3 gridSize = { m_grid->xRes(),m_grid->yRes() ,m_grid->zRes() };
 
    // std::vector<cl_int> output;
     cl_int outputCount = m_grid->getCellCount();
@@ -239,7 +244,7 @@ void CGPUParticleSimulator::updateGrid()
     m_updateParticlePositionsKernel->setArg(arg++, inputBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, outputBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, (cl_int)pariclesCount);
-    m_updateParticlePositionsKernel->setArg(arg++, gridSize);
+    m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
     m_updateParticlePositionsKernel->setArg(arg++, halfCellSize);
     //m_updateParticlePositionsKernel->setArg(arg++, (cl_float)CParticle::h);
 
@@ -286,6 +291,59 @@ void CGPUParticleSimulator::updateDensityPressure()
 
     cl_int3 gridSize = { m_grid->xRes(), m_grid->yRes(), m_grid->zRes() };
 
+    CParticle::Physics *particles_array = m_clParticles.data();
+    int *scan_array = m_gridScan.data();
+    int *indices_array = m_sortedIndices.data();
+
+    cl_int err;
+
+    auto particlesBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto scanBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, scanSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+    auto indicesBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, indicesSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+
+
+
+    cl_int arg = 0;
+    m_densityPresureStepKernel->setArg(arg++, particlesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, scanBuffer);
+    m_densityPresureStepKernel->setArg(arg++, indicesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, (cl_int)m_particlesCount);
+    m_densityPresureStepKernel->setArg(arg++, gridSize);
+
+    m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
+
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
+
+
+    cl::NDRange local(16);
+    //we need only half the threads of the input count
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+    cl::NDRange offset(0);
+
+    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(particlesBuffer, true, 0, particlesSize, particles_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(scanBuffer, true, 0, scanSize, scan_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(indicesBuffer, true, 0, indicesSize, indices_array, nullptr, &writeEvent);
+
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, global, local, nullptr, &kernelEvent);
+
+    m_cl_wrapper->getQueue().enqueueReadBuffer(particlesBuffer, true, 0, particlesSize, particles_array, nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+}
+
+void CGPUParticleSimulator::updateForces()
+{
+
+    size_t particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    size_t scanSize = m_gridScan.size() * sizeof(int);
+    size_t indicesSize = m_sortedIndices.size() * sizeof(int);
 
 
     CParticle::Physics *particles_array = m_clParticles.data();
@@ -307,9 +365,12 @@ void CGPUParticleSimulator::updateDensityPressure()
     m_densityPresureStepKernel->setArg(arg++, particlesBuffer);
     m_densityPresureStepKernel->setArg(arg++, scanBuffer);
     m_densityPresureStepKernel->setArg(arg++, indicesBuffer);
-
     m_densityPresureStepKernel->setArg(arg++, (cl_int)m_particlesCount);
-    m_densityPresureStepKernel->setArg(arg++, gridSize);
+    m_densityPresureStepKernel->setArg(arg++, m_gridSize);
+
+    m_densityPresureStepKernel->setArg(arg++, m_gravityCL);
+    m_densityPresureStepKernel->setArg(arg++, m_systemParams.spiky_constant);
+    m_densityPresureStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -333,105 +394,15 @@ void CGPUParticleSimulator::updateDensityPressure()
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
 
-    //for (int x = 0; x < m_grid->xRes(); x++) {
-    //    for (int y = 0; y < m_grid->yRes(); y++) {
-    //        for (int z = 0; z < m_grid->zRes(); z++) {
+    // collision force
+    for (int i = 0; i < m_particlesCount; ++i) {
+        CParticle::Physics &particleCL = m_clParticles[i];
+        QVector3D pos = CParticle::clFloatToVector(particleCL.position);
+        QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
 
-    //            auto &particles = m_grid->at(x, y, z);
-    //            for (auto &particle : particles) {
-
-    //                particle->density() = 0.0;
-
-    //                // neighbors
-    //                for (int offsetX = -1; offsetX <= 1; offsetX++) {
-    //                    if (x + offsetX < 0) continue;
-    //                    if (x + offsetX >= m_grid->xRes()) break;
-
-    //                    for (int offsetY = -1; offsetY <= 1; offsetY++) {
-    //                        if (y + offsetY < 0) continue;
-    //                        if (y + offsetY >= m_grid->yRes()) break;
-
-    //                        for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
-    //                            if (z + offsetZ < 0) continue;
-    //                            if (z + offsetZ >= m_grid->zRes()) break;
-
-    //                            auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
-    //                            for (auto &neighbor : neighborGridCellParticles) {
-    //                                double radiusSquared = particle->diffPosition(neighbor).lengthSquared();
-
-    //                                if (radiusSquared <= CParticle::h * CParticle::h) {
-    //                                    particle->density() += Wpoly6(radiusSquared);
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-
-    //                particle->density() *= CParticle::mass;
-    //                // p = k(density - density_rest)
-    //                particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
-    //            }
-    //        }
-    //    }
-    //}
-}
-
-void CGPUParticleSimulator::updateForces()
-{
-    for (int x = 0; x < m_grid->xRes(); x++) {
-        for (int y = 0; y < m_grid->yRes(); y++) {
-            for (int z = 0; z < m_grid->zRes(); z++) {
-
-                auto &particles = m_grid->at(x, y, z);
-
-                for (auto &particle : particles) {
-                    QVector3D f_gravity = gravity * particle->density();
-                    QVector3D f_pressure, f_viscosity, f_surface;
-
-                    // neighbors
-                    for (int offsetX = -1; offsetX <= 1; offsetX++) {
-                        if (x + offsetX < 0) continue;
-                        if (x + offsetX >= m_grid->xRes()) break;
-
-                        for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                            if (y + offsetY < 0) continue;
-                            if (y + offsetY >= m_grid->yRes()) break;
-
-                            for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
-                                if (z + offsetZ < 0) continue;
-                                if (z + offsetZ >= m_grid->zRes()) break;
-
-                                auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
-                                for (auto &neighbor : neighborGridCellParticles) {
-
-                                    QVector3D distance = particle->diffPosition(neighbor);
-                                    double radiusSquared = distance.lengthSquared();
-
-                                    if (radiusSquared <= CParticle::h * CParticle::h) {
-                                        QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
-                                        QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
-
-                                        if (particle->getId() != neighbor->getId()) {
-                                            f_pressure += (particle->pressure() / pow(particle->density(), 2) + neighbor->pressure() / pow(neighbor->density(), 2)) * spikyGradient;
-                                            f_viscosity += (neighbor->velocity() - particle->velocity()) * WviscosityLaplacian(radiusSquared) / neighbor->density();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    f_pressure *= -CParticle::mass * particle->density();
-                    f_viscosity *= CParticle::viscosity * CParticle::mass;
-
-                    // ADD IN SPH FORCES
-                    particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
-                    // collision force
-                    particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
-
-                }
-            }
-        }
+        m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particleCL);
+        //QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
+        //particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
     }
 }
 
@@ -444,17 +415,58 @@ void CGPUParticleSimulator::test(double dt, QVector3D position, QVector3D veloci
 
 void CGPUParticleSimulator::integrate()
 {
-    for (int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
-        std::vector<CParticle *> &particles = m_grid->getData()[gridCellIndex];
 
-        for (auto &particle : particles) {
-            QVector3D newPosition, newVelocity;
 
-            test(dt, particle->position(), particle->velocity(), particle->acceleration(), newPosition, newVelocity);
+    size_t particlesSize = m_particlesCount * sizeof(CParticle::Physics);
 
-            particle->translate(newPosition);
-            particle->velocity() = newVelocity;
-        }
-    }
+
+
+    CParticle::Physics *particles_array = m_clParticles.data();
+    int *scan_array = m_gridScan.data();
+    int *indices_array = m_sortedIndices.data();
+
+    cl_int err;
+
+    auto particlesBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE, particlesSize, nullptr, &err);
+    CLCommon::checkError(err, "inputBuffer creation");
+
+
+    cl_uint arg = 0;
+    m_integrationStepKernel->setArg(arg++, particlesBuffer);
+    m_integrationStepKernel->setArg(arg++, m_particlesCount);
+    m_integrationStepKernel->setArg(arg++, dt);
+
+    cl::Event writeEvent;
+    cl::Event kernelEvent;
+    cl::Event readEvent;
+
+
+    cl::NDRange local(16);
+    //we need only half the threads of the input count
+    cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
+
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(particlesBuffer, CL_FALSE, 0, particlesSize, particles_array, nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+
+    //for (int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
+    //    std::vector<CParticle *> &particles = m_grid->getData()[gridCellIndex];
+
+    //    for (auto &particle : particles) {
+    //        QVector3D newPosition, newVelocity;
+
+    //        test(dt, particle->position(), particle->velocity(), particle->acceleration(), newPosition, newVelocity);
+
+    //        particle->translate(newPosition);
+    //        particle->velocity() = newVelocity;
+    //    }
+    //}
 }
 
+void CGPUParticleSimulator::setGravityVector(QVector3D newGravity)
+{
+    CBaseParticleSimulator::setGravityVector(newGravity);
+    m_gravityCL = { gravity.x(), gravity.y(), gravity.z() };
+}
