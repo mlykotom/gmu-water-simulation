@@ -12,14 +12,14 @@ void CCPUParticleSimulator::updateGrid()
         for (int y = 0; y < m_grid->yRes(); y++) {
             for (int z = 0; z < m_grid->zRes(); z++) {
 
-                std::vector<CParticle *> particles = m_grid->at(x, y, z);
+                std::vector<CParticle *> &particles = m_grid->at(x, y, z);
 
                 for (unsigned long p = 0; p < particles.size(); p++) {
                     CParticle *particle = particles[p];
 
-                    int newGridCellX = (int) floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
-                    int newGridCellY = (int) floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
-                    int newGridCellZ = (int) floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
+                    int newGridCellX = (int)floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
+                    int newGridCellY = (int)floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
+                    int newGridCellZ = (int)floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
                     //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
                     //cout << "particle position: " << particle->position() << endl;
                     //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
