@@ -140,13 +140,11 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         }
 
         int cell_index = x + y * grid_size.x + z * grid_size.x * grid_size.y;
-       // printf("pos: %d, %d, %d | %d, %d, %d \n", x, y, z, particles[global_x].grid_position.x, particles[global_x].grid_position.y, particles[global_x].grid_position.z);
 
         if ((cell_index < (grid_size.x * grid_size.y * grid_size.z)) && (cell_index >= 0))
         {
             atomic_inc(&positions[cell_index]);
             particles[global_x].cell_id = cell_index;
-           // particles[global_x].grid_position = {x,y,z};
             particles[global_x].grid_position.xyz = (int3)(x, y, z);
 
         }
@@ -294,9 +292,6 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
 
         
         particles[global_x].acceleration = (f_pressure + f_viscosity + gravity * thisParticle.density) / thisParticle.density;
-
-        //printf("updating acceleration of %d to %d \n", global_x, particles[global_x].acceleration);
-
     }
 
     barrier(CLK_GLOBAL_MEM_FENCE);

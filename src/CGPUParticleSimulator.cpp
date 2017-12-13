@@ -44,10 +44,6 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
     size_t outputSize = countAsPowerOfTwo * sizeof(cl_int);
     cl_int *output_array = output.data();
 
-   // cl::Kernel kernel = cl::Kernel(m_cl_wrapper->getKernel("blelloch_scan"));
-    //cl::Kernel kernelReduce = cl::Kernel(m_cl_wrapper->getKernel("reduce"));
-    //cl::Kernel kernelDownSweep = cl::Kernel(m_cl_wrapper->getKernel("down_sweep"));
-
     cl_int err;
 
     //CLCommon::checkError(err, "inputBuffer creation");
@@ -86,8 +82,6 @@ std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
         m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
         offset >>= 1;
     }
-
-
 
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
@@ -206,14 +200,8 @@ void CGPUParticleSimulator::setupScene()
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
 
-                //if (m_particlesCount > 4)
-                //    break;
             }
-            //if (m_particlesCount > 4)
-            //    break;
         }
-        //if (m_particlesCount > 4)
-        //    break;
     }
 
     m_gridVector.clear();
@@ -293,8 +281,6 @@ void CGPUParticleSimulator::updateGrid()
     sort(m_sortedIndices.begin(), m_sortedIndices.end(),
         [this](cl_int i1, cl_int i2) {return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
 
-    //for (cl_int i : m_sortedIndices)
-    //    qDebug() << m_clParticles[i].cell_id;
 }
 
 void CGPUParticleSimulator::updateDensityPressure()
@@ -319,9 +305,6 @@ void CGPUParticleSimulator::updateDensityPressure()
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
 
-    //for (auto p : m_clParticles)
-    //    qDebug() << p.density;
-
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, true, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
@@ -332,10 +315,6 @@ void CGPUParticleSimulator::updateDensityPressure()
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-
-    //for (auto p : m_clParticles)
-    //    qDebug() << p.density;
-    //qDebug() << "==============================";
 
 }
 
@@ -362,10 +341,6 @@ void CGPUParticleSimulator::updateForces()
     cl::NDRange local(16);
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
-    cl::NDRange offset(0);
-
-    //for (auto p : m_clParticles)
-    //    qDebug() << p.acceleration.x << p.acceleration.y << p.acceleration.z;
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
@@ -379,11 +354,6 @@ void CGPUParticleSimulator::updateForces()
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
 
-    //qDebug() << "Before bounce";
-
-    //for (auto p : m_clParticles)
-    //    qDebug() << p.acceleration.x << p.acceleration.y << p.acceleration.z;
-
     // collision force
     for (int i = 0; i < m_particlesCount; ++i) {
         CParticle::Physics &particleCL = m_clParticles[i];
@@ -394,13 +364,6 @@ void CGPUParticleSimulator::updateForces()
         //QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
         //particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
     }
-
-    //qDebug() << "After";
-
-    //for (auto p : m_clParticles)
-    //    qDebug() << p.acceleration.x << p.acceleration.y << p.acceleration.z;
-
-    //qDebug() << "==============================";
 }
 
 void CGPUParticleSimulator::test(double dt, QVector3D position, QVector3D velocity, QVector3D acceleration, QVector3D &newPosition, QVector3D &newVelocity)

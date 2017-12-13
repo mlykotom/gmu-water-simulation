@@ -47,14 +47,8 @@ void CBaseParticleSimulator::setupScene()
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
 
-                if (m_particlesCount > 4)
-                    break;
             }
-            if (m_particlesCount > 4)
-                break;
         }
-        if (m_particlesCount > 4)
-            break;
     }
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
