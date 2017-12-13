@@ -221,6 +221,8 @@ void CGPUParticleSimulator::setupScene()
     m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
     m_indicesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize));
 
+    cl::Event writeEvent;
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
 
     qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
     qDebug() << "simulating" << m_particlesCount << "particles";
@@ -256,13 +258,11 @@ void CGPUParticleSimulator::updateGrid()
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
     cl::NDRange offset(0);
 
-    // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, input_array, nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, true, 0, m_gridVectorSize, output_array, nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, output_array, nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, true, 0, m_gridVectorSize, output_array, nullptr, &readEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, input_array, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, output_array, nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, input_array, nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
@@ -306,13 +306,13 @@ void CGPUParticleSimulator::updateDensityPressure()
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, true, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, true, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
+    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, CL_FALSE, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, CL_FALSE, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, global, local, nullptr, &kernelEvent);
 
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
+  //  m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
@@ -343,9 +343,9 @@ void CGPUParticleSimulator::updateForces()
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
 
     // TODO nastaveno blocking = true .. vsude bylo vzdycky false
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, true, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, true, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
+    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanBuffer, true, 0, m_scanSize, m_gridScan.data(), nullptr, &writeEvent);
+    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, true, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, global, local, nullptr, &kernelEvent);
 
@@ -389,7 +389,7 @@ void CGPUParticleSimulator::integrate()
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, 16));
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, global, local, nullptr, &kernelEvent);
 
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);

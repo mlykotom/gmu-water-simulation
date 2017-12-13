@@ -225,7 +225,7 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
     }
 
 
-    barrier(CLK_GLOBAL_MEM_FENCE);
+  //  barrier(CLK_GLOBAL_MEM_FENCE);
 
 }
 
@@ -294,7 +294,7 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
         particles[global_x].acceleration = (f_pressure + f_viscosity + gravity * thisParticle.density) / thisParticle.density;
     }
 
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    //barrier(CLK_GLOBAL_MEM_FENCE);
 
 }
 
