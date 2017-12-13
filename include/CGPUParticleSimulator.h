@@ -21,12 +21,15 @@ public:
     void test(double dt, QVector3D position, QVector3D velocity, QVector3D acceleration, QVector3D &newPosition, QVector3D &newVelocity);
 
     //TODO: TEST - DELETE
-    virtual void test() override;
+   // virtual void test() override;
 
 private: //methods
     std::vector<cl_int> scan(std::vector<cl_int> input);
+    void scanGrid();
+
     void setupKernels();
 
+    
 protected: //methods
     void setGravityVector(QVector3D newGravity) override;
 
@@ -44,6 +47,8 @@ protected:
     std::vector<cl_int> m_gridVector;
     std::vector<cl_int> m_sortedIndices;
     std::vector<cl_int> m_gridScan;
+
+    cl_int m_gridCountToPowerOfTwo;
     cl_int3 m_gridSize;
     cl_float3 m_gravityCL;
 
