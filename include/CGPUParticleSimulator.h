@@ -58,6 +58,8 @@ protected:
     cl::Buffer m_particlesBuffer;
     cl::Buffer m_indicesBuffer;
     cl::Buffer m_gridBuffer;
+    cl::Buffer m_scanHelperBuffer;
+
 };
 
 

@@ -50,7 +50,9 @@ void CGPUParticleSimulator::setupKernels()
     m_particlesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize));
 
     m_gridVectorSize = (cl_int)m_gridVector.size() * sizeof(cl_int);
-    m_gridBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));;
+    m_gridBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));
+
+    m_scanHelperBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize));
 
     m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
     m_indicesBuffer = (m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize));
@@ -97,7 +99,10 @@ void CGPUParticleSimulator::setupKernels()
 
     arg = 0;
     m_reduceKernel->setArg(arg++, m_gridBuffer);
+    m_reduceKernel->setArg(arg++, m_scanHelperBuffer);
     m_reduceKernel->setArg(arg++, m_gridCountToPowerOfTwo);
+    m_reduceKernel->setArg(arg++, 0);
+    m_reduceKernel->setArg(arg++, cl::Local(sizeof(cl_int) * m_localWokrgroupSize));
 
     arg = 0;
     m_downSweepKernel->setArg(arg++, m_gridBuffer);
@@ -132,20 +137,20 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
     auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    cl_int localWokrgroupSize = 4;
+    cl_int localWokrgroupSize = 16;
     cl::NDRange local(localWokrgroupSize);
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
 
-    m_reduceKernel->setArg(0, outputBuffer);
-    m_reduceKernel->setArg(1, inputBuffer);
+    m_reduceKernel->setArg(0, inputBuffer);
+    m_reduceKernel->setArg(1, outputBuffer);
     m_reduceKernel->setArg(2, countAsPowerOfTwo);
     m_reduceKernel->setArg(4, cl::Local(sizeof(cl_int) * localWokrgroupSize));
 
     
 
-    //m_downSweepKernel->setArg(0, outputBuffer);
-    //m_downSweepKernel->setArg(1, countAsPowerOfTwo);
+    m_downSweepKernel->setArg(0, inputBuffer);
+    m_downSweepKernel->setArg(1, countAsPowerOfTwo);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -168,14 +173,14 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
     //m_reduceKernel->setArg(3, 0);
     //m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
 
-
-    //offset = countAsPowerOfTwo;
-    //for (cl_int i = 0; i < levels; ++i)
-    //{
-    //    m_downSweepKernel->setArg(2, offset);
-    //    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
-    //    offset >>= 1;
-    //}
+    levels = log2(countAsPowerOfTwo);
+    offset = countAsPowerOfTwo;
+    for (cl_int i = 0; i < levels; ++i)
+    {
+        m_downSweepKernel->setArg(2, offset);
+        m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
+        offset >>= 1;
+    }
 
     m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, inputSize, input.data(), nullptr, &readEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
@@ -286,21 +291,23 @@ void CGPUParticleSimulator::scanGrid()
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
+    cl::Event copyEvent;
 
     cl::NDRange local(m_localWokrgroupSize);
-    //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_gridCountToPowerOfTwo, m_localWokrgroupSize));
 
-    int levels = log2(m_gridCountToPowerOfTwo);
-    int offset = 1;
+    m_cl_wrapper->getQueue().enqueueCopyBuffer(m_gridBuffer, m_scanHelperBuffer, 0, 0, m_gridVectorSize, nullptr, &copyEvent);
+    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanHelperBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
+
+    int offset = m_gridCountToPowerOfTwo;
+    int levels = ceil(log2(m_gridCountToPowerOfTwo) / log2(local[0]));
     for (cl_int i = 0; i < levels; ++i)
     {
-        m_reduceKernel->setArg(2, offset);
+        m_reduceKernel->setArg(3, i);
         m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
-        offset <<= 1;
     }
 
-    offset = m_gridCountToPowerOfTwo;
+    levels = log2(m_gridCountToPowerOfTwo);
     for (cl_int i = 0; i < levels; ++i)
     {
         m_downSweepKernel->setArg(2, offset);
@@ -323,7 +330,6 @@ void CGPUParticleSimulator::updateGrid()
 
 
     cl::NDRange local(m_localWokrgroupSize);
-    //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
     cl::NDRange offset(0);
 

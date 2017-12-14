@@ -2,7 +2,7 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 
-__kernel void reduce(__global int* input, __global int *result, int array_size, int level, volatile __local int *tmp)
+__kernel void reduce(__global int *result, __global int* subresults, int array_size, int level, volatile __local int *tmp)
 {
     int global_x = (int)get_global_id(0);
     int global_w = (int)get_global_size(0);
@@ -11,36 +11,37 @@ __kernel void reduce(__global int* input, __global int *result, int array_size, 
     int group_x = (int)get_group_id(0);
     //===========================================================================================  
 
-    tmp[local_x] = global_x >= array_size ? 0 : input[global_x];
+    tmp[local_x] = global_x >= array_size ? 0 : subresults[global_x];
 
+    //reduce
     for (int i = 1; i < local_w; i <<= 1)
     {
         if (((local_x + 1) % (i << 1) == 0) && (local_x < local_w) && (local_x - i >= 0))
         {
             tmp[local_x] = tmp[local_x] + tmp[local_x - i];
         }
-
-
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-   // printf("id: %d, local res: %d \n", global_x, tmp[local_x] );
 
-    //pre dalsie kolo
+    //for next round
     if(local_x == local_w-1)
-        input[group_x] = tmp[local_x];
+        subresults[group_x] = tmp[local_x];
     
     if(level == 0)
         result[global_x] = tmp[local_x];
     else
     {
-        printf("level: %d \n", level);
 
         int writeIndex = ((local_w * global_x) + (local_w - 1)) ;
         if (writeIndex < array_size && writeIndex >= 0)
             result[writeIndex] = tmp[local_x];
     }
 
+    if (global_x == array_size - 1)
+    {
+        result[array_size - 1] = 0;
+    }
 
     barrier(CLK_GLOBAL_MEM_FENCE);
 
