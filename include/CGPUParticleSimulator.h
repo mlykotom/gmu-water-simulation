@@ -21,10 +21,10 @@ public:
     void test(double dt, QVector3D position, QVector3D velocity, QVector3D acceleration, QVector3D &newPosition, QVector3D &newVelocity);
 
     //TODO: TEST - DELETE
-   // virtual void test() override;
+    virtual void test() override;
 
 private: //methods
-    std::vector<cl_int> scan(std::vector<cl_int> input);
+    void scan(std::vector<cl_int> input);
     void scanGrid();
 
     void setupKernels();

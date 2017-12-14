@@ -104,64 +104,139 @@ void CGPUParticleSimulator::setupKernels()
     m_downSweepKernel->setArg(arg++, m_gridCountToPowerOfTwo);
 }
 
-std::vector<cl_int> CGPUParticleSimulator::scan(std::vector<cl_int> input)
+void CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
+
+    m_reduceKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
+    m_downSweepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
+
     cl_int originalSize = (cl_int)input.size();
     //find nearest power of 2 to given count
     cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
-   
+
+    input.resize(countAsPowerOfTwo);
     std::vector<cl_int> output(input.begin(),input.end());
     //resize and append 0s
     output.resize(countAsPowerOfTwo, 0);
-    size_t outputSize = countAsPowerOfTwo * sizeof(cl_int);
+
+    size_t inputSize = countAsPowerOfTwo * sizeof(cl_int);
+    size_t outputSize = inputSize;
+
     cl_int *output_array = output.data();
 
     cl_int err;
 
     //CLCommon::checkError(err, "inputBuffer creation");
+    auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, inputSize, input.data(), &err);
+    CLCommon::checkError(err, "outputBuffer creation");
     auto outputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, outputSize, output_array, &err);
     CLCommon::checkError(err, "outputBuffer creation");
 
-    m_reduceKernel->setArg(0, outputBuffer);
-    m_reduceKernel->setArg(1, countAsPowerOfTwo);
-    //kernelReduce.setArg(2, cl::Local(sizeof(cl_int) * countAsPowerOfTwo));
+    cl_int localWokrgroupSize = 4;
+    cl::NDRange local(localWokrgroupSize);
+    //we need only half the threads of the input count
+    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
 
-    m_downSweepKernel->setArg(0, outputBuffer);
-    m_downSweepKernel->setArg(1, countAsPowerOfTwo);
+    m_reduceKernel->setArg(0, outputBuffer);
+    m_reduceKernel->setArg(1, inputBuffer);
+    m_reduceKernel->setArg(2, countAsPowerOfTwo);
+    m_reduceKernel->setArg(4, cl::Local(sizeof(cl_int) * localWokrgroupSize));
+
+    
+
+    //m_downSweepKernel->setArg(0, outputBuffer);
+    //m_downSweepKernel->setArg(1, countAsPowerOfTwo);
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-    cl_int localWokrgroupSize = 32;
-    cl::NDRange local(localWokrgroupSize);
-    //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
 
-    int levels = log2(countAsPowerOfTwo);
-    int offset = 1;
-    for (cl_int i = 0; i  < levels;  ++i)
+
+    int levels = ceil(log2(countAsPowerOfTwo) / log2(local[0]));
+    cl_int stride = 1;
+    cl_int offset;
+    for (cl_int i = 0; i  < 2;  ++i)
     {
-        m_reduceKernel->setArg(2, offset);
+        offset = i * global[0];
+        m_reduceKernel->setArg(3, i);
+
         m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
-        offset <<= 1;
+        stride <<= 1;
     }
 
-    offset = countAsPowerOfTwo;
-    for (cl_int i = 0; i < levels; ++i)
-    {
-        m_downSweepKernel->setArg(2, offset);
-        m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
-        offset >>= 1;
-    }
+    //m_reduceKernel->setArg(3, 0);
+    //m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
 
+
+    //offset = countAsPowerOfTwo;
+    //for (cl_int i = 0; i < levels; ++i)
+    //{
+    //    m_downSweepKernel->setArg(2, offset);
+    //    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
+    //    offset >>= 1;
+    //}
+
+    m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, inputSize, input.data(), nullptr, &readEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(outputBuffer, true, 0, outputSize, output_array, nullptr, &readEvent);
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    output.resize(originalSize);
-
-    return output;
+ //   output.resize(originalSize);
+    return;
 }
+
+
+//TODO: TEST - DELETE
+void CGPUParticleSimulator::test()
+{
+    
+    std::vector<cl_int> input;
+
+    input.push_back(1);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
+
+    input.push_back(5);
+    input.push_back(6);
+    input.push_back(7); 
+    input.push_back(8);
+
+    input.push_back(1);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
+
+    input.push_back(5);
+    input.push_back(6);
+    input.push_back(7);
+    input.push_back(8);
+
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
+
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
+
+    //input.push_back(1);
+    //input.push_back(2);
+    //input.push_back(3);
+    //input.push_back(4);
+
+    //input.push_back(5);
+    //input.push_back(6);
+    //input.push_back(7);
+    //input.push_back(8);
+
+
+     scan(input);
+
+}
+
 
 void CGPUParticleSimulator::setupScene()
 {

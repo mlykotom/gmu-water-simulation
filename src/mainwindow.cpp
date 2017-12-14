@@ -64,8 +64,8 @@ MainWindow::MainWindow(QWidget *parent) :
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
-        m_simulator->setupScene();
-        //m_simulator->test();
+        //m_simulator->setupScene();
+        m_simulator->test();
         // Set root object of the scene
         m_mainView->setRootEntity(rootEntity);
 
