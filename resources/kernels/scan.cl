@@ -11,7 +11,9 @@ __kernel void reduce(__global int *result, __global int* subresults, int array_s
     int group_x = (int)get_group_id(0);
     //===========================================================================================  
 
+
     tmp[local_x] = global_x >= array_size ? 0 : subresults[global_x];
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     //reduce
     for (int i = 1; i < local_w; i <<= 1)
@@ -38,11 +40,11 @@ __kernel void reduce(__global int *result, __global int* subresults, int array_s
             result[writeIndex] = tmp[local_x];
     }
 
-    if (global_x == array_size - 1)
+    /*if (global_x == array_size - 1)
     {
         result[array_size - 1] = 0;
     }
-
+*/
     barrier(CLK_GLOBAL_MEM_FENCE);
 
     //if (((global_x + 1) % (offset << 1) == 0) && (global_x < array_size) && (global_x - offset >= 0))
@@ -62,6 +64,12 @@ __kernel void down_sweep(__global int *result, int array_size, int offset)
     int global_x = (int)get_global_id(0);
     int global_w = (int)get_global_size(0);
     //=========================================================================================== 
+
+    if (global_x == array_size - 1)
+    {
+        result[array_size - 1] = 0;
+    }
+    barrier(CLK_GLOBAL_MEM_FENCE);
 
     if (((global_x + 1) % offset == 0) && (global_x < array_size))
     {

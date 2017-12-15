@@ -296,16 +296,20 @@ void CGPUParticleSimulator::scanGrid()
     cl::NDRange local(m_localWokrgroupSize);
     cl::NDRange global(CLCommon::alignTo(m_gridCountToPowerOfTwo, m_localWokrgroupSize));
 
+    //CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
     m_cl_wrapper->getQueue().enqueueCopyBuffer(m_gridBuffer, m_scanHelperBuffer, 0, 0, m_gridVectorSize, nullptr, &copyEvent);
-    //m_cl_wrapper->getQueue().enqueueWriteBuffer(m_scanHelperBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
+    //CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
-    int offset = m_gridCountToPowerOfTwo;
+    cl_int offset = m_gridCountToPowerOfTwo;
     int levels = ceil(log2(m_gridCountToPowerOfTwo) / log2(local[0]));
     for (cl_int i = 0; i < levels; ++i)
     {
         m_reduceKernel->setArg(3, i);
         m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
+
     }
+
+    //CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     levels = log2(m_gridCountToPowerOfTwo);
     for (cl_int i = 0; i < levels; ++i)
@@ -314,7 +318,6 @@ void CGPUParticleSimulator::scanGrid()
         m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
         offset >>= 1;
     }
-
    // CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 }
 
@@ -337,7 +340,7 @@ void CGPUParticleSimulator::updateGrid()
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
