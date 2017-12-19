@@ -8,7 +8,7 @@
 
 //local includes
 #include <CQt3DWindow.h>
-#include <include/CCPUBruteParticleSimulator.h>
+#include <include/CGPUBruteParticleSimulator.h>
 #include <include/CGPUParticleSimulator.h>
 #include <include/CCPUParticleSimulator.h>
 

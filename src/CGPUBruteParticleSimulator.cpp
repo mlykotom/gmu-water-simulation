@@ -1,4 +1,4 @@
-#include "CCPUBruteParticleSimulator.h"
+#include "CGPUBruteParticleSimulator.h"
 
 CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *parent)
     : CGPUBaseParticleSimulator(scene, parent)
