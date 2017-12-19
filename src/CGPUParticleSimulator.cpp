@@ -114,25 +114,28 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
 
     m_reduceKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
     m_downSweepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
-
+    m_incrementKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("increment_local_scans"));
 
     cl_int originalSize = (cl_int)input.size();
     //find nearest power of 2 to given count
     cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
 
-    cl_int localWokrgroupSize = 4;
+    cl_int localWokrgroupSize = qNextPowerOfTwo((cl_int)ceil(qSqrt(countAsPowerOfTwo)));
     cl::NDRange local(localWokrgroupSize);
     //we need only half the threads of the input count
     cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
 
     //resize input array, this algorithm works only in input is power of 2
-    input.resize(countAsPowerOfTwo);
+    input.resize(countAsPowerOfTwo,0);
     size_t inputSize = countAsPowerOfTwo * sizeof(cl_int);
 
     cl_int sumCount = global[0] / local[0];
     size_t sumSize = sumCount * sizeof(cl_int);
     std::vector<cl_int> sums;
     sums.resize(sumCount,0);
+
+    cl::NDRange sumsGlobal(CLCommon::alignTo(sumCount, localWokrgroupSize));
+
 
     cl_int err;
 
@@ -167,7 +170,7 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
 
-    //read sums buffer
+    ////read sums buffer
     m_cl_wrapper->getQueue().enqueueReadBuffer(sumsBuffer, true, 0, sumSize, sums.data(), nullptr, &readEvent);
 
     //scan sums
@@ -176,21 +179,16 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
     m_reduceKernel->setArg(2, sumCount);
     m_reduceKernel->setArg(3, cl::Local(sizeof(cl_int) * localWokrgroupSize));
 
-   global = cl::NDRange(CLCommon::alignTo(sumCount, localWokrgroupSize));
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, sumsGlobal, local, nullptr, &kernelEvent);
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
+    ////read sums buffer
+    m_cl_wrapper->getQueue().enqueueReadBuffer(sumsBuffer, true, 0, sumSize, sums.data(), nullptr, &readEvent);
 
-    //m_reduceKernel->setArg(3, 0);
-    //m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
+    m_incrementKernel->setArg(0, inputBuffer);
+    m_incrementKernel->setArg(1, sumsBuffer);
+    m_incrementKernel->setArg(2, countAsPowerOfTwo);
 
-    //levels = log2(countAsPowerOfTwo);
-    //offset = countAsPowerOfTwo;
-    //for (cl_int i = 0; i < levels; ++i)
-    //{
-    //    m_downSweepKernel->setArg(2, offset);
-    //    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_downSweepKernel, 0, global, local, nullptr, &kernelEvent);
-    //    offset >>= 1;
-    //}
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_incrementKernel, 0, global, local, nullptr, &kernelEvent);
 
     //read input buffer
     m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, inputSize, input.data(), nullptr, &readEvent);
@@ -222,17 +220,17 @@ void CGPUParticleSimulator::test()
     input.push_back(7); 
     input.push_back(8);
 
-    //input.push_back(1);
-    //input.push_back(2);
-    //input.push_back(3);
-    //input.push_back(4);
+    input.push_back(1);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
 
-    //input.push_back(5);
-    //input.push_back(6);
-    //input.push_back(7);
-    //input.push_back(8);
+    input.push_back(5);
+    input.push_back(6);
+    input.push_back(7);
+    input.push_back(8);
 
-    //input.push_back(1);
+    input.push_back(1);
     //input.push_back(2);
     //input.push_back(3);
     //input.push_back(4);

@@ -84,7 +84,21 @@ __kernel void down_sweep(__global int *result, int array_size, int offset)
 
 }
 
+__kernel void increment_local_scans(__global int *result, __global int *sums, int array_size)
+{
+    int global_x = (int)get_global_id(0);
+    int global_w = (int)get_global_size(0);
+    int local_x = (int)get_local_id(0);
+    int local_w = (int)get_local_size(0);
+    int group_x = (int)get_group_id(0);
+    int g_num = (int)get_num_groups(0);
+    //=========================================================================================== 
 
+    if (global_x < array_size)
+    {
+        result[global_x] += sums[group_x];
+    }
+}
 
 __kernel void reduce(__global int *result, __global int * sums, int array_size, volatile __local int *tmp)
 {
@@ -116,8 +130,11 @@ __kernel void reduce(__global int *result, __global int * sums, int array_size, 
     {
         sums[group_x] = tmp[local_x];
         tmp[local_x] = 0;
+        barrier(CLK_LOCAL_MEM_FENCE);
+
 
     }
+
     barrier(CLK_LOCAL_MEM_FENCE);
 
     //down sweep
