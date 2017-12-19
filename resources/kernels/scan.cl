@@ -221,19 +221,18 @@ __constant float viscosity = 3.5f;           // 5.0 // 0.00089 // Ns/m^2 or Pa*s
 __constant float gas_stiffness = 3.0f;       //20.0 // 461.5  // Nm/kg is gas constant of water vapor
 __constant float rest_density = 998.29f;     // kg/m^3 is rest density of water particle
 
-__kernel void update_grid_positions(__global ParticleCL *particles, __global int *positions, int particles_count, int3 grid_size, float3 halfCellSize)
+__kernel void update_grid_positions(__global ParticleCL *particles, __global int *positions, int particles_count, int3 grid_size, float3 half_box_size)
 {
     int global_x = (int)get_global_id(0);
 
     if (global_x < particles_count)
     {
         //this division is really bad...
-        float3 newGridPosition = (particles[global_x].position + halfCellSize) / particle_h;
+        float3 newGridPosition = (particles[global_x].position + half_box_size) / particle_h;
 
         int x = (int) floor(newGridPosition.x);
         int y = (int) floor(newGridPosition.y);
         int z = (int) floor(newGridPosition.z);
-          
 
         if (x < 0) {
             x = 0;

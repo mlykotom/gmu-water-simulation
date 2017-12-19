@@ -54,7 +54,7 @@ protected:
     cl_int m_localScanWokrgroupSize;
     cl_int m_sumsCount;
     cl_int m_elementsProcessedInOneGroup;
-    cl_float3 m_halfCellSize;
+    cl_float3 m_halfBoxSize;
 
     cl::NDRange m_scanLocal;
     cl::NDRange m_scanGlobal;
