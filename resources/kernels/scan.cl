@@ -117,8 +117,6 @@ __kernel void scan_local(__global int *result, __global int * sums, int array_si
     tmp[local_x] = global_x >= array_size ? 0 : result[global_x];
     tmp[local_x-1] = (global_x-1) >= array_size ? 0 : result[global_x-1];
 
-    printf("local_x: %d, global_x: %d, local_w: %d, values: %d, %d \n", local_x, global_x, local_w, tmp[local_x], tmp[local_x-1]);
-
     barrier(CLK_LOCAL_MEM_FENCE);
 
     //reduce
@@ -135,9 +133,6 @@ __kernel void scan_local(__global int *result, __global int * sums, int array_si
     {
         sums[group_x] = tmp[local_x];
         tmp[local_x] = 0;
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
