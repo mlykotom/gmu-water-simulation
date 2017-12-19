@@ -17,7 +17,8 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
 
     m_cl_wrapper->loadProgram(
         {
-            APP_RESOURCES"/kernels/sph.cl"
+            APP_RESOURCES"/kernels/sph_common.cl",
+            APP_RESOURCES"/kernels/sph_brute.cl"
         }
     );
 

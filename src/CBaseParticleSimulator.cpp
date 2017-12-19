@@ -10,8 +10,8 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
       //m_boxSize(QVector3D(0.3f, 0.3f, 0.3f))
       //m_boxSize(QVector3D(0.4, 0.4, 0.4))
       //m_boxSize(QVector3D(0.5, 0.5, 0.5))
-      //m_boxSize(QVector3D(0.6f, 0.6f, 0.6f))
-      m_boxSize(QVector3D(1.0f, 1.0f, 1.0f))
+      m_boxSize(QVector3D(0.6f, 0.6f, 0.6f))
+//      m_boxSize(QVector3D(0.9f, 0.9f, 0.9f))
 {
 
     m_systemParams.poly6_constant = (cl_float)(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
