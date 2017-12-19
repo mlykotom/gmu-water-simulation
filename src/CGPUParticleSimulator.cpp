@@ -79,7 +79,7 @@ void CGPUParticleSimulator::setupKernels()
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
 
 
-    cl_float3 halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
+    m_halfCellSize = { m_cellSize.x() / 2.0f, m_cellSize.y() / 2.0f, m_cellSize.z() / 2.0f };
 
     //setup kernels arguments
     cl_int arg = 0;
@@ -88,7 +88,7 @@ void CGPUParticleSimulator::setupKernels()
     m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, m_particlesCount);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
-    m_updateParticlePositionsKernel->setArg(arg++, halfCellSize);
+    m_updateParticlePositionsKernel->setArg(arg++, m_halfCellSize);
 
 
     arg = 0;
@@ -329,22 +329,22 @@ void CGPUParticleSimulator::scanGrid()
 
 void CGPUParticleSimulator::updateGrid()
 {
-    m_gridVector.clear();
-    m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
-
-
     cl::Event writeEvent;
     cl::Event kernelEvent;
     cl::Event readEvent;
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
+    m_gridVector.clear();
+    m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
 
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, m_global, m_local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
 
     //scan grid
     scanGrid();
+
+    //m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, CL_TRUE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &readEvent);
 
     //sort indices
     // initialize original index locations

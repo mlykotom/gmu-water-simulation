@@ -233,6 +233,7 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         int x = (int) floor(newGridPosition.x);
         int y = (int) floor(newGridPosition.y);
         int z = (int) floor(newGridPosition.z);
+          
 
         if (x < 0) {
             x = 0;
@@ -256,6 +257,8 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
         }
 
         int cell_index = x + y * grid_size.x + z * grid_size.x * grid_size.y;
+
+
 
         if ((cell_index < (grid_size.x * grid_size.y * grid_size.z)) && (cell_index >= 0))
         {
@@ -292,13 +295,16 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 
     if (global_x < size) 
     {
-        particles[global_x].density = 0.0;
 
         int gird_array_size = grid_size.x * grid_size.y *grid_size.z;
 
-        int x = particles[global_x].grid_position.x;
-        int y = particles[global_x].grid_position.y;
-        int z = particles[global_x].grid_position.z;
+        __private ParticleCL tmp_particle = particles[global_x];
+
+        tmp_particle.density = 0.0;
+
+        int x = tmp_particle.grid_position.x;
+        int y = tmp_particle.grid_position.y;
+        int z = tmp_particle.grid_position.z;
 
         // for all neighbors particles
         for (int offsetX = -1; offsetX <= 1; offsetX++) 
@@ -324,20 +330,21 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
                     for (int i = particlesIndexFrom; i < particlesIndexTo; ++i)
                     {
 
-                        float3 distance = particles[global_x].position - particles[sorted_indices[i]].position;
+                        float3 distance = tmp_particle.position - particles[sorted_indices[i]].position;
                         float radiusSquared = dot(distance, distance);
 
                         if (radiusSquared <= particle_h2)
                         {
-                            particles[global_x].density += Wpoly6(radiusSquared, poly6_constant);
+                            tmp_particle.density += Wpoly6(radiusSquared, poly6_constant);
                         }
                     }
                 }
             }
         }
 
-        particles[global_x].density *= particle_mass;
-        particles[global_x].pressure = gas_stiffness * (particles[global_x].density - rest_density);
+        tmp_particle.density *= particle_mass;
+        tmp_particle.pressure = gas_stiffness * (tmp_particle.density - rest_density);
+        particles[global_x] = tmp_particle;
     }
 
 
