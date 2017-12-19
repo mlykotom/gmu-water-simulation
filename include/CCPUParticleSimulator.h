@@ -7,6 +7,11 @@
 
 class CCPUParticleSimulator: public CBaseParticleSimulator
 {
+private:
+    double Wpoly6(double radiusSquared);
+    QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
+    double WviscosityLaplacian(double radiusSquared);
+
 public:
     explicit CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
 

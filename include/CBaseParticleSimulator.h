@@ -90,12 +90,6 @@ public:
     int getGridSizeY() { return m_grid->yRes(); }
     int getGridSizeZ() { return m_grid->zRes(); }
     void step();
-
-    // TODO  not sure if every implementation has it (or it should be static)
-    double Wpoly6(double radiusSquared);
-    QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
-    QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
-    double WviscosityLaplacian(double radiusSquared);
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

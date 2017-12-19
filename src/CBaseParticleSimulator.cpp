@@ -99,38 +99,6 @@ void CBaseParticleSimulator::step()
     integrate();
 }
 
-double CBaseParticleSimulator::Wpoly6(double radiusSquared)
-{
-    static double coefficient = 315.0 / (64.0 * M_PI * pow(CParticle::h, 9));
-    static double hSquared = CParticle::h * CParticle::h;
-
-    return coefficient * pow(hSquared - radiusSquared, 3);
-}
-
-QVector3D CBaseParticleSimulator::Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared)
-{
-    static double coefficient = -945.0 / (32.0 * M_PI * pow(CParticle::h, 9));
-    static double hSquared = CParticle::h * CParticle::h;
-
-    return coefficient * pow(hSquared - radiusSquared, 2) * diffPosition;
-}
-
-QVector3D CBaseParticleSimulator::WspikyGradient(QVector3D &diffPosition, double radiusSquared)
-{
-    static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
-}
-
-double CBaseParticleSimulator::WviscosityLaplacian(double radiusSquared)
-{
-    static double coefficient = 45.0 / (M_PI * pow(CParticle::h, 6));
-    double radius = sqrt(radiusSquared);
-
-    return coefficient * (CParticle::h - radius);
-}
-
 void CBaseParticleSimulator::doWork()
 {
     this->step();
