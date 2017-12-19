@@ -2,62 +2,62 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 
-__kernel void reduce(__global int *result, __global int* subresults, int array_size, int level, volatile __local int *tmp)
-{
-    int global_x = (int)get_global_id(0);
-    int global_w = (int)get_global_size(0);
-    int local_x = (int)get_local_id(0);
-    int local_w = (int)get_local_size(0);
-    int group_x = (int)get_group_id(0);
-    //===========================================================================================  
-
-
-    tmp[local_x] = global_x >= array_size ? 0 : subresults[global_x];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //reduce
-    for (int i = 1; i < local_w; i <<= 1)
-    {
-        if (((local_x + 1) % (i << 1) == 0) && (local_x < local_w) && (local_x - i >= 0))
-        {
-            tmp[local_x] = tmp[local_x] + tmp[local_x - i];
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-
-    //for next round
-    if(local_x == local_w-1)
-        subresults[group_x] = tmp[local_x];
-    
-    if(level == 0)
-        result[global_x] = tmp[local_x];
-    else
-    {
-
-        int writeIndex = ((local_w * global_x) + (local_w - 1)) ;
-        if (writeIndex < array_size && writeIndex >= 0)
-            result[writeIndex] = tmp[local_x];
-    }
-
-    /*if (global_x == array_size - 1)
-    {
-        result[array_size - 1] = 0;
-    }
-*/
-    barrier(CLK_GLOBAL_MEM_FENCE);
-
-    //if (((global_x + 1) % (offset << 1) == 0) && (global_x < array_size) && (global_x - offset >= 0))
-    //    result[global_x] = result[global_x] + result[global_x - offset];
-
-    //if (global_x == array_size - 1)
-    //{
-    //    result[array_size - 1] = 0;
-    //}
-
-    //barrier(CLK_GLOBAL_MEM_FENCE);
-
-}
+//__kernel void reduce(__global int *result, __global int* subresults, int array_size, int level, volatile __local int *tmp)
+//{
+//    int global_x = (int)get_global_id(0);
+//    int global_w = (int)get_global_size(0);
+//    int local_x = (int)get_local_id(0);
+//    int local_w = (int)get_local_size(0);
+//    int group_x = (int)get_group_id(0);
+//    //===========================================================================================  
+//
+//
+//    tmp[local_x] = global_x >= array_size ? 0 : subresults[global_x];
+//    barrier(CLK_LOCAL_MEM_FENCE);
+//
+//    //reduce
+//    for (int i = 1; i < local_w; i <<= 1)
+//    {
+//        if (((local_x + 1) % (i << 1) == 0) && (local_x < local_w) && (local_x - i >= 0))
+//        {
+//            tmp[local_x] = tmp[local_x] + tmp[local_x - i];
+//        }
+//        barrier(CLK_LOCAL_MEM_FENCE);
+//    }
+//
+//
+//    //for next round
+//    if(local_x == local_w-1)
+//        subresults[group_x] = tmp[local_x];
+//    
+//    if(level == 0)
+//        result[global_x] = tmp[local_x];
+//    else
+//    {
+//
+//        int writeIndex = ((local_w * global_x) + (local_w - 1)) ;
+//        if (writeIndex < array_size && writeIndex >= 0)
+//            result[writeIndex] = tmp[local_x];
+//    }
+//
+//    /*if (global_x == array_size - 1)
+//    {
+//        result[array_size - 1] = 0;
+//    }
+//*/
+//    barrier(CLK_GLOBAL_MEM_FENCE);
+//
+//    //if (((global_x + 1) % (offset << 1) == 0) && (global_x < array_size) && (global_x - offset >= 0))
+//    //    result[global_x] = result[global_x] + result[global_x - offset];
+//
+//    //if (global_x == array_size - 1)
+//    //{
+//    //    result[array_size - 1] = 0;
+//    //}
+//
+//    //barrier(CLK_GLOBAL_MEM_FENCE);
+//
+//}
 
 __kernel void down_sweep(__global int *result, int array_size, int offset)
 {
@@ -80,6 +80,61 @@ __kernel void down_sweep(__global int *result, int array_size, int offset)
         result[half_index] = tmp;
     }
 
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
+}
+
+
+
+__kernel void reduce(__global int *result, __global int * sums, int array_size, volatile __local int *tmp)
+{
+    int global_x = (int)get_global_id(0);
+    int global_w = (int)get_global_size(0);
+    int local_x = (int)get_local_id(0);
+    int local_w = (int)get_local_size(0);
+    int group_x = (int)get_group_id(0);
+    int g_num = (int)get_num_groups(0);
+    //===========================================================================================  
+
+    //if (group_x * local_w >= array_size)
+    //    return;
+
+    tmp[local_x] = global_x >= array_size ? 0 : result[global_x];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    //reduce
+    for (int i = 1; i < local_w; i <<= 1)
+    {
+        if (((local_x + 1) % (i << 1) == 0) && (local_x < local_w) && (local_x - i >= 0))
+        {
+            tmp[local_x] = tmp[local_x] + tmp[local_x - i];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    if (local_x == local_w - 1)
+    {
+        sums[group_x] = tmp[local_x];
+        tmp[local_x] = 0;
+
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    //down sweep
+    for (int i = local_w; i > 1; i >>= 1)
+    {
+        int half_index = local_x - (i >> 1);
+        if (((local_x + 1) % i == 0) && (local_x < local_w))
+        {
+            int val = tmp[local_x];
+            tmp[local_x] += tmp[half_index];
+            tmp[half_index] = val;
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    result[global_x] = tmp[local_x];
     barrier(CLK_GLOBAL_MEM_FENCE);
 
 }
