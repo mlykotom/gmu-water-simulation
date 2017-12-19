@@ -86,26 +86,27 @@ __kernel void down_sweep(__global int *result, int array_size, int offset)
 
 __kernel void increment_local_scans(__global int *result, __global int *sums, int array_size)
 {
-    int global_x = (int)get_global_id(0);
+    int global_x = (int)((get_global_id(0) + 1) << 1) - 1;
     int global_w = (int)get_global_size(0);
-    int local_x = (int)get_local_id(0);
-    int local_w = (int)get_local_size(0);
+    int local_x = (int)((get_local_id(0) + 1) << 1) - 1;
+    int local_w = (int)(get_local_size(0) << 1);
     int group_x = (int)get_group_id(0);
     int g_num = (int)get_num_groups(0);
     //=========================================================================================== 
 
-    if (global_x < array_size)
+    if (global_x < array_size && global_x -1 >= 0)
     {
         result[global_x] += sums[group_x];
+        result[global_x-1] += sums[group_x];
     }
 }
 
-__kernel void reduce(__global int *result, __global int * sums, int array_size, volatile __local int *tmp)
+__kernel void scan_local(__global int *result, __global int * sums, int array_size, volatile __local int *tmp)
 {
-    int global_x = (int)get_global_id(0);
+    int global_x = (int)((get_global_id(0) + 1) << 1) -1;
     int global_w = (int)get_global_size(0);
-    int local_x = (int)get_local_id(0);
-    int local_w = (int)get_local_size(0);
+    int local_x = (int)((get_local_id(0)+1) << 1) -1;
+    int local_w = (int) (get_local_size(0) << 1);
     int group_x = (int)get_group_id(0);
     int g_num = (int)get_num_groups(0);
     //===========================================================================================  
@@ -114,6 +115,10 @@ __kernel void reduce(__global int *result, __global int * sums, int array_size, 
     //    return;
 
     tmp[local_x] = global_x >= array_size ? 0 : result[global_x];
+    tmp[local_x-1] = (global_x-1) >= array_size ? 0 : result[global_x-1];
+
+    printf("local_x: %d, global_x: %d, local_w: %d, values: %d, %d \n", local_x, global_x, local_w, tmp[local_x], tmp[local_x-1]);
+
     barrier(CLK_LOCAL_MEM_FENCE);
 
     //reduce
@@ -152,6 +157,8 @@ __kernel void reduce(__global int *result, __global int * sums, int array_size, 
     }
 
     result[global_x] = tmp[local_x];
+    result[global_x-1] = tmp[local_x-1];
+
     barrier(CLK_GLOBAL_MEM_FENCE);
 
 }

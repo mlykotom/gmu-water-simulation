@@ -112,18 +112,20 @@ void CGPUParticleSimulator::setupKernels()
 void CGPUParticleSimulator::scan(std::vector<cl_int> input)
 {
 
-    m_reduceKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("reduce"));
-    m_downSweepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("down_sweep"));
+    m_scanLocalKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("scan_local"));
     m_incrementKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("increment_local_scans"));
 
     cl_int originalSize = (cl_int)input.size();
     //find nearest power of 2 to given count
     cl_int countAsPowerOfTwo = pow(2,ceil(log2(originalSize)));
 
-    cl_int localWokrgroupSize = qNextPowerOfTwo((cl_int)ceil(qSqrt(countAsPowerOfTwo)));
+    //cl_int elementsProcessedInOneGroup = CLCommon::alignTo(qNextPowerOfTwo((cl_int)ceil(qSqrt(countAsPowerOfTwo))),8);
+    cl_int elementsProcessedInOneGroup = qNextPowerOfTwo((cl_int)ceil(qSqrt(countAsPowerOfTwo)));
+    //we need only half the threads of processed elements
+    cl_int localWokrgroupSize = elementsProcessedInOneGroup/2;
     cl::NDRange local(localWokrgroupSize);
     //we need only half the threads of the input count
-    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo, localWokrgroupSize));
+    cl::NDRange global(CLCommon::alignTo(countAsPowerOfTwo/2, localWokrgroupSize));
 
     //resize input array, this algorithm works only in input is power of 2
     input.resize(countAsPowerOfTwo,0);
@@ -145,17 +147,7 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
     auto inputBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, inputSize, input.data(), &err);
     CLCommon::checkError(err, "outputBuffer creation");
     auto sumsBuffer = cl::Buffer(m_cl_wrapper->getContext(), CL_MEM_READ_WRITE , sumSize, nullptr, &err);
-    CLCommon::checkError(err, "outputBuffer creation");
-
-
-
-
-
-
-    
-
-    //m_downSweepKernel->setArg(0, inputBuffer);
-    //m_downSweepKernel->setArg(1, countAsPowerOfTwo);
+    CLCommon::checkError(err, "buffer creation");
 
     cl::Event writeEvent;
     cl::Event kernelEvent;
@@ -163,23 +155,25 @@ void CGPUParticleSimulator::scan(std::vector<cl_int> input)
 
 
     //scan input array
-    m_reduceKernel->setArg(0, inputBuffer);
-    m_reduceKernel->setArg(1, sumsBuffer);
-    m_reduceKernel->setArg(2, countAsPowerOfTwo);
-    m_reduceKernel->setArg(3, cl::Local(sizeof(cl_int) * localWokrgroupSize));
+    m_scanLocalKernel->setArg(0, inputBuffer);
+    m_scanLocalKernel->setArg(1, sumsBuffer);
+    m_scanLocalKernel->setArg(2, countAsPowerOfTwo);
+    m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * elementsProcessedInOneGroup));
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_scanLocalKernel, 0, global, local, nullptr, &kernelEvent);
 
+    //read input buffer
+    m_cl_wrapper->getQueue().enqueueReadBuffer(inputBuffer, true, 0, inputSize, input.data(), nullptr, &readEvent);
     ////read sums buffer
     m_cl_wrapper->getQueue().enqueueReadBuffer(sumsBuffer, true, 0, sumSize, sums.data(), nullptr, &readEvent);
 
     //scan sums
-    m_reduceKernel->setArg(0, sumsBuffer);
-    m_reduceKernel->setArg(1, sumsBuffer);
-    m_reduceKernel->setArg(2, sumCount);
-    m_reduceKernel->setArg(3, cl::Local(sizeof(cl_int) * localWokrgroupSize));
+    m_scanLocalKernel->setArg(0, sumsBuffer);
+    m_scanLocalKernel->setArg(1, sumsBuffer);
+    m_scanLocalKernel->setArg(2, sumCount);
+    m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * elementsProcessedInOneGroup));
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_reduceKernel, 0, sumsGlobal, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_scanLocalKernel, 0, sumsGlobal, local, nullptr, &kernelEvent);
 
     ////read sums buffer
     m_cl_wrapper->getQueue().enqueueReadBuffer(sumsBuffer, true, 0, sumSize, sums.data(), nullptr, &readEvent);
@@ -231,24 +225,24 @@ void CGPUParticleSimulator::test()
     input.push_back(8);
 
     input.push_back(1);
-    //input.push_back(2);
-    //input.push_back(3);
-    //input.push_back(4);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
 
-    //input.push_back(5);
-    //input.push_back(6);
-    //input.push_back(7);
-    //input.push_back(8);
+    input.push_back(5);
+    input.push_back(6);
+    input.push_back(7);
+    input.push_back(8);
 
-    //input.push_back(1);
-    //input.push_back(2);
-    //input.push_back(3);
-    //input.push_back(4);
+    input.push_back(1);
+    input.push_back(2);
+    input.push_back(3);
+    input.push_back(4);
 
-    //input.push_back(5);
-    //input.push_back(6);
-    //input.push_back(7);
-    //input.push_back(8);
+    input.push_back(5);
+    input.push_back(6);
+    input.push_back(7);
+    input.push_back(8);
 
 
      scan(input);

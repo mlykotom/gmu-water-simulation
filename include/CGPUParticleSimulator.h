@@ -39,7 +39,7 @@ protected:
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_reduceKernel;
     std::shared_ptr<cl::Kernel> m_downSweepKernel;
-    std::shared_ptr<cl::Kernel> m_scanKernel;
+    std::shared_ptr<cl::Kernel> m_scanLocalKernel;
     std::shared_ptr<cl::Kernel> m_incrementKernel;
 
     std::shared_ptr<cl::Kernel> m_densityPresureStepKernel;
