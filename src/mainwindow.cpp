@@ -5,7 +5,6 @@
 #include <Qt3DExtras/QFirstPersonCameraController>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "ocl_test.h"
 
 //local includes
 #include <CQt3DWindow.h>
@@ -23,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_mainView = new CQt3DWindow();
 
-    QWidget *container = QWidget::createWindowContainer(m_mainView);
+    QWidget * container = QWidget::createWindowContainer(m_mainView);
     QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     sizePolicy.setHorizontalStretch(0);
     sizePolicy.setVerticalStretch(0);
@@ -57,25 +56,18 @@ MainWindow::MainWindow(QWidget *parent) :
 
     try {
         //m_simulator = new CCPUParticleSimulator(m_scene);
-//        m_simulator = new CCPUBruteParticleSimulator(m_scene);
-        m_simulator = new CGPUParticleSimulator(m_scene);
+        m_simulator = new CCPUBruteParticleSimulator(m_scene);
+//        m_simulator = new CGPUParticleSimulator(m_scene);
 
         connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
         connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
         m_simulator->setupScene();
-        //m_simulator->test();
         // Set root object of the scene
         m_mainView->setRootEntity(rootEntity);
 
-        ui->particlesCountWidget->setText(QString::number(m_simulator->getParticlesCount()));
-        ui->gridSizeWidget->setText(QString("%1 x %2 x %3").arg(
-            QString::number(m_simulator->getGridSizeX()),
-            QString::number(m_simulator->getGridSizeY()),
-            QString::number(m_simulator->getGridSizeZ())
-        ));
-
+        setupUI();
     }
     catch (CLException &exc) {
         qDebug() << exc.what();
@@ -88,9 +80,21 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-//    delete m_scene;
     delete m_simulator;
     delete m_cl_wrapper;
+}
+
+void MainWindow::setupUI()
+{
+    ui->particlesCountWidget->setText(QString::number(m_simulator->getParticlesCount()));
+
+    ui->gridSizeWidget->setText(QString("%1 x %2 x %3").arg(
+        QString::number(m_simulator->getGridSizeX()),
+        QString::number(m_simulator->getGridSizeY()),
+        QString::number(m_simulator->getGridSizeZ())
+    ));
+
+    ui->selectedDeviceWidget->setText(m_simulator->getSelectedDevice());
 }
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)

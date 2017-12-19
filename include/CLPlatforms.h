@@ -11,8 +11,8 @@ public:
     static std::vector<cl::Device> getDevices(cl::Platform platform, cl_device_type deviceType = CL_DEVICE_TYPE_ALL);
 
     static void printInfoAll();
-    static QString getPlatformInfo(cl::Platform platform, int index = 0);
-    static QString getDeviceInfo(cl::Device device, int index = 0);
+    static QString getPlatformInfo(const cl::Platform &platform);
+    static QString getDeviceInfo(const cl::Device &device);
     static cl::Device getBestGPU();
 };
 

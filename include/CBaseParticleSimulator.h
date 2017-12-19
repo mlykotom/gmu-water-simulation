@@ -56,17 +56,16 @@ protected:
 
     cl_float dt;
     CGrid *m_grid;
-    std::vector<CParticle*> m_particles;
+    std::vector<CParticle *> m_particles;
     QVector3D m_boxSize;
     cl_float m_surfaceThreshold;
-    cl_int m_particlesCount = 0;
+    cl_uint m_particlesCount = 0;
     SystemParams m_systemParams;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
     virtual void updateForces() = 0;
     virtual void integrate() = 0;
-
 
 public:
     explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
@@ -82,6 +81,8 @@ public:
     void toggleGravity();
     virtual void setGravityVector(QVector3D newGravity);
 
+    virtual QString getSelectedDevice() = 0;
+
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
@@ -95,9 +96,6 @@ public:
     QVector3D Wpoly6Gradient(QVector3D &diffPosition, double radiusSquared);
     QVector3D WspikyGradient(QVector3D &diffPosition, double radiusSquared);
     double WviscosityLaplacian(double radiusSquared);
-
-    //TODO: DELETE
-    virtual void test() {}
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

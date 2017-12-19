@@ -70,6 +70,7 @@ public slots:
     void keyPressEvent(QKeyEvent *event){
         emit keyPressed((Qt::Key)event->key());
     }
+    void setupUI();
 };
 
 #endif // MAINWINDOW_H

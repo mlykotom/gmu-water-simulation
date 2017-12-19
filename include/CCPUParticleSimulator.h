@@ -3,12 +3,14 @@
 #define WATERSURFACESIMULATION_CCPUPARTICLESIMULATOR_H
 
 #include <CBaseParticleSimulator.h>
+#include "CGPUBaseParticleSimulator.h"
 
 class CCPUParticleSimulator: public CBaseParticleSimulator
 {
 public:
-    CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
+    explicit CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
 
+    QString getSelectedDevice() override { return "CPU (without OpenCL)"; };
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;

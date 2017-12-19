@@ -21,24 +21,24 @@ std::vector<cl::Device> CLPlatforms::getDevices(cl::Platform platform, cl_device
  * Print platform name
  * @param platform
  */
-QString CLPlatforms::getPlatformInfo(cl::Platform platform, int index)
+QString CLPlatforms::getPlatformInfo(const cl::Platform &platform)
 {
     cl_int err;
     auto platformInfo = platform.getInfo<CL_PLATFORM_NAME>(&err);
     CLCommon::checkError(err, "cl::Platform::getInfo<CL_PLATFORM_NAME>");
-    return QString("%1. platform name: %2").arg(QString::number(index), platformInfo.c_str());
+    return QString(platformInfo.c_str());
 }
 
 /**
  * Get device name
  * @param device
  */
-QString CLPlatforms::getDeviceInfo(cl::Device device, int index)
+QString CLPlatforms::getDeviceInfo(const cl::Device &device)
 {
     cl_int err;
     auto deviceInfo = device.getInfo<CL_DEVICE_NAME>(&err);
     CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_NAME>");
-    return QString("  %1. device name: %2.").arg(QString::number(index), deviceInfo.c_str());
+    return QString(deviceInfo.c_str());
 }
 
 void CLPlatforms::printInfoAll()
@@ -49,14 +49,14 @@ void CLPlatforms::printInfoAll()
     auto platforms = getAllPlatforms();
 
     for (int i = 0; i < platforms.size(); i++) {
-        qDebug() << getPlatformInfo(platforms[i], i);
+        qDebug() << i << getPlatformInfo(platforms[i]);
 
         // Get platform devices count
         auto devices = getDevices(platforms[i]);
         if (devices.empty()) continue;
 
         for (int j = 0; j < devices.size(); j++) {
-            qDebug() << getDeviceInfo(devices[j], j);
+            qDebug() << "\t" << j << getDeviceInfo(devices[j]);
         }
     }
     qDebug() << "------------------";
@@ -73,7 +73,7 @@ cl::Device CLPlatforms::getBestGPU()
     platform_index = 0;
 //    device_index = 0; // cpu
 //    device_index = 1 ; //intel gpu
-    device_index = 2 ; //amd gpu
+    device_index = 2; //amd gpu
     device_type = CL_DEVICE_TYPE_ALL;
 #else
     ////nvidia GPU
