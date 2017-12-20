@@ -65,23 +65,12 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
     m_meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
     addComponent(m_meshRenderer);
 
-
-    /*============================ Working area ====================================================*/
     //collision geometry
     m_collisionGeometry = new CCollisionGeometry(m_geometry);
-
-
-
-
-    /*============================ Working area ====================================================*/
-
 
     //Custom material
     CWireframeMaterial *wireframeMaterial = new CWireframeMaterial();
     addComponent(wireframeMaterial);
-
-    //CRobustWireframeMaterial *robustWireframeMaterial = new CRobustWireframeMaterial();
-    //addComponent(robustWireframeMaterial);
 
     this->setEnabled(true);
 }
