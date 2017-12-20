@@ -15,6 +15,8 @@ void CGPUBruteParticleSimulator::setupKernels()
 {
     CGPUBaseParticleSimulator::setupKernels();
 
+    m_global = cl::NDRange(m_particlesCount);
+
     // density kernel
     m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
 
@@ -46,9 +48,8 @@ void CGPUBruteParticleSimulator::updateDensityPressure()
     cl::Event kernelEvent;
 
     cl::NDRange local = cl::NullRange;
-    cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, m_global, local, nullptr, &kernelEvent);
 }
 
 void CGPUBruteParticleSimulator::updateForces()
@@ -57,12 +58,10 @@ void CGPUBruteParticleSimulator::updateForces()
     cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
     cl::NDRange local = cl::NullRange;
-    cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, m_global, local, nullptr, &kernelEvent);
 
     // collision forces
     cl::NDRange collisionLocal = cl::NullRange;
-    cl::NDRange collisionGlobal(m_particlesCount);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_walls_collision_kernel, 0, collisionGlobal, collisionLocal, nullptr, &kernelCollisionEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_walls_collision_kernel, 0, m_global, collisionLocal, nullptr, &kernelCollisionEvent);
 }

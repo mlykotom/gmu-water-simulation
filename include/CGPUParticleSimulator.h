@@ -22,7 +22,7 @@ private: //methods
 protected:
     void setupKernels() override;
 
-    cl_int m_localWokrgroupSize;
+    size_t m_localWokrgroupSize;
 
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_scanLocalKernel;

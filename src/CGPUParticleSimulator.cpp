@@ -131,25 +131,14 @@ void CGPUParticleSimulator::updateGrid()
     m_gridVector.clear();
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
 
+    cl::NDRange local = cl::NullRange;
+
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, m_global, m_local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, m_global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
-
-//    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, CL_TRUE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &readEvent);
-//    int l_max = -1;
-//    for (int i = 0; i < m_gridVector.size(); ++i)
-//    {
-//        l_max = std::max(l_max, m_gridVector.at(i));
-//    }
-//
-//    qDebug() << l_max;
-
 
     //scan grid
     scanGrid();
-
-
-
 
     //sort indices
     // initialize original index locations
@@ -160,7 +149,8 @@ void CGPUParticleSimulator::updateGrid()
     // sort indexes, smallest cell index first
     sort(m_sortedIndices.begin(), m_sortedIndices.end(),
          [this](cl_int i1, cl_int i2)
-         { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
+         { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; }
+    );
 
 }
 
@@ -169,8 +159,11 @@ void CGPUParticleSimulator::updateDensityPressure()
     cl::Event writeEvent;
     cl::Event kernelEvent;
 
+    cl::NDRange local = cl::NullRange;
+
+
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, CL_FALSE, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, m_global, local, nullptr, &kernelEvent);
 }
 
 void CGPUParticleSimulator::updateForces()
@@ -178,7 +171,9 @@ void CGPUParticleSimulator::updateForces()
     m_forceStepKernel->setArg(5, m_gravityCL);  // WARNING: gravityCL must be the same as in first setup!
     cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
+    cl::NDRange local = cl::NullRange;
+
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, m_global, local, nullptr, &kernelEvent);
 
     // collision forces
     cl::NDRange collisionLocal = cl::NullRange;
