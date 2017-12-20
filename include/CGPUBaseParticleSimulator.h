@@ -16,7 +16,7 @@ protected:
 
     virtual void setupKernels() = 0;
 public:
-    explicit CGPUBaseParticleSimulator(CScene *scene, QObject *parent = nullptr);
+    explicit CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
     void setGravityVector(QVector3D newGravity) override;
     QString getSelectedDevice() override;
     void setupScene() override;

@@ -1,7 +1,7 @@
 #include "CGPUParticleSimulator.h"
 
-CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, QObject *parent)
-    : CGPUBaseParticleSimulator(scene, parent),
+CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
+    : CGPUBaseParticleSimulator(scene, boxSize, device, parent),
       m_localWokrgroupSize(64)
 {
     m_cl_wrapper->loadProgram(

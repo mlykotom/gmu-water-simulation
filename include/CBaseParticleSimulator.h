@@ -19,22 +19,43 @@ class CScene;
 
 class CBaseParticleSimulator: public QObject
 {
-Q_OBJECT
+    Q_OBJECT
 
-private slots:
-    void doWork();
+public:
+    explicit CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent);
+    ~CBaseParticleSimulator() override
+    {
+        m_scene->clean();
+        for(CParticle *p : m_particles)
+            delete p;
 
-public slots:
-    virtual void onKeyPressed(Qt::Key key);
+        delete m_grid;
+    }
+
+    virtual void setupScene();
+    virtual void setGravityVector(QVector3D newGravity);
+    virtual QString getSelectedDevice() = 0;
+
+    void start();
+    void stop();
+    void step();
+    void toggleSimulation();
+    void toggleGravity();
+
+
+    qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
+    double getFps();
+    unsigned long getParticlesCount() { return m_particlesCount; }
+    int getGridSizeX() { return m_grid->xRes(); }
+    int getGridSizeY() { return m_grid->yRes(); }
+    int getGridSizeZ() { return m_grid->zRes(); }
+
 
 signals:
     void iterationChanged(unsigned long iteration);
 
-private: //attributes
-    QTimer m_timer;
-    QElapsedTimer m_elapsed_timer;
-    unsigned long iterationSincePaused;
-    unsigned long totalIteration;
+public slots:
+    virtual void onKeyPressed(Qt::Key key);
 
 protected:
 
@@ -67,29 +88,17 @@ protected:
     virtual void updateForces() = 0;
     virtual void integrate() = 0;
 
-public:
-    explicit CBaseParticleSimulator(CScene *scene, QObject *parent);
-    ~CBaseParticleSimulator() override
-    {
-        delete m_grid;
-    }
+private slots:
+    void doWork();
 
-    virtual void setupScene();
-    virtual void start();
+private: //attributes
+    QTimer m_timer;
+    QElapsedTimer m_elapsed_timer;
+    unsigned long iterationSincePaused;
+    unsigned long totalIteration;
 
-    void toggleSimulation();
-    void toggleGravity();
-    virtual void setGravityVector(QVector3D newGravity);
 
-    virtual QString getSelectedDevice() = 0;
 
-    qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
-    double getFps();
-    unsigned long getParticlesCount() { return m_particlesCount; }
-    int getGridSizeX() { return m_grid->xRes(); }
-    int getGridSizeY() { return m_grid->yRes(); }
-    int getGridSizeZ() { return m_grid->zRes(); }
-    void step();
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

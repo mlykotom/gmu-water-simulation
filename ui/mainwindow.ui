@@ -162,7 +162,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="restartPushButto">
+               <widget class="QPushButton" name="restartPushButton">
                 <property name="text">
                  <string>Restart</string>
                 </property>

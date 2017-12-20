@@ -1,13 +1,12 @@
 #include <include/CGPUBaseParticleSimulator.h>
 
-CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, QObject *parent)
-    : CBaseParticleSimulator(scene, parent),
+CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
+    : CBaseParticleSimulator(scene, boxSize, parent),
       m_gravityCL({gravity.x(), gravity.y(), gravity.z()})
 {
     CLPlatforms::printInfoAll();
 
-    auto clDevice = CLPlatforms::getBestGPU();
-    m_cl_wrapper = new CLWrapper(clDevice);
+    m_cl_wrapper = new CLWrapper(device);
 }
 
 void CGPUBaseParticleSimulator::setupScene()

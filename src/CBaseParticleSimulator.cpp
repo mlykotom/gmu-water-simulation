@@ -1,17 +1,13 @@
 #include "CBaseParticleSimulator.h"
 
-CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
+CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent)
     : QObject(parent),
       gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
       m_scene(scene),
       dt(0.01f),
       totalIteration(0),
       m_surfaceThreshold(0.01f),
-      //m_boxSize(QVector3D(0.3f, 0.3f, 0.3f))
-      //m_boxSize(QVector3D(0.4, 0.4, 0.4))
-      //m_boxSize(QVector3D(0.5, 0.5, 0.5))
-      m_boxSize(QVector3D(0.6f, 0.6f, 0.6f))
-//      m_boxSize(QVector3D(0.9f, 0.9f, 0.9f))
+      m_boxSize(QVector3D(boxSize, boxSize, boxSize))
 {
 
     m_systemParams.poly6_constant = (cl_float)(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
@@ -60,6 +56,11 @@ void CBaseParticleSimulator::start()
 {
     m_timer.start();
     m_elapsed_timer.start();
+}
+
+void CBaseParticleSimulator::stop()
+{
+    m_timer.stop();
 }
 
 void CBaseParticleSimulator::toggleSimulation()
@@ -135,3 +136,5 @@ double CBaseParticleSimulator::getFps()
     double elapsed = getElapsedTime() / 1000.0;
     return iterationSincePaused / elapsed;
 }
+
+

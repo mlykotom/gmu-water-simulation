@@ -29,6 +29,7 @@ CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D 
     sphereEntity->addComponent(m_material);
     sphereEntity->addComponent(m_transform);
     sphereEntity->setEnabled(true);
+
 }
 
 CParticle::~CParticle()

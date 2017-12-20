@@ -13,7 +13,7 @@ private:
     double WviscosityLaplacian(double radiusSquared);
 
 public:
-    explicit CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
+    explicit CCPUParticleSimulator(CScene *scene, float boxSize, QObject *parent = nullptr);
 
     QString getSelectedDevice() override { return "CPU (without OpenCL)"; };
     void updateGrid() override;

@@ -8,8 +8,17 @@
 #include "CGPUBaseParticleSimulator.h"
 
 
-class CCPUBruteParticleSimulator: public CGPUBaseParticleSimulator
+class CGPUBruteParticleSimulator: public CGPUBaseParticleSimulator
 {
+public:
+
+    explicit CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
+
+    void updateGrid() override;
+    void updateDensityPressure() override;
+    void updateForces() override;
+    void integrate() override;
+
 protected:
     std::shared_ptr<cl::Kernel> m_integration_kernel;
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
@@ -19,14 +28,6 @@ protected:
     size_t m_dataBufferSize;
 
     void setupKernels() override;
-public:
-
-    explicit CCPUBruteParticleSimulator(CScene *scene, QObject *parent = nullptr);
-
-    void updateGrid() override;
-    void updateDensityPressure() override;
-    void updateForces() override;
-    void integrate() override;
 };
 
 

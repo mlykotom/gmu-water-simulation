@@ -25,6 +25,7 @@ public:
     void createSphere();
 
     void addGrid();
+    void clean();
 
 private:
     Qt3DCore::QEntity *m_rootEntity;

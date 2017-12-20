@@ -49,6 +49,14 @@ Q_OBJECT
 enum eComboBoxRole { platformRole = Qt::UserRole +1, deviceRole, simulationTypeRole};
 enum eSimulationType { CPU = 0, GPUBrute, GPUGrid };
 
+struct sSimulationOptions
+{
+    eSimulationType type;
+    float boxSize;
+    int platformIndex;
+    int deviceIndex;
+};
+
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow() override;
@@ -74,17 +82,21 @@ private: //members
     FrameGraph *m_pFrameGraph;
 
     CBaseParticleSimulator *m_simulator;
-   // CLWrapper *m_cl_wrapper;
+    sSimulationOptions m_simulationOptions;
 
 private: //methods
     void setupUI();
     void setupDevicesComboBox();
     void setupSimulationTypesComboBox();
+    void setupScene();
 
 private slots:
     void onDevicesComboBoxIndexChanged(int index);
     void onSimulationTypeComboBoxIndexChanged(int index);
     void oncubeSizeSliderValueChanged(int value);
+    void onStartSimulationClicked();
+    void onPauseSimulationClicked();
+    void onRestartSimulationClicked();
 
 };
 

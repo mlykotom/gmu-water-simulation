@@ -94,3 +94,8 @@ void CScene::createScene()
 void CScene::addGrid()
 {
 }
+
+void CScene::clean()
+{
+
+}

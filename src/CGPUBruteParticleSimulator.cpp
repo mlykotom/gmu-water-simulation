@@ -1,7 +1,7 @@
 #include "CGPUBruteParticleSimulator.h"
 
-CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *parent)
-    : CGPUBaseParticleSimulator(scene, parent)
+CGPUBruteParticleSimulator::CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
+    : CGPUBaseParticleSimulator(scene, boxSize, device, parent)
 {
     m_cl_wrapper->loadProgram(
         {
@@ -11,7 +11,7 @@ CCPUBruteParticleSimulator::CCPUBruteParticleSimulator(CScene *scene, QObject *p
     );
 }
 
-void CCPUBruteParticleSimulator::setupKernels()
+void CGPUBruteParticleSimulator::setupKernels()
 {
     m_dataBufferSize = m_particlesCount * sizeof(CParticle::Physics);
     m_outputBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_dataBufferSize);
@@ -21,14 +21,14 @@ void CCPUBruteParticleSimulator::setupKernels()
     m_update_forces_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
 }
 
-void CCPUBruteParticleSimulator::updateGrid()
+void CGPUBruteParticleSimulator::updateGrid()
 {
     // don't need to update the grid, since everything is in one cell
     cl::Event writeEvent;
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_TRUE, 0, m_dataBufferSize, m_clParticles.data(), nullptr, &writeEvent);
 }
 
-void CCPUBruteParticleSimulator::updateDensityPressure()
+void CGPUBruteParticleSimulator::updateDensityPressure()
 {
     cl_uint arg = 0;
     m_update_density_kernel->setArg(arg++, m_outputBuffer);
@@ -43,7 +43,7 @@ void CCPUBruteParticleSimulator::updateDensityPressure()
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, global, local, nullptr, &kernelEvent);
 }
 
-void CCPUBruteParticleSimulator::updateForces()
+void CGPUBruteParticleSimulator::updateForces()
 {
     cl_uint arg = 0;
     m_update_forces_kernel->setArg(arg++, m_outputBuffer);
@@ -78,7 +78,7 @@ void CCPUBruteParticleSimulator::updateForces()
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_outputBuffer, CL_FALSE, 0, m_dataBufferSize, m_clParticles.data(), nullptr, &writeEventAfterCollision);
 }
 
-void CCPUBruteParticleSimulator::integrate()
+void CGPUBruteParticleSimulator::integrate()
 {
     cl_uint arg = 0;
     m_integration_kernel->setArg(arg++, m_outputBuffer);
