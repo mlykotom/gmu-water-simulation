@@ -134,7 +134,6 @@ void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 double CBaseParticleSimulator::getFps()
 {
     double elapsed = getElapsedTime() / 1000.0;
-    qDebug() << iterationSincePaused << iterationSincePaused / elapsed;
     return iterationSincePaused / elapsed;
 }
 
