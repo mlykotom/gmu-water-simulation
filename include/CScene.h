@@ -25,7 +25,7 @@ public:
 
 private:
     Qt3DCore::QEntity *m_rootEntity;
-    CGrid *m_grid;
+
 };
 
 #endif

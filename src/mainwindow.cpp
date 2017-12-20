@@ -1,14 +1,16 @@
 // Qt 3D
+#include <Qt3DExtras/QFirstPersonCameraController>
+#include <CQt3DWindow.h>
+#include <QClearBuffers>
 #include <QMessageBox>
 #include <QCullFace>
 #include <QTextEdit>
-#include <Qt3DExtras/QFirstPersonCameraController>
 #include <QStandardItemModel>
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
+
 
 //local includes
-#include <CQt3DWindow.h>
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
 #include <CGPUBruteParticleSimulator.h>
 #include <CGPUParticleSimulator.h>
 #include <CCPUParticleSimulator.h>
@@ -17,7 +19,9 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    m_simulator(nullptr)
+    m_simulator(nullptr),
+    m_scene(nullptr),
+    m_mainView(nullptr)
 {
 
     setupUI();
@@ -60,7 +64,13 @@ void MainWindow::setupUI()
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
     this->setCentralWidget(this->ui->mainWidget);
+   
+    m_mainView = new CQt3DWindow();
 
+    QWidget * container = QWidget::createWindowContainer(m_mainView);
+    QSizePolicy centralWidgetSizePolicy = ui->centralWidget->sizePolicy();
+    container->setSizePolicy(centralWidgetSizePolicy);
+    ui->mainLayout->replaceWidget(ui->centralWidget, container);
 
     setupScene();
     setupDevicesComboBox();
@@ -138,14 +148,7 @@ void MainWindow::setupSimulationTypesComboBox()
 }
 
 void MainWindow::setupScene()
-{
-    m_mainView = new CQt3DWindow();
-
-    QWidget * container = QWidget::createWindowContainer(m_mainView);
-    QSizePolicy centralWidgetSizePolicy = ui->centralWidget->sizePolicy();
-    container->setSizePolicy(centralWidgetSizePolicy);
-    ui->mainLayout->replaceWidget(ui->centralWidget, container);
-
+{    
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
@@ -225,6 +228,10 @@ void MainWindow::onStartSimulationClicked()
 
     m_simulator->setupScene();
     m_simulator->start();
+
+    connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 }
 
 void MainWindow::onPauseSimulationClicked()
@@ -233,6 +240,21 @@ void MainWindow::onPauseSimulationClicked()
 
 void MainWindow::onRestartSimulationClicked()
 {
+    if (m_simulator != nullptr)
+    {
+        m_simulator->stop();
+        delete m_simulator;
+        m_simulator = nullptr;
+    }
+
+    if (m_scene != nullptr)
+    {
+        delete m_scene;
+        m_scene = nullptr;
+    }
+
+    setupScene();
+
 }
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)

@@ -4,8 +4,6 @@ CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSiz
     : CBaseParticleSimulator(scene, boxSize, parent),
       m_gravityCL({gravity.x(), gravity.y(), gravity.z()})
 {
-    CLPlatforms::printInfoAll();
-
     m_cl_wrapper = new CLWrapper(device);
 }
 

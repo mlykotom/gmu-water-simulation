@@ -76,5 +76,17 @@ CGrid::CGrid(Qt3DCore::QNode *parent)
 }
 CGrid::~CGrid()
 {
-    delete[] m_data;
+   // delete[] m_data;
+
+    for (int i = 0; i < m_data->size(); ++i)
+    {
+        std::vector<CParticle *> particles = m_data[i];
+        for (CParticle* p : particles)
+        {
+            if(p != nullptr)
+                delete p;
+            p = nullptr;
+        }
+
+    }
 }
