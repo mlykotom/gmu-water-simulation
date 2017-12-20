@@ -32,9 +32,7 @@ MainWindow::MainWindow(QWidget *parent) :
 //        m_simulator = new CCPUBruteParticleSimulator(m_scene);
 ////        m_simulator = new CGPUParticleSimulator(m_scene);
 //
-//        connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-//        connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-//        connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+
 //
 //        m_simulator->setupScene();
 //        // Set root object of the scene
@@ -63,11 +61,11 @@ void MainWindow::setupUI()
     this->setWindowTitle("GMU Water surface simulation");
     this->setCentralWidget(this->ui->mainWidget);
 
-    
+
     setupScene();
     setupDevicesComboBox();
     setupSimulationTypesComboBox();
-    
+
     connect(ui->cubeSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(oncubeSizeSliderValueChanged(int)));
     oncubeSizeSliderValueChanged(ui->cubeSizeSlider->value());
 
@@ -221,6 +219,10 @@ void MainWindow::onStartSimulationClicked()
         break;
     }
 
+    connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+
     m_simulator->setupScene();
     m_simulator->start();
 }
@@ -235,6 +237,6 @@ void MainWindow::onRestartSimulationClicked()
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    //ui->fpsWidget->setText(QString::number(m_simulator->getFps()));
-    //ui->iterationWidget->setText(QString::number(iteration));
+    ui->FPSLabel->setText(QString::number(m_simulator->getFps(), 'f', 2));
+    ui->iterationWidget->setText(QString::number(iteration));
 }
