@@ -16,14 +16,14 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, float boxSize, cl::D
 
 void CGPUParticleSimulator::setupKernels()
 {
+    CGPUBaseParticleSimulator::setupKernels();
+
     //create kernels
     m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
     m_scanLocalKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("scan_local"));
     m_incrementKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("increment_local_scans"));
     m_densityPresureStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
     m_forceStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
-    m_integrationStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
-
 
     m_local = cl::NDRange(m_localWokrgroupSize);
     m_global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
@@ -36,9 +36,6 @@ void CGPUParticleSimulator::setupKernels()
 
     m_sortedIndices.clear();
     m_sortedIndices.resize(m_clParticles.size());
-
-    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
-    m_particlesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
 
     m_gridVectorSize = (cl_int) m_gridVector.size() * sizeof(cl_int);
     m_gridBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize);
@@ -68,7 +65,7 @@ void CGPUParticleSimulator::setupKernels()
 
     m_halfBoxSize = {m_boxSize.x() / 2.0f, m_boxSize.y() / 2.0f, m_boxSize.z() / 2.0f};
     //setup kernels arguments
-    cl_int arg = 0;
+    cl_uint arg = 0;
 
     m_updateParticlePositionsKernel->setArg(arg++, m_particlesBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
@@ -94,12 +91,6 @@ void CGPUParticleSimulator::setupKernels()
     m_forceStepKernel->setArg(arg++, m_gravityCL);
     m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
     m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
-
-    arg = 0;
-    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
-    m_integrationStepKernel->setArg(arg++, m_particlesCount);
-    m_integrationStepKernel->setArg(arg++, dt);
-
 }
 
 void CGPUParticleSimulator::scanGrid()
@@ -140,25 +131,14 @@ void CGPUParticleSimulator::updateGrid()
     m_gridVector.clear();
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
 
+    cl::NDRange local = cl::NullRange;
+
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, m_global, m_local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, m_global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
-
-//    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, CL_TRUE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &readEvent);
-//    int l_max = -1;
-//    for (int i = 0; i < m_gridVector.size(); ++i)
-//    {
-//        l_max = std::max(l_max, m_gridVector.at(i));
-//    }
-//
-//    qDebug() << l_max;
-
 
     //scan grid
     scanGrid();
-
-
-
 
     //sort indices
     // initialize original index locations
@@ -169,7 +149,8 @@ void CGPUParticleSimulator::updateGrid()
     // sort indexes, smallest cell index first
     sort(m_sortedIndices.begin(), m_sortedIndices.end(),
          [this](cl_int i1, cl_int i2)
-         { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; });
+         { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; }
+    );
 
 }
 
@@ -178,52 +159,23 @@ void CGPUParticleSimulator::updateDensityPressure()
     cl::Event writeEvent;
     cl::Event kernelEvent;
 
+    cl::NDRange local = cl::NullRange;
+
+
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, CL_FALSE, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, m_global, local, nullptr, &kernelEvent);
 }
 
 void CGPUParticleSimulator::updateForces()
 {
-    m_forceStepKernel->setArg(5, m_gravityCL);  // WARNING: gravityCL must be on 5th position
+    m_forceStepKernel->setArg(5, m_gravityCL);  // WARNING: gravityCL must be the same as in first setup!
+    cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
-    cl::Event kernelEvent, readEvent, writeEventAfterCollision;
+    cl::NDRange local = cl::NullRange;
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, m_global, local, nullptr, &kernelEvent);
 
-    // collision force
-#pragma omp parallel for
-    for (int i = 0; i < m_particlesCount; ++i) {
-        CParticle::Physics &particleCL = m_clParticles[i];
-        QVector3D pos = CParticle::clFloatToVector(particleCL.position);
-        QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
-
-        m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particleCL);
-        //QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
-        //particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
-    }
-
-    // need to write buffer because previous step has
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEventAfterCollision);
-}
-
-void CGPUParticleSimulator::integrate()
-{
-    cl::Event writeEvent;
-    cl::Event kernelEvent;
-    cl::Event readEvent;
-
-    // TODO here m_local should be nullRange (because we don't use local memory)
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
-
-    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-
-    //all particles are in cell 0 on CPU
-    std::vector<CParticle *> &particles = m_grid->getData()[0];
-
-    for (auto &particle : particles) {
-        particle->updatePosition();
-        particle->updateVelocity();
-    }
+    // collision forces
+    cl::NDRange collisionLocal = cl::NullRange;
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_walls_collision_kernel, 0, m_global, collisionLocal, nullptr, &kernelCollisionEvent);
 }

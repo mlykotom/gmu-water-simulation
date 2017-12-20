@@ -17,15 +17,12 @@ public:
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
-    void integrate() override;
 
 protected:
-    std::shared_ptr<cl::Kernel> m_integration_kernel;
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
     std::shared_ptr<cl::Kernel> m_update_forces_kernel;
 
-    cl::Buffer m_outputBuffer;
-    size_t m_dataBufferSize;
+    cl::NDRange m_global;
 
     void setupKernels() override;
 };

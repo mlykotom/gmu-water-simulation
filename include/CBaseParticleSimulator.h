@@ -19,12 +19,12 @@ class CScene;
 
 class CBaseParticleSimulator: public QObject
 {
-    Q_OBJECT
+Q_OBJECT
 
 public:
     explicit CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent);
-    ~CBaseParticleSimulator() 
-    {    
+    ~CBaseParticleSimulator()
+    {
         delete m_grid;
     }
 
@@ -37,7 +37,6 @@ public:
     void step();
     void toggleSimulation();
     void toggleGravity();
-
 
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
@@ -69,8 +68,6 @@ protected:
     CScene *m_scene;
     QVector3D gravity;
 
-    QVector3D m_cellSize; // TODO is it anyhow useful?
-
     cl_float dt;
     CGrid *m_grid;
     std::vector<CParticle *> m_particles;
@@ -92,9 +89,6 @@ private: //attributes
     QElapsedTimer m_elapsed_timer;
     unsigned long iterationSincePaused;
     unsigned long totalIteration;
-
-
-
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

@@ -11,28 +11,24 @@ class CGPUParticleSimulator: public CGPUBaseParticleSimulator
 {
 public:
     explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
-    ~CGPUParticleSimulator()
-    {
-    }
+    ~CGPUParticleSimulator() override {}
 
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
-    void integrate() override;
 private: //methods
     void scanGrid();
 
 protected:
     void setupKernels() override;
 
-    cl_int m_localWokrgroupSize;
+    size_t m_localWokrgroupSize;
 
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_scanLocalKernel;
     std::shared_ptr<cl::Kernel> m_incrementKernel;
     std::shared_ptr<cl::Kernel> m_densityPresureStepKernel;
     std::shared_ptr<cl::Kernel> m_forceStepKernel;
-    std::shared_ptr<cl::Kernel> m_integrationStepKernel;
 
     std::vector<cl_int> m_gridVector;
     std::vector<cl_int> m_sortedIndices;
@@ -51,12 +47,9 @@ protected:
     cl::NDRange m_local;
     cl::NDRange m_global;
 
-    size_t m_sumsSize;
-    size_t m_particlesSize;
     size_t m_indicesSize;
     size_t m_gridVectorSize;
 
-    cl::Buffer m_particlesBuffer;
     cl::Buffer m_indicesBuffer;
     cl::Buffer m_gridBuffer;
     cl::Buffer m_scanSumsBuffer;

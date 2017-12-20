@@ -20,7 +20,7 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QOb
         (int) ceil(m_boxSize.z() / CParticle::h)
     );
 
-    m_cellSize = QVector3D(m_boxSize.x() / gridResolution.x(), m_boxSize.y() / gridResolution.y(), m_boxSize.z() / gridResolution.z());
+
     m_grid = new CGrid(m_boxSize, gridResolution, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
@@ -36,14 +36,10 @@ void CBaseParticleSimulator::setupScene()
         for (float x = -m_boxSize.x() / 2.0f; x < -m_boxSize.x() / 4.0; x += halfParticle) {
             for (float z = -m_boxSize.z() / 2.0f; z < m_boxSize.z() / 2.0f; z += halfParticle) {
 
-//    for (double y = -boxSize.y() / 4.0; y < boxSize.y() / 4.0; y += halfParticle) {
-//        for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += halfParticle) {
-//            for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += halfParticle) {
                 auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x, y, z));
                 m_particles.push_back(particle);
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
-
             }
         }
     }

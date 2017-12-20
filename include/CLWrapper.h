@@ -5,6 +5,7 @@
 #include <fstream>
 #include <istream>
 #include <QDebug>
+#include <utility>
 
 class CLWrapper
 {
@@ -18,12 +19,8 @@ private:
 
 public:
     explicit CLWrapper(cl::Device device)
-        :m_device(device)
+        : m_device(std::move(device))
     {
-        // init device
-        //m_device = std::move(device);
-
-        
         // init context
         cl_int err;
         m_context = cl::Context(m_device, nullptr, nullptr, nullptr, &err);
