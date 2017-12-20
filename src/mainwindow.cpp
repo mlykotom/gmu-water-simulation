@@ -66,11 +66,26 @@ void MainWindow::setupUI()
     this->setCentralWidget(this->ui->mainWidget);
    
     m_mainView = new CQt3DWindow();
-
     QWidget * container = QWidget::createWindowContainer(m_mainView);
     QSizePolicy centralWidgetSizePolicy = ui->centralWidget->sizePolicy();
     container->setSizePolicy(centralWidgetSizePolicy);
     ui->mainLayout->replaceWidget(ui->centralWidget, container);
+
+    Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
+    m_mainView->registerAspect(input);
+
+    // Scene Camera
+    Qt3DRender::QCamera *basicCamera = m_mainView->camera();
+    basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
+
+    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
+    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
+
+
+    // FrameGraph
+    m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
+    m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
     setupScene();
     setupDevicesComboBox();
@@ -154,23 +169,14 @@ void MainWindow::setupScene()
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
     m_mainView->setRootEntity(rootEntity);
 
-    Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
-    m_mainView->registerAspect(input);
-
     // Scene Camera
     Qt3DRender::QCamera *basicCamera = m_mainView->camera();
-    basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
 
-    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
-    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
 
-    // FrameGraph
-    m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
-    m_mainView->defaultFrameGraph()->setCamera(basicCamera);
+
 }
 
 void MainWindow::onDevicesComboBoxIndexChanged(int index)
@@ -249,6 +255,8 @@ void MainWindow::onRestartSimulationClicked()
 
     if (m_scene != nullptr)
     {
+        m_mainView->setRootEntity(nullptr);
+
         delete m_scene;
         m_scene = nullptr;
     }
