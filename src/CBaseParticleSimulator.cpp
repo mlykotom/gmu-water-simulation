@@ -10,9 +10,9 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QOb
       m_boxSize(QVector3D(boxSize, boxSize, boxSize))
 {
 
-    m_systemParams.poly6_constant = (cl_float)(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
-    m_systemParams.spiky_constant = (cl_float)(-45.0f / (M_PI * pow(CParticle::h, 6)));
-    m_systemParams.viscosity_constant = (cl_float)(45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.poly6_constant = (cl_float) (315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
+    m_systemParams.spiky_constant = (cl_float) (-45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.viscosity_constant = (cl_float) (45.0f / (M_PI * pow(CParticle::h, 6)));
 
     QVector3D gridResolution(
         (int) ceil(m_boxSize.x() / CParticle::h),
@@ -54,6 +54,7 @@ void CBaseParticleSimulator::setupScene()
 
 void CBaseParticleSimulator::start()
 {
+    iterationSincePaused = 0;
     m_timer.start();
     m_elapsed_timer.start();
 }
@@ -71,7 +72,6 @@ void CBaseParticleSimulator::toggleSimulation()
     }
     else {
         qDebug() << "resuming simulation ...";
-        iterationSincePaused = 0;
         m_elapsed_timer.restart();
         start();
     }
@@ -134,6 +134,7 @@ void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 double CBaseParticleSimulator::getFps()
 {
     double elapsed = getElapsedTime() / 1000.0;
+    qDebug() << iterationSincePaused << iterationSincePaused / elapsed;
     return iterationSincePaused / elapsed;
 }
 
