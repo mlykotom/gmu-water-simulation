@@ -15,9 +15,31 @@ void CGPUBruteParticleSimulator::setupKernels()
 {
     CGPUBaseParticleSimulator::setupKernels();
 
-    m_integration_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
+    // density kernel
     m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
+
+    cl_uint arg = 0;
+    m_update_density_kernel->setArg(arg++, m_particlesBuffer);
+    m_update_density_kernel->setArg(arg++, m_particlesCount);
+    m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
+
+    // forces kernel
     m_update_forces_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
+
+    arg = 0;
+    m_update_forces_kernel->setArg(arg++, m_particlesBuffer);
+    m_update_forces_kernel->setArg(arg++, m_particlesCount);
+    m_update_forces_kernel->setArg(arg++, m_gravityCL);
+    m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
+    m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
+
+    // integration kernel
+    m_integration_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
+
+    arg = 0;
+    m_integration_kernel->setArg(arg++, m_particlesBuffer);
+    m_integration_kernel->setArg(arg++, m_particlesCount);
+    m_integration_kernel->setArg(arg++, dt);
 }
 
 void CGPUBruteParticleSimulator::updateGrid()
@@ -29,11 +51,6 @@ void CGPUBruteParticleSimulator::updateGrid()
 
 void CGPUBruteParticleSimulator::updateDensityPressure()
 {
-    cl_uint arg = 0;
-    m_update_density_kernel->setArg(arg++, m_particlesBuffer);
-    m_update_density_kernel->setArg(arg++, m_particlesCount);
-    m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
-
     cl::Event kernelEvent;
 
     cl::NDRange local = cl::NullRange;
@@ -44,13 +61,7 @@ void CGPUBruteParticleSimulator::updateDensityPressure()
 
 void CGPUBruteParticleSimulator::updateForces()
 {
-    cl_uint arg = 0;
-    m_update_forces_kernel->setArg(arg++, m_particlesBuffer);
-    m_update_forces_kernel->setArg(arg++, m_particlesCount);
-    m_update_forces_kernel->setArg(arg++, m_gravityCL);
-    m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
-    m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
-
+    m_update_forces_kernel->setArg(2, m_gravityCL);  // WARNING: gravityCL must be the same as in first setup!
     cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
     cl::NDRange local = cl::NullRange;
@@ -66,11 +77,6 @@ void CGPUBruteParticleSimulator::updateForces()
 
 void CGPUBruteParticleSimulator::integrate()
 {
-    cl_uint arg = 0;
-    m_integration_kernel->setArg(arg++, m_particlesBuffer);
-    m_integration_kernel->setArg(arg++, m_particlesCount);
-    m_integration_kernel->setArg(arg++, dt);
-
     cl::Event kernelEvent, readEvent;
 
     cl::NDRange local = cl::NullRange;

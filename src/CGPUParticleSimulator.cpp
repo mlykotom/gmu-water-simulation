@@ -183,8 +183,7 @@ void CGPUParticleSimulator::updateDensityPressure()
 
 void CGPUParticleSimulator::updateForces()
 {
-    m_forceStepKernel->setArg(5, m_gravityCL);  // WARNING: gravityCL must be on 5th position
-
+    m_forceStepKernel->setArg(5, m_gravityCL);  // WARNING: gravityCL must be the same as in first setup!
     cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
