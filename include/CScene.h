@@ -20,10 +20,6 @@ public:
     void setRootEntity(Qt3DCore::QEntity *e) { m_rootEntity = e; }
    
     void createScene();
-
-    //TODO: Test method - delete later
-    void createSphere();
-
     void addGrid();
     void clean();
 
