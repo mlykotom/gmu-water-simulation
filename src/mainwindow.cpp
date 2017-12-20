@@ -125,14 +125,14 @@ void MainWindow::setupSimulationTypesComboBox()
     QStandardItemModel *comboBoxModel = qobject_cast<QStandardItemModel *>(ui->simulationTypeComboBox->model());
 
     //all available simulation types
-    ui->simulationTypeComboBox->insertItem((int)eSimulationType::CPU, "CPU Grid");
-    ui->simulationTypeComboBox->setItemData((int)eSimulationType::CPU, (int)eSimulationType::CPU, simulationTypeRole);
+    ui->simulationTypeComboBox->insertItem((int)eSimulationType::GPUGrid, "GPU Grid");
+    ui->simulationTypeComboBox->setItemData((int)eSimulationType::GPUGrid, (int)eSimulationType::GPUGrid, simulationTypeRole);
 
     ui->simulationTypeComboBox->insertItem((int)eSimulationType::GPUBrute, "GPU Brute Force");
     ui->simulationTypeComboBox->setItemData((int)eSimulationType::GPUBrute, (int)eSimulationType::GPUBrute, simulationTypeRole);
 
-    ui->simulationTypeComboBox->insertItem((int)eSimulationType::GPUGrid, "GPU Grid");
-    ui->simulationTypeComboBox->setItemData((int)eSimulationType::GPUGrid, (int)eSimulationType::GPUGrid, simulationTypeRole);
+    ui->simulationTypeComboBox->insertItem((int)eSimulationType::CPU, "CPU Grid");
+    ui->simulationTypeComboBox->setItemData((int)eSimulationType::CPU, (int)eSimulationType::CPU, simulationTypeRole);
 
     connect(ui->simulationTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onSimulationTypeComboBoxIndexChanged(int)));
     onSimulationTypeComboBoxIndexChanged(0);

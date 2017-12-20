@@ -23,7 +23,6 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <zorder>widget</zorder>
      </widget>
     </item>
     <item row="0" column="1">
@@ -107,7 +106,7 @@
                  <number>1</number>
                 </property>
                 <property name="value">
-                 <number>1</number>
+                 <number>5</number>
                 </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -251,7 +250,7 @@
      <x>0</x>
      <y>0</y>
      <width>889</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

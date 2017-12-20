@@ -47,7 +47,7 @@ class MainWindow: public QMainWindow
 Q_OBJECT
 
 enum eComboBoxRole { platformRole = Qt::UserRole +1, deviceRole, simulationTypeRole};
-enum eSimulationType { CPU = 0, GPUBrute, GPUGrid };
+enum eSimulationType { GPUGrid = 0, GPUBrute , CPU };
 
 struct sSimulationOptions
 {
