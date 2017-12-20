@@ -6,6 +6,30 @@ CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, QObject *parent)
 
 }
 
+double CCPUParticleSimulator::Wpoly6(double radiusSquared)
+{
+    static double coefficient = 315.0 / (64.0 * M_PI * pow(CParticle::h, 9));
+    static double hSquared = CParticle::h * CParticle::h;
+
+    return coefficient * pow(hSquared - radiusSquared, 3);
+}
+
+QVector3D CCPUParticleSimulator::WspikyGradient(QVector3D &diffPosition, double radiusSquared)
+{
+    static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
+    double radius = sqrt(radiusSquared);
+
+    return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
+}
+
+double CCPUParticleSimulator::WviscosityLaplacian(double radiusSquared)
+{
+    static double coefficient = 45.0 / (M_PI * pow(CParticle::h, 6));
+    double radius = sqrt(radiusSquared);
+
+    return coefficient * (CParticle::h - radius);
+}
+
 void CCPUParticleSimulator::updateGrid()
 {
     for (int x = 0; x < m_grid->xRes(); x++) {
@@ -17,9 +41,9 @@ void CCPUParticleSimulator::updateGrid()
                 for (unsigned long p = 0; p < particles.size(); p++) {
                     CParticle *particle = particles[p];
 
-                    int newGridCellX = (int)floor((particle->position().x() + m_cellSize.x() / 2.0) / CParticle::h);
-                    int newGridCellY = (int)floor((particle->position().y() + m_cellSize.y() / 2.0) / CParticle::h);
-                    int newGridCellZ = (int)floor((particle->position().z() + m_cellSize.z() / 2.0) / CParticle::h);
+                    int newGridCellX = (int) floor((particle->position().x() + m_boxSize.x() / 2.0) / CParticle::h);
+                    int newGridCellY = (int) floor((particle->position().y() + m_boxSize.y() / 2.0) / CParticle::h);
+                    int newGridCellZ = (int) floor((particle->position().z() + m_boxSize.z() / 2.0) / CParticle::h);
                     //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
                     //cout << "particle position: " << particle->position() << endl;
                     //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
