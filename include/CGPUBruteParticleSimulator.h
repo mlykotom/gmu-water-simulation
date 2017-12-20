@@ -17,14 +17,12 @@ public:
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
-    void integrate() override;
 
 protected:
-    std::shared_ptr<cl::Kernel> m_integration_kernel;
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
     std::shared_ptr<cl::Kernel> m_update_forces_kernel;
 
-    void setupKernels();
+    void setupKernels() override;
 };
 
 

@@ -17,6 +17,7 @@ public:
     QString getSelectedDevice() override;
     void setupScene() override;
 
+
 protected:
     CLWrapper *m_cl_wrapper;
     cl_float3 m_gravityCL;
@@ -31,7 +32,10 @@ protected:
     size_t m_wallsBufferSize;
     std::shared_ptr<cl::Kernel> m_walls_collision_kernel;
 
+    std::shared_ptr<cl::Kernel> m_integrationStepKernel;
+
     virtual void setupKernels();
+    virtual void integrate();
 };
 
 #endif //WATERSURFACESIMULATION_CGPUBASEPARTICLESIMULATOR_H

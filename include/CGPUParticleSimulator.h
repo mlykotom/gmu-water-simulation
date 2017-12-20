@@ -16,12 +16,11 @@ public:
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
-    void integrate() override;
 private: //methods
     void scanGrid();
 
 protected:
-    void setupKernels();
+    void setupKernels() override;
 
     cl_int m_localWokrgroupSize;
 
@@ -30,7 +29,6 @@ protected:
     std::shared_ptr<cl::Kernel> m_incrementKernel;
     std::shared_ptr<cl::Kernel> m_densityPresureStepKernel;
     std::shared_ptr<cl::Kernel> m_forceStepKernel;
-    std::shared_ptr<cl::Kernel> m_integrationStepKernel;
 
     std::vector<cl_int> m_gridVector;
     std::vector<cl_int> m_sortedIndices;

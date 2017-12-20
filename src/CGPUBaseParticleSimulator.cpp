@@ -7,6 +7,17 @@ CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSiz
     m_cl_wrapper = new CLWrapper(device);
 }
 
+void CGPUBaseParticleSimulator::setGravityVector(QVector3D newGravity)
+{
+    CBaseParticleSimulator::setGravityVector(newGravity);
+    m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
+}
+
+QString CGPUBaseParticleSimulator::getSelectedDevice()
+{
+    return CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
+}
+
 void CGPUBaseParticleSimulator::setupScene()
 {
     auto &firstGridCell = m_grid->at(0, 0, 0);
@@ -42,6 +53,13 @@ void CGPUBaseParticleSimulator::setupKernels()
     m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
     m_particlesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
 
+    // integration
+    m_integrationStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
+    cl_uint arg = 0;
+    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
+    m_integrationStepKernel->setArg(arg++, m_particlesCount);
+    m_integrationStepKernel->setArg(arg++, dt);
+
     // collisions
     m_wallsVector = m_grid->getCollisionGeometry()->getBoundingBox().m_walls;
     m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, static_cast<size_t>(m_wallsVector.size()));
@@ -60,12 +78,21 @@ void CGPUBaseParticleSimulator::setupKernels()
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_wallsBuffer, CL_TRUE, 0, m_wallsBufferSize, m_wallsVector.data(), nullptr, &writeCollisionEvent);
 }
 
-void CGPUBaseParticleSimulator::setGravityVector(QVector3D newGravity)
+void CGPUBaseParticleSimulator::integrate()
 {
-    CBaseParticleSimulator::setGravityVector(newGravity);
-    m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
-}
-QString CGPUBaseParticleSimulator::getSelectedDevice()
-{
-    return CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());
+    cl::Event kernelEvent, readEvent;
+
+    cl::NDRange local = cl::NullRange;
+    cl::NDRange global(m_particlesCount);
+
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
+
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    std::vector<CParticle *> &particles = m_grid->getData()[0];
+    for (auto &particle : particles) {
+        particle->updatePosition();
+        particle->updateVelocity();
+    }
 }

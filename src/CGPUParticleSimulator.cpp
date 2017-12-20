@@ -24,8 +24,6 @@ void CGPUParticleSimulator::setupKernels()
     m_incrementKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("increment_local_scans"));
     m_densityPresureStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
     m_forceStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
-    m_integrationStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
-
 
     m_local = cl::NDRange(m_localWokrgroupSize);
     m_global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
@@ -93,12 +91,6 @@ void CGPUParticleSimulator::setupKernels()
     m_forceStepKernel->setArg(arg++, m_gravityCL);
     m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
     m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
-
-    arg = 0;
-    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
-    m_integrationStepKernel->setArg(arg++, m_particlesCount);
-    m_integrationStepKernel->setArg(arg++, dt);
-
 }
 
 void CGPUParticleSimulator::scanGrid()
@@ -191,25 +183,4 @@ void CGPUParticleSimulator::updateForces()
     // collision forces
     cl::NDRange collisionLocal = cl::NullRange;
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_walls_collision_kernel, 0, m_global, collisionLocal, nullptr, &kernelCollisionEvent);
-}
-
-void CGPUParticleSimulator::integrate()
-{
-    cl::Event writeEvent;
-    cl::Event kernelEvent;
-    cl::Event readEvent;
-
-    // TODO here m_local should be nullRange (because we don't use local memory)
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
-
-    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-
-    //all particles are in cell 0 on CPU
-    std::vector<CParticle *> &particles = m_grid->getData()[0];
-
-    for (auto &particle : particles) {
-        particle->updatePosition();
-        particle->updateVelocity();
-    }
 }
