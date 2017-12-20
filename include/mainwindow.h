@@ -84,7 +84,7 @@ private: //methods
 private slots:
     void onDevicesComboBoxIndexChanged(int index);
     void onSimulationTypeComboBoxIndexChanged(int index);
-
+    void oncubeSizeSliderValueChanged(int value);
 
 };
 

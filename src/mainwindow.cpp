@@ -101,6 +101,9 @@ void MainWindow::setupUI()
 
     setupDevicesComboBox();
     setupSimulationTypesComboBox();
+    
+    connect(ui->cubeSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(oncubeSizeSliderValueChanged(int)));
+    oncubeSizeSliderValueChanged(ui->cubeSizeSlider->value());
 }
 
 void MainWindow::setupDevicesComboBox()
@@ -162,6 +165,7 @@ void MainWindow::setupSimulationTypesComboBox()
     ui->simulationTypeComboBox->setItemData((int)eSimulationType::GPUGrid, (int)eSimulationType::GPUGrid, simulationTypeRole);
 
     connect(ui->simulationTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onSimulationTypeComboBoxIndexChanged(int)));
+    onSimulationTypeComboBoxIndexChanged(0);
 
 }
 
@@ -174,8 +178,17 @@ void MainWindow::onDevicesComboBoxIndexChanged(int index)
 
 void MainWindow::onSimulationTypeComboBoxIndexChanged(int index)
 {
-    qDebug() << index;
-    qDebug() << ui->simulationTypeComboBox->itemData(index, simulationTypeRole);
+    //disable devices selection if running CPU simulation
+    if (ui->simulationTypeComboBox->itemData(index, simulationTypeRole) == eSimulationType::CPU)
+        ui->devicesComboBox->setDisabled(true);
+    else
+        ui->devicesComboBox->setEnabled(true);
+
+}
+
+void MainWindow::oncubeSizeSliderValueChanged(int value)
+{
+    ui->cubeSizeLabel->setText(QString::number((float)value / 10.0f, 'g',1));
 }
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
