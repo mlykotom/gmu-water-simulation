@@ -165,7 +165,6 @@ void MainWindow::setup3DWidget()
     basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
     basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
 
-
     // FrameGraph
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
@@ -184,6 +183,8 @@ void MainWindow::setupScene()
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
+    camController->setLookSpeed(6.0);
+    camController->setLinearSpeed(6.0);
 }
 
 void MainWindow::resetScene()
