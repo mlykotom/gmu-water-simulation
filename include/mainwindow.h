@@ -46,13 +46,26 @@ class MainWindow: public QMainWindow
 {
 Q_OBJECT
 
+enum eComboBoxRole { platformRole = Qt::UserRole +1, deviceRole, simulationTypeRole};
+enum eSimulationType { CPU = 0, GPUBrute, GPUGrid };
+
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow() override;
 
     CQt3DWindow *getView() { return m_mainView; }
 
-private:
+signals:
+    void keyPressed(Qt::Key key);
+
+public slots:
+    void onSimulationIterationChanged(unsigned long iteration);
+    void keyPressEvent(QKeyEvent *event)
+    {
+        emit keyPressed((Qt::Key)event->key());
+    }
+
+private: //members
     //UI
     Ui::MainWindow *ui;
 
@@ -61,16 +74,18 @@ private:
     FrameGraph *m_pFrameGraph;
 
     CBaseParticleSimulator *m_simulator;
-    CLWrapper *m_cl_wrapper;
+   // CLWrapper *m_cl_wrapper;
 
-signals:
-    void keyPressed(Qt::Key key);
-public slots:
-    void onSimulationIterationChanged(unsigned long iteration);
-    void keyPressEvent(QKeyEvent *event){
-        emit keyPressed((Qt::Key)event->key());
-    }
+private: //methods
     void setupUI();
+    void setupDevicesComboBox();
+    void setupSimulationTypesComboBox();
+
+private slots:
+    void onDevicesComboBoxIndexChanged(int index);
+    void onSimulationTypeComboBoxIndexChanged(int index);
+
+
 };
 
 #endif // MAINWINDOW_H

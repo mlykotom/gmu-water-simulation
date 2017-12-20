@@ -20,7 +20,6 @@
 
 
 #include "CGrid.h"
-#include <CToplessBox.h>
 
 CScene::CScene()
 {
@@ -36,9 +35,6 @@ CScene::CScene()
     lightTransform->setTranslation(QVector3D(0, 0, 100.0f));
     lightEntity->addComponent(lightTransform);
 
-    //m_grid = new CGrid(m_rootEntity);
-
-    //CToplessBox *box = new CToplessBox(1, 1, 1, m_rootEntity);
 }
 
 CScene::~CScene()

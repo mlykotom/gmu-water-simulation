@@ -3,19 +3,24 @@
 #include <QCullFace>
 #include <QTextEdit>
 #include <Qt3DExtras/QFirstPersonCameraController>
+#include <QStandardItemModel>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 //local includes
 #include <CQt3DWindow.h>
-#include <include/CGPUBruteParticleSimulator.h>
-#include <include/CGPUParticleSimulator.h>
-#include <include/CCPUParticleSimulator.h>
+#include <CGPUBruteParticleSimulator.h>
+#include <CGPUParticleSimulator.h>
+#include <CCPUParticleSimulator.h>
+#include <CLPlatforms.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+
+    //TODO: move this to setup UI
+
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
     this->setCentralWidget(this->ui->mainWidget);
@@ -23,14 +28,10 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView = new CQt3DWindow();
 
     QWidget * container = QWidget::createWindowContainer(m_mainView);
-    QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-    sizePolicy.setHorizontalStretch(0);
-    sizePolicy.setVerticalStretch(0);
-    sizePolicy.setHeightForWidth(container->sizePolicy().hasHeightForWidth());
-    container->setSizePolicy(sizePolicy);
-
-    this->ui->verticalLayout->replaceWidget(ui->centralWidget, container);
-
+    QSizePolicy centralWidgetSizePolicy = ui->centralWidget->sizePolicy();
+    container->setSizePolicy(centralWidgetSizePolicy);
+    ui->mainLayout->replaceWidget(ui->centralWidget, container);
+    
     // Scene
     m_scene = new CScene();
     Qt3DCore::QEntity *rootEntity = m_scene->getRootEntity();
@@ -54,51 +55,131 @@ MainWindow::MainWindow(QWidget *parent) :
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
 
-    try {
-        //m_simulator = new CCPUParticleSimulator(m_scene);
-        m_simulator = new CCPUBruteParticleSimulator(m_scene);
-//        m_simulator = new CGPUParticleSimulator(m_scene);
+    setupUI();
 
-        connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-        connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-        connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
 
-        m_simulator->setupScene();
-        // Set root object of the scene
-        m_mainView->setRootEntity(rootEntity);
-
-        setupUI();
-    }
-    catch (CLException &exc) {
-        qDebug() << exc.what();
-        QMessageBox message;
-        message.setText(QString(exc.what()));
-        message.exec();
-        exit(1);
-    }
+//    try {
+//        //m_simulator = new CCPUParticleSimulator(m_scene);
+//        m_simulator = new CCPUBruteParticleSimulator(m_scene);
+////        m_simulator = new CGPUParticleSimulator(m_scene);
+//
+//        connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+//        connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+//        connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+//
+//        m_simulator->setupScene();
+//        // Set root object of the scene
+//        m_mainView->setRootEntity(rootEntity);
+//
+//    }
+//    catch (CLException &exc) {
+//        qDebug() << exc.what();
+//        QMessageBox message;
+//        message.setText(QString(exc.what()));
+//        message.exec();
+//        exit(1);
+//    }
 }
 
 MainWindow::~MainWindow()
 {
     delete m_simulator;
-    delete m_cl_wrapper;
+   // delete m_cl_wrapper;
 }
 
 void MainWindow::setupUI()
 {
-    ui->particlesCountWidget->setText(QString::number(m_simulator->getParticlesCount()));
+    //ui->particlesCountWidget->setText(QString::number(m_simulator->getParticlesCount()));
 
-    ui->gridSizeWidget->setText(QString("%1 x %2 x %3").arg(
-        QString::number(m_simulator->getGridSizeX()),
-        QString::number(m_simulator->getGridSizeY()),
-        QString::number(m_simulator->getGridSizeZ())
-    ));
+    //ui->gridSizeWidget->setText(QString("%1 x %2 x %3").arg(
+    //    QString::number(m_simulator->getGridSizeX()),
+    //    QString::number(m_simulator->getGridSizeY()),
+    //    QString::number(m_simulator->getGridSizeZ())
+    //));
 
-    ui->selectedDeviceWidget->setText(m_simulator->getSelectedDevice());
+  //  ui->selectedDeviceWidget->setText(m_simulator->getSelectedDevice());
+
+    setupDevicesComboBox();
+    setupSimulationTypesComboBox();
+}
+
+void MainWindow::setupDevicesComboBox()
+{
+
+    QStringList comboBoxList;
+
+    //platforms
+    auto platforms = CLPlatforms::getAllPlatforms();
+    unsigned int count = 0;
+    QStandardItemModel *comboBoxModel = qobject_cast<QStandardItemModel *>(ui->devicesComboBox->model());
+
+    for (int i = 0; i < platforms.size(); i++)
+    {
+        ui->devicesComboBox->insertItem(count, "-- " + CLPlatforms::getPlatformInfo(platforms[i]) + " --");
+        comboBoxModel->item(count)->setSelectable(false);
+        comboBoxModel->item(count)->setBackground(QBrush(QColor(Qt::lightGray)));
+        ++count;
+
+        // Devices in that platform
+        auto devices = CLPlatforms::getDevices(platforms[i]);
+        if (devices.empty()) continue;
+
+        for (int j = 0; j < devices.size(); j++)
+        {
+            ui->devicesComboBox->insertItem(count, "   " + CLPlatforms::getDeviceInfo(devices[j]));
+            ui->devicesComboBox->setItemData(count, i, platformRole);
+            ui->devicesComboBox->setItemData(count, j, deviceRole);
+
+            ++count;
+        }
+    }
+
+    connect(ui->devicesComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onDevicesComboBoxIndexChanged(int)));
+
+    //select first device
+    for (int i = 0; i < count; ++i)
+    {
+        if (comboBoxModel->item(i)->isSelectable())
+        {
+            ui->devicesComboBox->setCurrentIndex(i);
+            break;
+        }
+    }
+}
+
+void MainWindow::setupSimulationTypesComboBox()
+{
+    QStandardItemModel *comboBoxModel = qobject_cast<QStandardItemModel *>(ui->simulationTypeComboBox->model());
+
+    //all available simulation types
+    ui->simulationTypeComboBox->insertItem((int)eSimulationType::CPU, "CPU Grid");
+    ui->simulationTypeComboBox->setItemData((int)eSimulationType::CPU, (int)eSimulationType::CPU, simulationTypeRole);
+
+    ui->simulationTypeComboBox->insertItem((int)eSimulationType::GPUBrute, "GPU Brute Force");
+    ui->simulationTypeComboBox->setItemData((int)eSimulationType::GPUBrute, (int)eSimulationType::GPUBrute, simulationTypeRole);
+
+    ui->simulationTypeComboBox->insertItem((int)eSimulationType::GPUGrid, "GPU Grid");
+    ui->simulationTypeComboBox->setItemData((int)eSimulationType::GPUGrid, (int)eSimulationType::GPUGrid, simulationTypeRole);
+
+    connect(ui->simulationTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onSimulationTypeComboBoxIndexChanged(int)));
+
+}
+
+void MainWindow::onDevicesComboBoxIndexChanged(int index)
+{
+    qDebug() << index;
+    qDebug() << ui->devicesComboBox->itemData(index, platformRole);
+    qDebug() << ui->devicesComboBox->itemData(index, deviceRole);
+}
+
+void MainWindow::onSimulationTypeComboBoxIndexChanged(int index)
+{
+    qDebug() << index;
+    qDebug() << ui->simulationTypeComboBox->itemData(index, simulationTypeRole);
 }
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
-    ui->fpsWidget->setText(QString::number(m_simulator->getFps()));
-    ui->iterationWidget->setText(QString::number(iteration));
+    //ui->fpsWidget->setText(QString::number(m_simulator->getFps()));
+    //ui->iterationWidget->setText(QString::number(iteration));
 }
