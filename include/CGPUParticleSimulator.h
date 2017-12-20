@@ -11,9 +11,7 @@ class CGPUParticleSimulator: public CGPUBaseParticleSimulator
 {
 public:
     explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
-    ~CGPUParticleSimulator()
-    {
-    }
+    ~CGPUParticleSimulator() override {}
 
     void updateGrid() override;
     void updateDensityPressure() override;
@@ -23,7 +21,7 @@ private: //methods
     void scanGrid();
 
 protected:
-    void setupKernels() override;
+    void setupKernels();
 
     cl_int m_localWokrgroupSize;
 
@@ -51,12 +49,9 @@ protected:
     cl::NDRange m_local;
     cl::NDRange m_global;
 
-    size_t m_sumsSize;
-    size_t m_particlesSize;
     size_t m_indicesSize;
     size_t m_gridVectorSize;
 
-    cl::Buffer m_particlesBuffer;
     cl::Buffer m_indicesBuffer;
     cl::Buffer m_gridBuffer;
     cl::Buffer m_scanSumsBuffer;

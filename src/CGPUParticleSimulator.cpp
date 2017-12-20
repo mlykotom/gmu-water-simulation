@@ -16,6 +16,8 @@ CGPUParticleSimulator::CGPUParticleSimulator(CScene *scene, float boxSize, cl::D
 
 void CGPUParticleSimulator::setupKernels()
 {
+    CGPUBaseParticleSimulator::setupKernels();
+
     //create kernels
     m_updateParticlePositionsKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("update_grid_positions"));
     m_scanLocalKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("scan_local"));
@@ -36,9 +38,6 @@ void CGPUParticleSimulator::setupKernels()
 
     m_sortedIndices.clear();
     m_sortedIndices.resize(m_clParticles.size());
-
-    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
-    m_particlesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
 
     m_gridVectorSize = (cl_int) m_gridVector.size() * sizeof(cl_int);
     m_gridBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize);
@@ -68,7 +67,7 @@ void CGPUParticleSimulator::setupKernels()
 
     m_halfBoxSize = {m_boxSize.x() / 2.0f, m_boxSize.y() / 2.0f, m_boxSize.z() / 2.0f};
     //setup kernels arguments
-    cl_int arg = 0;
+    cl_uint arg = 0;
 
     m_updateParticlePositionsKernel->setArg(arg++, m_particlesBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
@@ -186,25 +185,13 @@ void CGPUParticleSimulator::updateForces()
 {
     m_forceStepKernel->setArg(5, m_gravityCL);  // WARNING: gravityCL must be on 5th position
 
-    cl::Event kernelEvent, readEvent, writeEventAfterCollision;
+    cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_forceStepKernel, 0, m_global, m_local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
 
-    // collision force
-#pragma omp parallel for
-    for (int i = 0; i < m_particlesCount; ++i) {
-        CParticle::Physics &particleCL = m_clParticles[i];
-        QVector3D pos = CParticle::clFloatToVector(particleCL.position);
-        QVector3D velocity = CParticle::clFloatToVector(particleCL.velocity);
-
-        m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particleCL);
-        //QVector3D f_collision = m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(pos, velocity);
-        //particleCL.acceleration = {particleCL.acceleration.x + f_collision.x(), particleCL.acceleration.y + f_collision.y(), particleCL.acceleration.z + f_collision.z()};
-    }
-
-    // need to write buffer because previous step has
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEventAfterCollision);
+    // collision forces
+    cl::NDRange collisionLocal = cl::NullRange;
+    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_walls_collision_kernel, 0, m_global, collisionLocal, nullptr, &kernelCollisionEvent);
 }
 
 void CGPUParticleSimulator::integrate()

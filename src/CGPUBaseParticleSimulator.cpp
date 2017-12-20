@@ -1,4 +1,4 @@
-#include <include/CGPUBaseParticleSimulator.h>
+#include "CGPUBaseParticleSimulator.h"
 
 CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
     : CBaseParticleSimulator(scene, boxSize, parent),
@@ -32,7 +32,32 @@ void CGPUBaseParticleSimulator::setupScene()
     }
 
     assert(calculatedCount == m_particlesCount);
+
     setupKernels();
+}
+
+void CGPUBaseParticleSimulator::setupKernels()
+{
+    // particles
+    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    m_particlesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
+
+    // collisions
+    m_wallsVector = m_grid->getCollisionGeometry()->getBoundingBox().m_walls;
+    m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, static_cast<size_t>(m_wallsVector.size()));
+    m_wallsBufferSize = m_wallsVector.size() * sizeof(sWall);
+    m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, m_wallsBufferSize);
+
+    m_walls_collision_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("walls_collision"));
+
+    cl_uint argCollision = 0;
+    m_walls_collision_kernel->setArg(argCollision++, m_particlesBuffer);
+    m_walls_collision_kernel->setArg(argCollision++, m_wallsBuffer);
+    m_walls_collision_kernel->setArg(argCollision++, m_particlesCount);
+    m_walls_collision_kernel->setArg(argCollision++, m_wallsVector.size());
+
+    cl::Event writeCollisionEvent;
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_wallsBuffer, CL_TRUE, 0, m_wallsBufferSize, m_wallsVector.data(), nullptr, &writeCollisionEvent);
 }
 
 void CGPUBaseParticleSimulator::setGravityVector(QVector3D newGravity)
@@ -40,7 +65,6 @@ void CGPUBaseParticleSimulator::setGravityVector(QVector3D newGravity)
     CBaseParticleSimulator::setGravityVector(newGravity);
     m_gravityCL = {gravity.x(), gravity.y(), gravity.z()};
 }
-
 QString CGPUBaseParticleSimulator::getSelectedDevice()
 {
     return CLPlatforms::getDeviceInfo(m_cl_wrapper->getDevice());

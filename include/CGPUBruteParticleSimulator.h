@@ -24,10 +24,7 @@ protected:
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
     std::shared_ptr<cl::Kernel> m_update_forces_kernel;
 
-    cl::Buffer m_outputBuffer;
-    size_t m_dataBufferSize;
-
-    void setupKernels() override;
+    void setupKernels();
 };
 
 
