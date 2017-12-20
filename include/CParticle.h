@@ -30,6 +30,16 @@ public:
         cl_float pressure;
         cl_uint id;
         cl_uint cell_id;
+
+        sPhysics(float x, float y, float z, cl_uint id) :
+            position({x, y, z}),
+            id(id),
+            acceleration({0, 0, 0}),
+            density(0.0f),
+            pressure(0.0f),
+            velocity({0, 0, 0}),
+            grid_position({0, 0, 0}),
+            cell_id(0) {}
     } Physics;
 
     explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));

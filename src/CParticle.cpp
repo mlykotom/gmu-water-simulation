@@ -1,12 +1,12 @@
 #include "CParticle.h"
 
-CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D initialPosition)
+CParticle::CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition)
     : RenderableEntity(rootEntity),
-    m_id(id),
-    m_position(initialPosition), 
-    m_velocity(0.0f, 0.0f, 0.0f),
-    m_acceleration(0.0f, 0.0f, 0.0f), 
-    m_density(0.0), m_pressure(0.0)
+      m_id(id),
+      m_position(initialPosition),
+      m_velocity(0.0f, 0.0f, 0.0f),
+      m_acceleration(0.0f, 0.0f, 0.0f),
+      m_density(0.0), m_pressure(0.0)
 {
     // Sphere shape data
     m_mesh = new Qt3DExtras::QSphereMesh();
@@ -32,9 +32,4 @@ CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D 
 
 }
 
-CParticle::~CParticle()
-{
-    //delete m_material;
-    //delete m_mesh;
-    //delete m_transform;
-}
+CParticle::~CParticle() = default;
