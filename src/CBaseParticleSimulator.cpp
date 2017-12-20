@@ -47,9 +47,6 @@ void CBaseParticleSimulator::setupScene()
             }
         }
     }
-
-    qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
-    qDebug() << "simulating" << m_particlesCount << "particles";
 }
 
 void CBaseParticleSimulator::start()

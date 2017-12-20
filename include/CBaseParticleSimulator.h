@@ -23,7 +23,7 @@ class CBaseParticleSimulator: public QObject
 
 public:
     explicit CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent);
-    ~CBaseParticleSimulator() override
+    ~CBaseParticleSimulator() 
     {    
         delete m_grid;
     }

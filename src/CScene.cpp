@@ -42,11 +42,3 @@ CScene::~CScene()
     delete m_rootEntity;
 }
 
-void CScene::addGrid()
-{
-}
-
-void CScene::clean()
-{
-
-}

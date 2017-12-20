@@ -83,20 +83,26 @@ private: //members
 
     CBaseParticleSimulator *m_simulator;
     sSimulationOptions m_simulationOptions;
-
+    bool m_simulationIsReady;
 private: //methods
     void setupUI();
     void setupDevicesComboBox();
     void setupSimulationTypesComboBox();
+    void setup3DWidget();
     void setupScene();
+    void resetScene();
 
+    void createSimulator();
+    void togglePushButtons(bool value);
 private slots:
     void onDevicesComboBoxIndexChanged(int index);
     void onSimulationTypeComboBoxIndexChanged(int index);
-    void oncubeSizeSliderValueChanged(int value);
+    void onCubeSizeSliderValueChanged(int value);
     void onStartSimulationClicked();
     void onPauseSimulationClicked();
-    void onRestartSimulationClicked();
+    void onStopSimulationClicked();
+    void onSetupSimulationClicked();
+     
 
 };
 

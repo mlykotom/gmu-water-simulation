@@ -23,7 +23,7 @@ typedef struct __attribute__((aligned(16))) tag_ParticleCL
 
 } ParticleCL;
 
-float Wpoly6(double radiusSquared, float poly6_constant)
+float Wpoly6(float radiusSquared, float poly6_constant)
 {
     return poly6_constant * pow(particle_h2 - radiusSquared, 3);
 }

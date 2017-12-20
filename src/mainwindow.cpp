@@ -21,7 +21,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow),
     m_simulator(nullptr),
     m_scene(nullptr),
-    m_mainView(nullptr)
+    m_mainView(nullptr),
+    m_simulationIsReady(false)
 {
 
     setupUI();
@@ -60,43 +61,26 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-
     ui->setupUi(this);
     this->setWindowTitle("GMU Water surface simulation");
     this->setCentralWidget(this->ui->mainWidget);
    
-    m_mainView = new CQt3DWindow();
-    QWidget * container = QWidget::createWindowContainer(m_mainView);
-    QSizePolicy centralWidgetSizePolicy = ui->centralWidget->sizePolicy();
-    container->setSizePolicy(centralWidgetSizePolicy);
-    ui->mainLayout->replaceWidget(ui->centralWidget, container);
 
-    Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
-    m_mainView->registerAspect(input);
-
-    // Scene Camera
-    Qt3DRender::QCamera *basicCamera = m_mainView->camera();
-    basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
-
-    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
-    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
-
-
-    // FrameGraph
-    m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
-    m_mainView->defaultFrameGraph()->setCamera(basicCamera);
-
+    setup3DWidget();
     setupScene();
     setupDevicesComboBox();
     setupSimulationTypesComboBox();
 
-    connect(ui->cubeSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(oncubeSizeSliderValueChanged(int)));
-    oncubeSizeSliderValueChanged(ui->cubeSizeSlider->value());
+    connect(ui->cubeSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(onCubeSizeSliderValueChanged(int)));
+    onCubeSizeSliderValueChanged(ui->cubeSizeSlider->value());
 
+    connect(ui->setupPushButton, SIGNAL(clicked()), this, SLOT(onSetupSimulationClicked()));
     connect(ui->startPushButton, SIGNAL(clicked()), this, SLOT(onStartSimulationClicked()));
     connect(ui->pausePushButton, SIGNAL(clicked()), this, SLOT(onPauseSimulationClicked()));
-    connect(ui->restartPushButton, SIGNAL(clicked()), this, SLOT(onRestartSimulationClicked()));
+    connect(ui->stopPushButton, SIGNAL(clicked()), this, SLOT(onStopSimulationClicked()));
+
+    togglePushButtons(false);
+
 }
 
 void MainWindow::setupDevicesComboBox()
@@ -162,6 +146,31 @@ void MainWindow::setupSimulationTypesComboBox()
 
 }
 
+void MainWindow::setup3DWidget()
+{
+    m_mainView = new CQt3DWindow();
+    QWidget * container = QWidget::createWindowContainer(m_mainView);
+    QSizePolicy centralWidgetSizePolicy = ui->centralWidget->sizePolicy();
+    container->setSizePolicy(centralWidgetSizePolicy);
+    ui->mainLayout->replaceWidget(ui->centralWidget, container);
+
+    Qt3DInput::QInputAspect *input = new Qt3DInput::QInputAspect;
+    m_mainView->registerAspect(input);
+
+    // Scene Camera
+    Qt3DRender::QCamera *basicCamera = m_mainView->camera();
+    basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
+
+    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
+    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
+
+
+    // FrameGraph
+    m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
+    m_mainView->defaultFrameGraph()->setCamera(basicCamera);
+}
+
 void MainWindow::setupScene()
 {    
     // Scene
@@ -175,76 +184,9 @@ void MainWindow::setupScene()
     // For camera controls
     Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
     camController->setCamera(basicCamera);
-
-
 }
 
-void MainWindow::onDevicesComboBoxIndexChanged(int index)
-{
-    m_simulationOptions.platformIndex = ui->devicesComboBox->itemData(index, platformRole).toInt();
-    m_simulationOptions.deviceIndex = ui->devicesComboBox->itemData(index, deviceRole).toInt();
-}
-
-void MainWindow::onSimulationTypeComboBoxIndexChanged(int index)
-{
-    m_simulationOptions.type = (eSimulationType)ui->simulationTypeComboBox->itemData(index, simulationTypeRole).toInt();
-
-    //disable devices selection if running CPU simulation
-    if (m_simulationOptions.type == eSimulationType::CPU)
-        ui->devicesComboBox->setDisabled(true);
-    else
-        ui->devicesComboBox->setEnabled(true);
-
-}
-
-void MainWindow::oncubeSizeSliderValueChanged(int value)
-{
-    m_simulationOptions.boxSize = (float)value / 10.0;
-    ui->cubeSizeLabel->setText(QString::number(m_simulationOptions.boxSize, 'g',1));
-}
-
-void MainWindow::onStartSimulationClicked()
-{
-    if (m_simulator != nullptr)
-    {
-        m_simulator->stop();
-        delete m_simulator;
-    }
-
-    cl::Device  device = CLPlatforms::getDevices(CLPlatforms::getAllPlatforms()[m_simulationOptions.platformIndex], CL_DEVICE_TYPE_ALL)[m_simulationOptions.deviceIndex];
-
-    switch (m_simulationOptions.type)
-    {
-    case eSimulationType::CPU:
-        m_simulator = new CCPUParticleSimulator(m_scene, m_simulationOptions.boxSize);
-        break;
-    case eSimulationType::GPUBrute:
-        m_simulator = new CGPUBruteParticleSimulator(m_scene, m_simulationOptions.boxSize,device);
-        break;
-    case eSimulationType::GPUGrid:
-        m_simulator = new CGPUParticleSimulator(m_scene, m_simulationOptions.boxSize, device);
-        break;
-    default:
-        break;
-    }
-
-    connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-    connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-    connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
-
-    m_simulator->setupScene();
-    m_simulator->start();
-
-    connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-    connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
-    connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
-}
-
-void MainWindow::onPauseSimulationClicked()
-{
-}
-
-void MainWindow::onRestartSimulationClicked()
+void MainWindow::resetScene()
 {
     if (m_simulator != nullptr)
     {
@@ -260,9 +202,118 @@ void MainWindow::onRestartSimulationClicked()
         delete m_scene;
         m_scene = nullptr;
     }
-
     setupScene();
+}
 
+void MainWindow::createSimulator()
+{
+    if (m_simulator != nullptr)
+    {
+        m_simulator->stop();
+        delete m_simulator;
+    }
+
+    cl::Device  device = CLPlatforms::getDevices(CLPlatforms::getAllPlatforms()[m_simulationOptions.platformIndex], CL_DEVICE_TYPE_ALL)[m_simulationOptions.deviceIndex];
+
+    switch (m_simulationOptions.type)
+    {
+    case eSimulationType::CPU:
+        m_simulator = new CCPUParticleSimulator(m_scene, m_simulationOptions.boxSize);
+        break;
+    case eSimulationType::GPUBrute:
+        m_simulator = new CGPUBruteParticleSimulator(m_scene, m_simulationOptions.boxSize, device);
+        break;
+    case eSimulationType::GPUGrid:
+        m_simulator = new CGPUParticleSimulator(m_scene, m_simulationOptions.boxSize, device);
+        break;
+    default:
+        break;
+    }
+
+    connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
+}
+
+void MainWindow::togglePushButtons(bool value)
+{
+    ui->startPushButton->setEnabled(!value);
+    ui->setupPushButton->setEnabled(!value);
+
+    ui->stopPushButton->setEnabled(value);
+    ui->pausePushButton->setEnabled(value);
+}
+
+void MainWindow::onDevicesComboBoxIndexChanged(int index)
+{
+    m_simulationOptions.platformIndex = ui->devicesComboBox->itemData(index, platformRole).toInt();
+    m_simulationOptions.deviceIndex = ui->devicesComboBox->itemData(index, deviceRole).toInt();
+    m_simulationIsReady = false;
+
+}
+
+void MainWindow::onSimulationTypeComboBoxIndexChanged(int index)
+{
+    m_simulationOptions.type = (eSimulationType)ui->simulationTypeComboBox->itemData(index, simulationTypeRole).toInt();
+
+    //disable devices selection if running CPU simulation
+    if (m_simulationOptions.type == eSimulationType::CPU)
+        ui->devicesComboBox->setDisabled(true);
+    else
+        ui->devicesComboBox->setEnabled(true);
+
+    m_simulationIsReady = false;
+
+}
+
+void MainWindow::onCubeSizeSliderValueChanged(int value)
+{
+    m_simulationOptions.boxSize = (float)value / 10.0;
+    ui->cubeSizeLabel->setText(QString::number(m_simulationOptions.boxSize, 'g',1));
+
+    m_simulationIsReady = false;
+
+}
+
+void MainWindow::onStartSimulationClicked()
+{    
+    if(!m_simulationIsReady)
+        onSetupSimulationClicked();
+    
+    togglePushButtons(true);
+
+    m_simulator->start();
+}
+
+void MainWindow::onPauseSimulationClicked()
+{
+    if (m_simulator != nullptr)
+        m_simulator->toggleSimulation();
+}
+
+void MainWindow::onStopSimulationClicked()
+{
+    resetScene();
+    m_simulationIsReady = false;
+
+    ui->FPSLabel->clear();
+    ui->iterationWidget->clear();
+
+    togglePushButtons(false);
+}
+
+void MainWindow::onSetupSimulationClicked()
+{
+    if (!m_simulationIsReady)
+    {
+        resetScene();
+        createSimulator();
+        m_simulator->setupScene();
+
+        ui->particlesNumberLabel->setText(QString::number(m_simulator->getParticlesCount()));
+
+        m_simulationIsReady = true;
+    }
 }
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
