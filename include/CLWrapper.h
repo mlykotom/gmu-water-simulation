@@ -45,6 +45,10 @@ public:
     cl::Kernel getKernel(const std::string &kernelName);
 
     cl::Buffer createBuffer(cl_mem_flags flags, size_t bufferSize, void *hostPtr = nullptr);
+
+    cl::Event enqueueRead(const cl::Buffer &buffer, size_t size, void *ptr, cl_bool blocking, size_t offset = 0);
+    cl::Event enqueueWrite(const cl::Buffer &buffer, size_t size, const void *ptr, cl_bool blocking, size_t offset = 0);
+    cl::Event enqueueKernel(cl::Kernel &kernel, const cl::NDRange &global, const cl::NDRange &local = cl::NullRange, const cl::NDRange &offset = cl::NullRange);
 };
 
 #endif //WATERSURFACESIMULATION_CLWRAPPER_H

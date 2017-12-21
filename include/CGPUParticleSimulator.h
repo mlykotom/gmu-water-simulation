@@ -18,6 +18,7 @@ public:
     void updateForces() override;
 private: //methods
     void scanGrid();
+    void sortIndices();
 
 protected:
     void setupKernels() override;

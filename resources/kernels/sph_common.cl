@@ -87,14 +87,11 @@ __kernel void walls_collision(__global ParticleCL *output, __global WallCL *wall
 __kernel void integration_step(__global ParticleCL *output, int size, float dt)
 {
     int global_x = (int) get_global_id(0);
-
     if (global_x < size) {
-        __private ParticleCL tmp_particle = output[global_x];
-        __private float3 newPosition = tmp_particle.position + (tmp_particle.velocity * dt) + (tmp_particle.acceleration * dt * dt);
+        __private ParticleCL tmpParticle = output[global_x];
+        __private float3 newPosition = tmpParticle.position + (tmpParticle.velocity * dt) + (tmpParticle.acceleration * dt * dt);
 
-        tmp_particle.velocity = (newPosition - tmp_particle.position) / dt;
-        tmp_particle.position = newPosition;
-
-        output[global_x] = tmp_particle;
+        output[global_x].velocity = (newPosition - tmpParticle.position) / dt;
+        output[global_x].position = newPosition;
     }
 }

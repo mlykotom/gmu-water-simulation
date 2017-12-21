@@ -4,7 +4,7 @@ CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSiz
     : CBaseParticleSimulator(scene, boxSize, parent),
       m_gravityCL({gravity.x(), gravity.y(), gravity.z()})
 {
-    m_cl_wrapper = new CLWrapper(device);
+    m_cl_wrapper = new CLWrapper(std::move(device));
 }
 
 void CGPUBaseParticleSimulator::setGravityVector(QVector3D newGravity)
@@ -85,18 +85,14 @@ void CGPUBaseParticleSimulator::setupKernels()
     m_walls_collision_kernel->setArg(argCollision++, m_particlesCount);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsVector.size());
 
-    cl::Event writeCollisionEvent;
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_wallsBuffer, CL_TRUE, 0, m_wallsBufferSize, m_wallsVector.data(), nullptr, &writeCollisionEvent);
+    m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
 }
 void CGPUBaseParticleSimulator::integrate()
 {
-    cl::Event kernelEvent, readEvent;
-
-    cl::NDRange local = cl::NullRange;
     cl::NDRange global(m_particlesCount);
 
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_integrationStepKernel, 0, global, local, nullptr, &kernelEvent);
-    m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_FALSE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
+    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, global);
+    m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 

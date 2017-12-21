@@ -1,3 +1,11 @@
+//#if defined(__JETBRAINS_IDE__) && !defined(__kernel) // so that IDE doesn't complain and provides some help
+//#define __kernel
+//#define __global
+//#define __local
+//#define __constant
+//#define __private
+//#endif
+
 __kernel void increment_local_scans(__global int *result, __global int *sums, int array_size)
 {
     int global_x = (int) ((get_global_id(0) + 1) << 1) - 1;
@@ -14,96 +22,12 @@ __kernel void increment_local_scans(__global int *result, __global int *sums, in
     }
 }
 
-__kernel void scan_local(__global int *result, __global int *sums, int array_size, volatile __local int *tmp)
-{
-    int global_x = (int) ((get_global_id(0) + 1) << 1) - 1;
-    int global_w = (int) get_global_size(0);
-    int local_x = (int) ((get_local_id(0) + 1) << 1) - 1;
-    int local_w = (int) (get_local_size(0) << 1);
-    int group_x = (int) get_group_id(0);
-    int g_num = (int) get_num_groups(0);
-    //===========================================================================================  
-
-    //if (group_x * local_w >= array_size)
-    //    return;
-
-    tmp[local_x] = global_x >= array_size ? 0 : result[global_x];
-    tmp[local_x - 1] = (global_x - 1) >= array_size ? 0 : result[global_x - 1];     // TODO this data.race1
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //reduce
-    for (int i = 1; i < local_w; i <<= 1) {
-        if (((local_x + 1) % (i << 1) == 0) && (local_x < local_w) && (local_x - i >= 0)) {
-            tmp[local_x] = tmp[local_x] + tmp[local_x - i];
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    if (local_x == local_w - 1) {
-        sums[group_x] = tmp[local_x];       // TODO this data.race1
-        tmp[local_x] = 0;
-    }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //down sweep
-    for (int i = local_w; i > 1; i >>= 1) {
-        int half_index = local_x - (i >> 1);
-        if (((local_x + 1) % i == 0) && (local_x < local_w)) {
-            int val = tmp[local_x];
-            tmp[local_x] += tmp[half_index];
-            tmp[half_index] = val;
-        }
-
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    if (global_x < array_size) {
-        result[global_x] = tmp[local_x];
-        result[global_x - 1] = tmp[local_x - 1];
-    }
-
-    barrier(CLK_GLOBAL_MEM_FENCE);
-}
-
-
-__kernel void blelloch_scan(__global int *result, int array_size)
-{
-    int global_x = (int) get_global_id(0);
-    int global_w = (int) get_global_size(0);
-    //===========================================================================================  
-
-    //Reduce
-    for (int i = 1; i < global_w; i <<= 1) {
-        if (((global_x + 1) % (i << 1) == 0) && (global_x < array_size) && (global_x - i >= 0)) {
-            result[global_x] = result[global_x] + result[global_x - i];
-        }
-
-        barrier(CLK_GLOBAL_MEM_FENCE);
-    }
-
-    ////down sweep
-    result[array_size - 1] = 0;
-    barrier(CLK_GLOBAL_MEM_FENCE);
-    for (int i = array_size; i > 1; i >>= 1) {
-        int half_index = global_x - (i >> 1);
-        if (((global_x + 1) % i == 0) && (global_x < array_size)) {
-            int tmp = result[global_x];
-            result[global_x] += result[half_index];
-            result[half_index] = tmp;
-        }
-
-        barrier(CLK_GLOBAL_MEM_FENCE);
-    }
-}
-
 __kernel void update_grid_positions(__global ParticleCL *particles, __global int *positions, int particles_count, int3 grid_size, float3 half_box_size)
 {
     int global_x = (int) get_global_id(0);
 
     if (global_x < particles_count) {
-        //this division is really bad...
+//this division is really bad...
         float3 newGridPosition = (particles[global_x].position + half_box_size) / particle_h;
 
         int x = (int) floor(newGridPosition.x);
@@ -144,6 +68,59 @@ __kernel void update_grid_positions(__global ParticleCL *particles, __global int
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
+__kernel void scan_local(__global int *result, __global int *sums, int array_size, volatile __local int *tmp)
+{
+    int global_x = (int) ((get_global_id(0) + 1) << 1) - 1;
+    int global_w = (int) get_global_size(0);
+    int local_x = (int) ((get_local_id(0) + 1) << 1) - 1;
+    int local_w = (int) (get_local_size(0) << 1);
+    int group_x = (int) get_group_id(0);
+    int g_num = (int) get_num_groups(0);
+    //===========================================================================================  
+
+    tmp[local_x] = global_x >= array_size ? 0 : result[global_x];
+    tmp[local_x - 1] = (global_x - 1) >= array_size ? 0 : result[global_x - 1];
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    //reduce
+    for (int i = 1; i < local_w; i <<= 1) {
+        if (((local_x + 1) % (i << 1) == 0) && (local_x < local_w) && (local_x - i >= 0)) {
+            tmp[local_x] = tmp[local_x] + tmp[local_x - i];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (local_x == local_w - 1) {
+        sums[group_x] = tmp[local_x];       // TODO this data.race1
+        tmp[local_x] = 0;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    //down sweep
+    for (int i = local_w; i > 1; i >>= 1) {
+        int half_index = local_x - (i >> 1);
+        if (((local_x + 1) % i == 0) && (local_x < local_w)) {
+            int val = tmp[local_x];
+            tmp[local_x] += tmp[half_index];
+            tmp[half_index] = val;
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    if (global_x < array_size) {
+        result[global_x] = tmp[local_x];
+        result[global_x - 1] = tmp[local_x - 1];
+    }
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+}
+
+
 __kernel void density_pressure_step(__global ParticleCL *particles, __global int *scan_array, __global int *sorted_indices, int size, int3 grid_size, float poly6_constant)
 {
     int global_x = (int) get_global_id(0);
@@ -174,6 +151,7 @@ __kernel void density_pressure_step(__global ParticleCL *particles, __global int
 
                     for (int i = particlesIndexFrom; i < particlesIndexTo; ++i) {
                         float3 distance = thisPosition - particles[sorted_indices[i]].position;
+
                         float radiusSquared = dot(distance, distance);
 
                         if (radiusSquared <= particle_h2) {
@@ -222,15 +200,17 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
                     int particlesIndexTo = (gridIndex + 1) < grid_array_size ? (scan_array[gridIndex + 1]) : (size);
 
                     for (int i = particlesIndexFrom; i < particlesIndexTo; ++i) {
-                        float3 distance = thisParticle.position - particles[sorted_indices[i]].position;
+                        __private ParticleCL neighborParticle = particles[sorted_indices[i]];
+
+                        float3 distance = thisParticle.position - neighborParticle.position;
                         float radiusSquared = dot(distance, distance);
 
-                        if (radiusSquared <= particle_h2 && thisParticle.id != particles[sorted_indices[i]].id) {
+                        if (radiusSquared <= particle_h2 && thisParticle.id != neighborParticle.id) {
                             float3 spikyGradient = WspikyGradient(distance, radiusSquared, spiky_constant);
                             float viscosityLaplacian = WviscosityLaplacian(radiusSquared, viscosity_constant);
 
                             f_pressure += thisParticle.pressure / pow(thisParticle.density, 2) + thisParticle.pressure / pow(thisParticle.density, 2) * spikyGradient;
-                            f_viscosity += (particles[sorted_indices[i]].velocity - thisParticle.velocity) * viscosityLaplacian / thisParticle.density;
+                            f_viscosity += (neighborParticle.velocity - thisParticle.velocity) * viscosityLaplacian / thisParticle.density;
                         }
                     }
                 }

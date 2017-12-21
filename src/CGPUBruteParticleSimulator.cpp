@@ -39,29 +39,18 @@ void CGPUBruteParticleSimulator::setupKernels()
 void CGPUBruteParticleSimulator::updateGrid()
 {
     // don't need to update the grid, since everything is in one cell
-    cl::Event writeEvent;
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
 }
 
 void CGPUBruteParticleSimulator::updateDensityPressure()
 {
-    cl::Event kernelEvent;
-
-    cl::NDRange local = cl::NullRange;
-
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_density_kernel, 0, m_global, local, nullptr, &kernelEvent);
+    m_cl_wrapper->enqueueKernel(*m_update_density_kernel, m_global);
 }
 
 void CGPUBruteParticleSimulator::updateForces()
 {
     m_update_forces_kernel->setArg(2, m_gravityCL);  // WARNING: gravityCL must be the same as in first setup!
-    cl::Event kernelEvent, readEvent, kernelCollisionEvent;
 
-    cl::NDRange local = cl::NullRange;
-
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_update_forces_kernel, 0, m_global, local, nullptr, &kernelEvent);
-
-    // collision forces
-    cl::NDRange collisionLocal = cl::NullRange;
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_walls_collision_kernel, 0, m_global, collisionLocal, nullptr, &kernelCollisionEvent);
+    m_cl_wrapper->enqueueKernel(*m_update_forces_kernel, m_global);
+    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, m_global);
 }

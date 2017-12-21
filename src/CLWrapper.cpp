@@ -62,3 +62,27 @@ cl::Buffer CLWrapper::createBuffer(cl_mem_flags flags, size_t bufferSize, void *
     CLCommon::checkError(err, "inputBuffer creation");
     return inputBuffer;
 }
+
+cl::Event CLWrapper::enqueueRead(const cl::Buffer &buffer, size_t size, void *ptr, cl_bool blocking, size_t offset)
+{
+    cl::Event event;
+    cl_int err = m_queue.enqueueReadBuffer(buffer, blocking, offset, size, ptr, nullptr, &event);
+    CLCommon::checkError(err, "enqueueReadBuffer");
+    return event;
+}
+
+cl::Event CLWrapper::enqueueWrite(const cl::Buffer &buffer, size_t size, const void *ptr, cl_bool blocking, size_t offset)
+{
+    cl::Event event;
+    cl_int err = m_queue.enqueueWriteBuffer(buffer, blocking, offset, size, ptr, nullptr, &event);
+    CLCommon::checkError(err, "enqueueWriteBuffer");
+    return event;
+}
+
+cl::Event CLWrapper::enqueueKernel(cl::Kernel &kernel, const cl::NDRange &global, const cl::NDRange &local, const cl::NDRange &offset)
+{
+    cl::Event event;
+    cl_int err = m_queue.enqueueNDRangeKernel(kernel, offset, global, local, nullptr, &event);
+    CLCommon::checkError(err, kernel.getInfo<CL_KERNEL_FUNCTION_NAME>());
+    return event;
+}
