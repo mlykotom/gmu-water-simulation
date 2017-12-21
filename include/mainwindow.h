@@ -110,6 +110,7 @@ private slots:
     void onStopSimulationClicked();
     void onSetupSimulationClicked();
 
+    void exportLogs();
 };
 
 #endif // MAINWINDOW_H

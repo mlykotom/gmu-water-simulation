@@ -45,6 +45,7 @@ public:
     int getGridSizeY() { return m_grid->yRes(); }
     int getGridSizeZ() { return m_grid->zRes(); }
 
+    QList<QPair<unsigned long, double>> events;
 
 signals:
     void iterationChanged(unsigned long iteration);

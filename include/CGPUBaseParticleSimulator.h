@@ -12,7 +12,7 @@ class CGPUBaseParticleSimulator: public CBaseParticleSimulator
 {
 public:
     explicit CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
-    ~CGPUBaseParticleSimulator() = default;
+    ~CGPUBaseParticleSimulator() override = default;
     void setGravityVector(QVector3D newGravity) override;
     QString getSelectedDevice() override;
     void setupScene() override;
@@ -35,7 +35,7 @@ protected:
     std::shared_ptr<cl::Kernel> m_integrationStepKernel;
 
     virtual void setupKernels();
-    virtual void integrate();
+    void integrate() override;
 };
 
 #endif //WATERSURFACESIMULATION_CGPUBASEPARTICLESIMULATOR_H

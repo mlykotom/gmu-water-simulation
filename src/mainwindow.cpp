@@ -260,6 +260,7 @@ void MainWindow::onPauseSimulationClicked()
 
 void MainWindow::onStopSimulationClicked()
 {
+    exportLogs();
     resetScene();
     m_simulationIsReady = false;
 
@@ -300,4 +301,16 @@ void MainWindow::onError(const char *error)
     QMessageBox message;
     message.setText(QString(error));
     message.exec();
+}
+void MainWindow::exportLogs()
+{
+    QFile data("../logs/output.csv");
+
+    if (data.open(QFile::WriteOnly | QFile::Truncate)) {
+        QTextStream output(&data);
+
+        for (auto pair : m_simulator->events) {
+            output << pair.first << ';' << pair.second << '\n';
+        }
+    }
 }

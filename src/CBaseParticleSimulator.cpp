@@ -96,6 +96,11 @@ void CBaseParticleSimulator::step()
 void CBaseParticleSimulator::doWork()
 {
     this->step();
+
+    if (totalIteration % 10 == 0) {
+        events << QPair<unsigned long, double>(totalIteration, getFps());
+    }
+
     ++totalIteration;
     ++iterationSincePaused;
     emit iterationChanged(totalIteration);
