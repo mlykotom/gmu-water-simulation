@@ -60,7 +60,7 @@ void CGPUParticleSimulator::setupKernels()
 
     //write buffers on GPU
     cl::Event writeEvent;
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, true, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &writeEvent);
 
 
     m_halfBoxSize = {m_boxSize.x() / 2.0f, m_boxSize.y() / 2.0f, m_boxSize.z() / 2.0f};
@@ -93,35 +93,6 @@ void CGPUParticleSimulator::setupKernels()
     m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 }
 
-void CGPUParticleSimulator::scanGrid()
-{
-    cl::Event kernelEvent;
-
-    //scan input array
-    m_scanLocalKernel->setArg(0, m_gridBuffer);
-    m_scanLocalKernel->setArg(1, m_scanSumsBuffer);
-    m_scanLocalKernel->setArg(2, m_gridCountToPowerOfTwo);
-    m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * m_elementsProcessedInOneGroup));
-
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_scanLocalKernel, 0, m_scanGlobal, m_scanLocal, nullptr, &kernelEvent);
-
-    //scan sums
-    m_scanLocalKernel->setArg(0, m_scanSumsBuffer);
-    m_scanLocalKernel->setArg(1, m_scanSumsBuffer);
-    m_scanLocalKernel->setArg(2, m_sumsCount);
-    m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * m_elementsProcessedInOneGroup));
-
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_scanLocalKernel, 0, m_sumsGlobal, m_scanLocal, nullptr, &kernelEvent);
-
-    //increment input scan
-    m_incrementKernel->setArg(0, m_gridBuffer);
-    m_incrementKernel->setArg(1, m_scanSumsBuffer);
-    m_incrementKernel->setArg(2, m_gridCountToPowerOfTwo);
-
-    m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_incrementKernel, 0, m_scanGlobal, m_scanLocal, nullptr, &kernelEvent);
-
-}
-
 void CGPUParticleSimulator::updateGrid()
 {
     cl::Event writeEvent;
@@ -133,12 +104,18 @@ void CGPUParticleSimulator::updateGrid()
 
     cl::NDRange local = cl::NullRange;
 
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_FALSE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_gridBuffer, CL_TRUE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_updateParticlePositionsKernel, 0, m_global, local, nullptr, &kernelEvent);
     m_cl_wrapper->getQueue().enqueueReadBuffer(m_particlesBuffer, CL_TRUE, 0, m_particlesSize, m_clParticles.data(), nullptr, &readEvent);
+    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
 
     //scan grid
     scanGrid();
+
+    // TODO pryc
+//    m_cl_wrapper->getQueue().enqueueReadBuffer(m_gridBuffer, CL_TRUE, 0, m_gridVectorSize, m_gridVector.data(), nullptr, &readEvent);
+//    qDebug() << m_gridVector.data()[0];
+
 
     //sort indices
     // initialize original index locations
@@ -152,6 +129,41 @@ void CGPUParticleSimulator::updateGrid()
          { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; }
     );
 
+//    qDebug() << m_sortedIndices
+
+    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, CL_FALSE, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
+}
+
+void CGPUParticleSimulator::scanGrid()
+{
+    cl::Event kernelEvent;
+
+    //scan input array
+    m_scanLocalKernel->setArg(0, m_gridBuffer);
+    m_scanLocalKernel->setArg(1, m_scanSumsBuffer);
+    m_scanLocalKernel->setArg(2, m_gridCountToPowerOfTwo);
+    m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * m_elementsProcessedInOneGroup));
+
+    cl_int err;
+    err = m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_scanLocalKernel, 0, m_scanGlobal, m_scanLocal, nullptr, &kernelEvent);
+    CLCommon::checkError(err, "scanLocal");
+
+    //scan sums
+    m_scanLocalKernel->setArg(0, m_scanSumsBuffer);
+    m_scanLocalKernel->setArg(1, m_scanSumsBuffer);
+    m_scanLocalKernel->setArg(2, m_sumsCount);
+    m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * m_elementsProcessedInOneGroup));
+
+    err = m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_scanLocalKernel, 0, m_sumsGlobal, m_scanLocal, nullptr, &kernelEvent);
+    CLCommon::checkError(err, "scanLocal2");
+
+    //increment input scan
+    m_incrementKernel->setArg(0, m_gridBuffer);
+    m_incrementKernel->setArg(1, m_scanSumsBuffer);
+    m_incrementKernel->setArg(2, m_gridCountToPowerOfTwo);
+
+    err = m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_incrementKernel, 0, m_scanGlobal, m_scanLocal, nullptr, &kernelEvent);
+    CLCommon::checkError(err, "increment");
 }
 
 void CGPUParticleSimulator::updateDensityPressure()
@@ -161,8 +173,6 @@ void CGPUParticleSimulator::updateDensityPressure()
 
     cl::NDRange local = cl::NullRange;
 
-
-    m_cl_wrapper->getQueue().enqueueWriteBuffer(m_indicesBuffer, CL_FALSE, 0, m_indicesSize, m_sortedIndices.data(), nullptr, &writeEvent);
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(*m_densityPresureStepKernel, 0, m_global, local, nullptr, &kernelEvent);
 }
 

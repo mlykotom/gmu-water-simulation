@@ -38,7 +38,9 @@ QString CLPlatforms::getDeviceInfo(const cl::Device &device)
     cl_int err;
     auto deviceInfo = device.getInfo<CL_DEVICE_NAME>(&err);
     CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_NAME>");
-    return QString(deviceInfo.c_str());
+    auto maxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>(&err);
+    CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>");
+    return QString("%1 (%2)").arg(QString(deviceInfo.c_str()), QString::number(maxWorkGroupSize));
 }
 
 void CLPlatforms::printInfoAll()

@@ -47,6 +47,17 @@ void CGPUBaseParticleSimulator::setupScene()
     setupKernels();
 }
 
+void CGPUBaseParticleSimulator::step()
+{
+    try {
+        CBaseParticleSimulator::step();
+    }
+    catch (CLException &exc) {
+        emit errorOccured(exc.what());
+        stop();
+    }
+}
+
 void CGPUBaseParticleSimulator::setupKernels()
 {
     // particles
@@ -77,7 +88,6 @@ void CGPUBaseParticleSimulator::setupKernels()
     cl::Event writeCollisionEvent;
     m_cl_wrapper->getQueue().enqueueWriteBuffer(m_wallsBuffer, CL_TRUE, 0, m_wallsBufferSize, m_wallsVector.data(), nullptr, &writeCollisionEvent);
 }
-
 void CGPUBaseParticleSimulator::integrate()
 {
     cl::Event kernelEvent, readEvent;

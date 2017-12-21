@@ -34,7 +34,7 @@ public:
 
     void start();
     void stop();
-    void step();
+    virtual void step();
     void toggleSimulation();
     void toggleGravity();
 
@@ -48,6 +48,7 @@ public:
 
 signals:
     void iterationChanged(unsigned long iteration);
+    void errorOccured(const char *error);
 
 public slots:
     virtual void onKeyPressed(Qt::Key key);

@@ -16,7 +16,7 @@ public:
     void setGravityVector(QVector3D newGravity) override;
     QString getSelectedDevice() override;
     void setupScene() override;
-
+    void step() override;
 
 protected:
     CLWrapper *m_cl_wrapper;

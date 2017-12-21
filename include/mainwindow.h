@@ -46,16 +46,22 @@ class MainWindow: public QMainWindow
 {
 Q_OBJECT
 
-enum eComboBoxRole { platformRole = Qt::UserRole +1, deviceRole, simulationTypeRole};
-enum eSimulationType { GPUGrid = 0, GPUBrute , CPU };
+    enum eComboBoxRole
+    {
+        platformRole = Qt::UserRole + 1, deviceRole, simulationTypeRole
+    };
+    enum eSimulationType
+    {
+        GPUGrid = 0, GPUBrute, CPU
+    };
 
-struct sSimulationOptions
-{
-    eSimulationType type;
-    float boxSize;
-    int platformIndex;
-    int deviceIndex;
-};
+    struct sSimulationOptions
+    {
+        eSimulationType type;
+        float boxSize;
+        int platformIndex;
+        int deviceIndex;
+    };
 
 public:
     explicit MainWindow(QWidget *parent = 0);
@@ -68,9 +74,10 @@ signals:
 
 public slots:
     void onSimulationIterationChanged(unsigned long iteration);
+    void onError(const char *error);
     void keyPressEvent(QKeyEvent *event)
     {
-        emit keyPressed((Qt::Key)event->key());
+        emit keyPressed((Qt::Key) event->key());
     }
 
 private: //members
@@ -102,7 +109,6 @@ private slots:
     void onPauseSimulationClicked();
     void onStopSimulationClicked();
     void onSetupSimulationClicked();
-     
 
 };
 
