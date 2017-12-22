@@ -89,6 +89,7 @@ protected:
     virtual void updateForces() = 0;
     virtual void integrate() = 0;
 
+
 private slots:
     void doWork();
 
@@ -97,6 +98,8 @@ private: //attributes
     QElapsedTimer m_elapsed_timer;
     unsigned long iterationSincePaused;
     unsigned long totalIteration;
+
+    void addParticle(float x, float y, float z);
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

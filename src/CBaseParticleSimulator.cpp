@@ -27,9 +27,7 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, Sim
 
 void CBaseParticleSimulator::setupScene()
 {
-    auto &firstGridCell = m_grid->at(0, 0, 0);
     double halfParticle = CParticle::h / 2.0f;
-
     unsigned int calculatedCount = (unsigned) (ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
     m_clParticles.reserve(calculatedCount);
 
@@ -38,17 +36,21 @@ void CBaseParticleSimulator::setupScene()
     for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
         for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
             for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
-
-                m_clParticles.emplace_back(x + offset.x(), y + offset.y(), z + offset.z(), m_particlesCount);
-                auto particle = new CParticle(&m_clParticles.back(), m_particlesCount, m_scene->getRootEntity(), x + offset.x(), y + offset.y(), z + offset.z());
-
-                firstGridCell.push_back(particle);
-                m_particlesCount++;
+                addParticle(x + offset.x(), y + offset.y(), z + offset.z());
             }
         }
     }
 
     assert(calculatedCount == m_particlesCount);
+}
+
+void CBaseParticleSimulator::addParticle(float x, float y, float z)
+{
+    auto &firstGridCell = m_grid->at(0, 0, 0);
+    m_clParticles.emplace_back(x, y, z, m_particlesCount);
+    auto particle = new CParticle(&m_clParticles.back(), m_particlesCount, m_scene->getRootEntity(), x, y, z);
+    firstGridCell.push_back(particle);
+    m_particlesCount++;
 }
 
 void CBaseParticleSimulator::start()
