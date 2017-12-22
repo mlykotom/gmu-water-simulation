@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QPlaneMesh>
 #include <QtMath>
+#include <cassert>
 
 #include <iostream>
 #include <QElapsedTimer>
@@ -75,6 +76,7 @@ protected:
     cl_float m_surfaceThreshold;
     cl_uint m_particlesCount = 0;
     SystemParams m_systemParams;
+    std::vector<CParticle::Physics> m_clParticles;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;

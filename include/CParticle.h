@@ -42,7 +42,7 @@ public:
             cell_id(0) {}
     } Physics;
 
-    explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z);
+    explicit CParticle(Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z);
     ~CParticle() override;
 
 public: //methods
@@ -105,9 +105,8 @@ public: //attributes
     static constexpr float gas_stiffness = 3.0f; //20.0 // 461.5  // Nm/kg is gas constant of water vapor
     static constexpr float rest_density = 998.29f; // kg/m^3 is rest density of water particle
 
-    const Physics *m_physics;
 private:
-
+    Physics *m_physics;
     QVector3D m_position;
     QVector3D m_velocity;
     QVector3D m_acceleration;

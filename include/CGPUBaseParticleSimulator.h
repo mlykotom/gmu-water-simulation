@@ -21,7 +21,6 @@ public:
 protected:
     CLWrapper *m_cl_wrapper;
     cl_float3 m_gravityCL;
-    std::vector<CParticle::Physics> m_clParticles;
 
     cl::Buffer m_particlesBuffer;
     size_t m_particlesSize;

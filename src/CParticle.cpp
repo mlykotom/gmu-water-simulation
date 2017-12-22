@@ -1,7 +1,8 @@
 #include "CParticle.h"
 
-CParticle::CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z)
+CParticle::CParticle(Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z)
     : RenderableEntity(rootEntity),
+      m_physics(physics),
       m_id(id),
       m_position(QVector3D(x, y, z)),
       m_velocity(0.0f, 0.0f, 0.0f),
