@@ -16,6 +16,12 @@
 
 #define GRAVITY_ACCELERATION (-9.80665f)
 
+enum SimulationScenario
+{
+    DAM_BREAK,
+    FOUNTAIN,
+};
+
 class CScene;
 
 class CBaseParticleSimulator: public QObject
@@ -23,7 +29,7 @@ class CBaseParticleSimulator: public QObject
 Q_OBJECT
 
 public:
-    explicit CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent);
+    explicit CBaseParticleSimulator(CScene *scene, float boxSize, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
     ~CBaseParticleSimulator() override
     {
         delete m_grid;
@@ -46,7 +52,7 @@ public:
     QList<QPair<unsigned long, double>> events;
 
     int eventLoggerStride = 10;
-
+    SimulationScenario m_scenario;
 signals:
     void iterationChanged(unsigned long iteration);
     void errorOccured(const char *error);

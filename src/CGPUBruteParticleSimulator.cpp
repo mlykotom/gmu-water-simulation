@@ -1,7 +1,7 @@
 #include "CGPUBruteParticleSimulator.h"
 
-CGPUBruteParticleSimulator::CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
-    : CGPUBaseParticleSimulator(scene, boxSize, device, parent)
+CGPUBruteParticleSimulator::CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario, QObject *parent)
+    : CGPUBaseParticleSimulator(scene, boxSize, device, scenario, parent)
 {
     m_cl_wrapper->loadProgram(
         {

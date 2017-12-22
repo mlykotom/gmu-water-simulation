@@ -10,8 +10,8 @@
 class CGPUParticleSimulator: public CGPUBaseParticleSimulator
 {
 public:
-    explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
-    ~CGPUParticleSimulator() override {}
+    explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
+    ~CGPUParticleSimulator() override = default;
 
     void updateGrid() override;
     void updateDensityPressure() override;

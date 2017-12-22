@@ -12,7 +12,7 @@ class CGPUBruteParticleSimulator: public CGPUBaseParticleSimulator
 {
 public:
 
-    explicit CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
+    explicit CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
 
     void updateGrid() override;
     void updateDensityPressure() override;

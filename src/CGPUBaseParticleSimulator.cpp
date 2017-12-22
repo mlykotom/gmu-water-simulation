@@ -1,7 +1,7 @@
 #include "CGPUBaseParticleSimulator.h"
 
-CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
-    : CBaseParticleSimulator(scene, boxSize, parent),
+CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario, QObject *parent)
+    : CBaseParticleSimulator(scene, boxSize, scenario, parent),
       m_gravityCL({gravity.x(), gravity.y(), gravity.z()})
 {
     m_cl_wrapper = new CLWrapper(std::move(device));

@@ -11,7 +11,7 @@
 class CGPUBaseParticleSimulator: public CBaseParticleSimulator
 {
 public:
-    explicit CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
+    explicit CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
     ~CGPUBaseParticleSimulator() override = default;
     void setGravityVector(QVector3D newGravity) override;
     QString getSelectedDevice() override;

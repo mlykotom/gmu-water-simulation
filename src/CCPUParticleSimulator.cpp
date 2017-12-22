@@ -1,7 +1,7 @@
 #include "CCPUParticleSimulator.h"
 
-CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, float boxSize, QObject *parent)
-    : CBaseParticleSimulator(scene, boxSize, parent)
+CCPUParticleSimulator::CCPUParticleSimulator(CScene *scene, float boxSize, SimulationScenario scenario, QObject *parent)
+    : CBaseParticleSimulator(scene, boxSize, scenario, parent)
 {
 
 }

@@ -1,13 +1,14 @@
 #include "CBaseParticleSimulator.h"
 
-CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent)
+CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, SimulationScenario scenario, QObject *parent)
     : QObject(parent),
       gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
       m_scene(scene),
       dt(0.01f),
       totalIteration(0),
       m_surfaceThreshold(0.01f),
-      m_boxSize(QVector3D(boxSize, boxSize, boxSize))
+      m_boxSize(QVector3D(boxSize, boxSize, boxSize)),
+      m_scenario(scenario)
 {
     m_systemParams.poly6_constant = (cl_float) (315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
     m_systemParams.spiky_constant = (cl_float) (-45.0f / (M_PI * pow(CParticle::h, 6)));
