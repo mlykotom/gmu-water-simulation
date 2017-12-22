@@ -99,7 +99,7 @@ void CBaseParticleSimulator::doWork()
     ++totalIteration;
     ++iterationSincePaused;
     emit iterationChanged(totalIteration);
-    if (totalIteration % 10 == 0) {
+    if (totalIteration % eventLoggerStride == 0) {
         events << QPair<unsigned long, double>(totalIteration, getFps());
     }
 };

@@ -47,6 +47,8 @@ public:
 
     QList<QPair<unsigned long, double>> events;
 
+    int eventLoggerStride = 10;
+
 signals:
     void iterationChanged(unsigned long iteration);
     void errorOccured(const char *error);

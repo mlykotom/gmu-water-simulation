@@ -318,7 +318,6 @@ void MainWindow::exportLogs()
         QTextStream fpsStream(&fps);
 
         for (auto pair : m_simulator->events) {
-//            output << pair.first << ';';
             fpsStream << pair.second << ';';
         }
 
