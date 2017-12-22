@@ -304,13 +304,26 @@ void MainWindow::onError(const char *error)
 }
 void MainWindow::exportLogs()
 {
-    QFile data("../logs/output.csv");
+    QString fileName = QString("%1_%2").arg(
+        QString::number(ui->cubeSizeSlider->value() / 10.0),
+        ui->devicesComboBox->currentText()
+    );
 
-    if (data.open(QFile::WriteOnly | QFile::Truncate)) {
+    QFile data("../logs/" + fileName + ".csv");
+
+    if (data.open(QFile::WriteOnly | QFile::Append)) {
         QTextStream output(&data);
 
+        QString fps = "";
+        QTextStream fpsStream(&fps);
+
         for (auto pair : m_simulator->events) {
-            output << pair.first << ';' << pair.second << '\n';
+//            output << pair.first << ';';
+            fpsStream << pair.second << ';';
         }
+
+        output << ui->simulationTypeComboBox->currentText() << ';';
+        output << fps;
+        output << '\n';
     }
 }
