@@ -87,6 +87,7 @@ protected:
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
     virtual void updateForces() = 0;
+    virtual void updateCollisions() = 0;
     virtual void integrate() = 0;
 
 

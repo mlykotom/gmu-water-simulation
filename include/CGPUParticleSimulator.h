@@ -46,7 +46,6 @@ protected:
     cl::NDRange m_scanGlobal;
     cl::NDRange m_sumsGlobal;
     cl::NDRange m_local;
-    cl::NDRange m_global;
 
     size_t m_indicesSize;
     size_t m_gridVectorSize;

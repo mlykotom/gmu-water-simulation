@@ -23,18 +23,23 @@ protected:
     cl_float3 m_gravityCL;
 
     cl::Buffer m_particlesBuffer;
+    cl::Buffer m_particlesBufferOut;
     size_t m_particlesSize;
 
     // walls for collisions
     QVector<sWall> m_wallsVector;
     cl::Buffer m_wallsBuffer;
     size_t m_wallsBufferSize;
-    std::shared_ptr<cl::Kernel> m_walls_collision_kernel;
 
+    cl::NDRange m_global;
+
+    std::shared_ptr<cl::Kernel> m_walls_collision_kernel;
     std::shared_ptr<cl::Kernel> m_integrationStepKernel;
+
 
     virtual void setupKernels();
     void integrate() override;
+    void updateCollisions() override;
 };
 
 #endif //WATERSURFACESIMULATION_CGPUBASEPARTICLESIMULATOR_H

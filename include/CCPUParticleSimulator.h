@@ -19,6 +19,7 @@ public:
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
+    void updateCollisions() override;
     void integrate() override;
 };
 

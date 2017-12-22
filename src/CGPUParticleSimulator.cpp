@@ -43,7 +43,6 @@ void CGPUParticleSimulator::setupKernels()
     m_indicesSize = m_sortedIndices.size() * sizeof(cl_int);
     m_indicesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_indicesSize);
 
-
     m_elementsProcessedInOneGroup = qNextPowerOfTwo((cl_int) ceil(qSqrt(m_gridCountToPowerOfTwo)));
     //we need only half the threads of processed elements
     m_localScanWokrgroupSize = m_elementsProcessedInOneGroup / 2;
@@ -70,25 +69,6 @@ void CGPUParticleSimulator::setupKernels()
     m_updateParticlePositionsKernel->setArg(arg++, m_particlesCount);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
     m_updateParticlePositionsKernel->setArg(arg++, m_halfBoxSize);
-
-
-    arg = 0;
-    m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_gridBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_indicesBuffer);
-    m_densityPresureStepKernel->setArg(arg++, m_particlesCount);
-    m_densityPresureStepKernel->setArg(arg++, m_gridSize);
-    m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
-
-    arg = 0;
-    m_forceStepKernel->setArg(arg++, m_particlesBuffer);
-    m_forceStepKernel->setArg(arg++, m_gridBuffer);
-    m_forceStepKernel->setArg(arg++, m_indicesBuffer);
-    m_forceStepKernel->setArg(arg++, m_particlesCount);
-    m_forceStepKernel->setArg(arg++, m_gridSize);
-    m_forceStepKernel->setArg(arg++, m_gravityCL);
-    m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
-    m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 }
 
 void CGPUParticleSimulator::updateGrid()
@@ -154,18 +134,28 @@ void CGPUParticleSimulator::sortIndices()
 
 void CGPUParticleSimulator::updateDensityPressure()
 {
-    cl::NDRange local = cl::NullRange;
-    m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, m_global, local);
+    cl_uint arg = 0;
+    m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_gridBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_indicesBuffer);
+    m_densityPresureStepKernel->setArg(arg++, m_particlesCount);
+    m_densityPresureStepKernel->setArg(arg++, m_gridSize);
+    m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
+
+    m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, m_global);
 }
 
 void CGPUParticleSimulator::updateForces()
 {
-    // WARNING: gravityCL must be the same as in first setup!
-    m_forceStepKernel->setArg(5, m_gravityCL);
-    cl::NDRange local = cl::NullRange;
-    m_cl_wrapper->enqueueKernel(*m_forceStepKernel, m_global, local);
+    cl_uint arg = 0;
+    m_forceStepKernel->setArg(arg++, m_particlesBuffer);
+    m_forceStepKernel->setArg(arg++, m_gridBuffer);
+    m_forceStepKernel->setArg(arg++, m_indicesBuffer);
+    m_forceStepKernel->setArg(arg++, m_particlesCount);
+    m_forceStepKernel->setArg(arg++, m_gridSize);
+    m_forceStepKernel->setArg(arg++, m_gravityCL);
+    m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
+    m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 
-    // collision forces
-    cl::NDRange collisionLocal = cl::NullRange;
-    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, m_global, collisionLocal);
+    m_cl_wrapper->enqueueKernel(*m_forceStepKernel, m_global);
 }

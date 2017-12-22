@@ -43,10 +43,6 @@ void CGPUBaseParticleSimulator::setupKernels()
 
     // integration
     m_integrationStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
-    cl_uint arg = 0;
-    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
-    m_integrationStepKernel->setArg(arg++, m_particlesCount);
-    m_integrationStepKernel->setArg(arg++, dt);
 
     // collisions
     m_wallsVector = m_grid->getCollisionGeometry()->getBoundingBox().m_walls;
@@ -55,20 +51,28 @@ void CGPUBaseParticleSimulator::setupKernels()
     m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, m_wallsBufferSize);
 
     m_walls_collision_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("walls_collision"));
+    m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
+}
 
+void CGPUBaseParticleSimulator::updateCollisions()
+{
     cl_uint argCollision = 0;
     m_walls_collision_kernel->setArg(argCollision++, m_particlesBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_particlesCount);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsVector.size());
 
-    m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
+    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, cl::NDRange(m_particlesCount));
 }
+
 void CGPUBaseParticleSimulator::integrate()
 {
-    cl::NDRange global(m_particlesCount);
+    cl_uint arg = 0;
+    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
+    m_integrationStepKernel->setArg(arg++, m_particlesCount);
+    m_integrationStepKernel->setArg(arg++, dt);
 
-    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, global);
+    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_particlesCount));
     m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");

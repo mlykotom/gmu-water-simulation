@@ -183,11 +183,15 @@ void CCPUParticleSimulator::updateForces()
                     particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
                     // collision force
                     particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
-
                 }
             }
         }
     }
+}
+
+void CCPUParticleSimulator::updateCollisions()
+{
+    // is part of updateForces
 }
 
 void CCPUParticleSimulator::integrate()

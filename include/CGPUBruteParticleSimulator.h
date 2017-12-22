@@ -22,8 +22,6 @@ protected:
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
     std::shared_ptr<cl::Kernel> m_update_forces_kernel;
 
-    cl::NDRange m_global;
-
     void setupKernels() override;
 };
 

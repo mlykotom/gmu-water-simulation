@@ -17,23 +17,13 @@ void CGPUBruteParticleSimulator::setupKernels()
 
     m_global = cl::NDRange(m_particlesCount);
 
+//    m_particlesBufferOut = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
+
     // density kernel
     m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
 
-    cl_uint arg = 0;
-    m_update_density_kernel->setArg(arg++, m_particlesBuffer);
-    m_update_density_kernel->setArg(arg++, m_particlesCount);
-    m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
-
     // forces kernel
     m_update_forces_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
-
-    arg = 0;
-    m_update_forces_kernel->setArg(arg++, m_particlesBuffer);
-    m_update_forces_kernel->setArg(arg++, m_particlesCount);
-    m_update_forces_kernel->setArg(arg++, m_gravityCL);
-    m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
-    m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 }
 
 void CGPUBruteParticleSimulator::updateGrid()
@@ -44,13 +34,24 @@ void CGPUBruteParticleSimulator::updateGrid()
 
 void CGPUBruteParticleSimulator::updateDensityPressure()
 {
+    cl_uint arg = 0;
+    m_update_density_kernel->setArg(arg++, m_particlesBuffer);
+//    m_update_density_kernel->setArg(arg++, m_particlesBufferOut);
+    m_update_density_kernel->setArg(arg++, m_particlesCount);
+    m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
+
     m_cl_wrapper->enqueueKernel(*m_update_density_kernel, m_global);
 }
 
 void CGPUBruteParticleSimulator::updateForces()
 {
-    m_update_forces_kernel->setArg(2, m_gravityCL);  // WARNING: gravityCL must be the same as in first setup!
+    cl_uint arg = 0;
+//    m_update_forces_kernel->setArg(arg++, m_particlesBufferOut);
+    m_update_forces_kernel->setArg(arg++, m_particlesBuffer);
+    m_update_forces_kernel->setArg(arg++, m_particlesCount);
+    m_update_forces_kernel->setArg(arg++, m_gravityCL);
+    m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
+    m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     m_cl_wrapper->enqueueKernel(*m_update_forces_kernel, m_global);
-    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, m_global);
 }

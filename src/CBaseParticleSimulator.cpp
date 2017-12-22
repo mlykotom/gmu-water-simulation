@@ -98,6 +98,7 @@ void CBaseParticleSimulator::step()
     updateGrid();
     updateDensityPressure();
     updateForces();
+    updateCollisions();
     integrate();
 }
 
