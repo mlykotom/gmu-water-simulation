@@ -44,9 +44,6 @@ void CCPUParticleSimulator::updateGrid()
                     int newGridCellX = (int) floor((particle->position().x() + m_boxSize.x() / 2.0) / CParticle::h);
                     int newGridCellY = (int) floor((particle->position().y() + m_boxSize.y() / 2.0) / CParticle::h);
                     int newGridCellZ = (int) floor((particle->position().z() + m_boxSize.z() / 2.0) / CParticle::h);
-                    //                        qDebug() << x << y << z << "NEW" << newGridCellX << newGridCellY << newGridCellZ;
-                    //cout << "particle position: " << particle->position() << endl;
-                    //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
 
                     if (newGridCellX < 0) {
                         newGridCellX = 0;
@@ -69,13 +66,9 @@ void CCPUParticleSimulator::updateGrid()
                         newGridCellZ = m_grid->zRes() - 1;
                     }
 
-                    //cout << "particle cell pos: " << newGridCellX << " " << newGridCellY << " " << newGridCellZ << endl;
-
 
                     // check if particle has moved
-
                     if (x != newGridCellX || y != newGridCellY || z != newGridCellZ) {
-
                         // move the particle to the new grid cell
 
                         std::vector<CParticle *> &what = m_grid->at(newGridCellX, newGridCellY, newGridCellZ);
@@ -131,7 +124,6 @@ void CCPUParticleSimulator::updateDensityPressure()
                     }
 
                     particle->density() *= CParticle::mass;
-                    // p = k(density - density_rest)
                     particle->pressure() = CParticle::gas_stiffness * (particle->density() - CParticle::rest_density);
                 }
             }
@@ -150,7 +142,7 @@ void CCPUParticleSimulator::updateForces()
 
                 for (auto &particle : particles) {
                     QVector3D f_gravity = gravity * particle->density();
-                    QVector3D f_pressure, f_viscosity, f_surface;
+                    QVector3D f_pressure, f_viscosity;
 
                     // neighbors
                     for (int offsetX = -1; offsetX <= 1; offsetX++) {
@@ -172,7 +164,6 @@ void CCPUParticleSimulator::updateForces()
                                     double radiusSquared = distance.lengthSquared();
 
                                     if (radiusSquared <= CParticle::h * CParticle::h) {
-                                        //QVector3D poly6Gradient = Wpoly6Gradient(distance, radiusSquared);
                                         QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
 
                                         if (particle->getId() != neighbor->getId()) {
@@ -197,7 +188,6 @@ void CCPUParticleSimulator::updateForces()
             }
         }
     }
-
 }
 
 void CCPUParticleSimulator::integrate()

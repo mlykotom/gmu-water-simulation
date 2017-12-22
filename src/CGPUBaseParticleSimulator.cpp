@@ -32,7 +32,7 @@ void CGPUBaseParticleSimulator::setupScene()
         for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
             for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
 
-                m_clParticles.emplace_back(x + offset.x(), y + offset.y(), z + offset.z(), m_particlesCount);
+                m_clParticles.push_back(CParticle::sPhysics(x + offset.x(), y + offset.y(), z + offset.z(), m_particlesCount));
                 auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), x + offset.x(), y + offset.y(), z + offset.z());
                 particle->m_physics = &m_clParticles.back();
 

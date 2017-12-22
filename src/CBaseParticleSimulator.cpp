@@ -9,7 +9,6 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QOb
       m_surfaceThreshold(0.01f),
       m_boxSize(QVector3D(boxSize, boxSize, boxSize))
 {
-
     m_systemParams.poly6_constant = (cl_float) (315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
     m_systemParams.spiky_constant = (cl_float) (-45.0f / (M_PI * pow(CParticle::h, 6)));
     m_systemParams.viscosity_constant = (cl_float) (45.0f / (M_PI * pow(CParticle::h, 6)));
@@ -19,7 +18,6 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QOb
         (int) ceil(m_boxSize.y() / CParticle::h),
         (int) ceil(m_boxSize.z() / CParticle::h)
     );
-
 
     m_grid = new CGrid(m_boxSize, gridResolution, m_scene->getRootEntity());
 
@@ -31,13 +29,13 @@ void CBaseParticleSimulator::setupScene()
     auto &firstGridCell = m_grid->at(0, 0, 0);
     double halfParticle = CParticle::h / 2.0f;
 
-    // add particles
-    for (float y = -m_boxSize.y() / 2.0f; y < m_boxSize.y() / 2.0f; y += halfParticle) {
-        for (float x = -m_boxSize.x() / 2.0f; x < -m_boxSize.x() / 4.0; x += halfParticle) {
-            for (float z = -m_boxSize.z() / 2.0f; z < m_boxSize.z() / 2.0f; z += halfParticle) {
+    QVector3D offset = -m_boxSize / 2.0f;
 
-                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), x, y, z);
-                m_particles.push_back(particle);
+    for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
+        for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
+            for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
+                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), x + offset.x(), y + offset.y(), z + offset.z());
+
                 firstGridCell.push_back(particle);
                 m_particlesCount++;
             }
