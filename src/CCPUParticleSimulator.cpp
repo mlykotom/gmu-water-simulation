@@ -160,7 +160,7 @@ void CCPUParticleSimulator::updateForces()
                                 auto &neighborGridCellParticles = m_grid->at(x + offsetX, y + offsetY, z + offsetZ);
                                 for (auto &neighbor : neighborGridCellParticles) {
 
-                                    QVector3D distance = particle->diffPosition(neighbor);
+                                    QVector3D distance = (particle->position() - neighbor->position());
                                     double radiusSquared = distance.lengthSquared();
 
                                     if (radiusSquared <= CParticle::h * CParticle::h) {
