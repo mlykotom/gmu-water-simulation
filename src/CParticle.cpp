@@ -1,9 +1,9 @@
 #include "CParticle.h"
 
-CParticle::CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition)
+CParticle::CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z)
     : RenderableEntity(rootEntity),
       m_id(id),
-      m_position(initialPosition),
+      m_position(QVector3D(x, y, z)),
       m_velocity(0.0f, 0.0f, 0.0f),
       m_acceleration(0.0f, 0.0f, 0.0f),
       m_density(0.0), m_pressure(0.0)
@@ -16,8 +16,7 @@ CParticle::CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D i
 
     // Sphere mesh transform
     m_transform = new Qt3DCore::QTransform();
-    m_transform->setTranslation(initialPosition);
-    //        m_transform->setScale(0.1);
+    m_transform->setTranslation(m_position);
 
     // material
     m_material = new Qt3DExtras::QPhongMaterial();

@@ -33,7 +33,7 @@ void CGPUBaseParticleSimulator::setupScene()
             for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
 
                 m_clParticles.emplace_back(x + offset.x(), y + offset.y(), z + offset.z(), m_particlesCount);
-                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
+                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), x + offset.x(), y + offset.y(), z + offset.z());
                 particle->m_physics = &m_clParticles.back();
 
                 firstGridCell.push_back(particle);

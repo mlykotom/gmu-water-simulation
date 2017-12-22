@@ -29,14 +29,14 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, QOb
 void CBaseParticleSimulator::setupScene()
 {
     auto &firstGridCell = m_grid->at(0, 0, 0);
-
     double halfParticle = CParticle::h / 2.0f;
+
     // add particles
     for (float y = -m_boxSize.y() / 2.0f; y < m_boxSize.y() / 2.0f; y += halfParticle) {
         for (float x = -m_boxSize.x() / 2.0f; x < -m_boxSize.x() / 4.0; x += halfParticle) {
             for (float z = -m_boxSize.z() / 2.0f; z < m_boxSize.z() / 2.0f; z += halfParticle) {
 
-                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x, y, z));
+                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), x, y, z);
                 m_particles.push_back(particle);
                 firstGridCell.push_back(particle);
                 m_particlesCount++;

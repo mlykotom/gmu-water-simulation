@@ -42,7 +42,7 @@ public:
             cell_id(0) {}
     } Physics;
 
-    explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));
+    explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z);
     ~CParticle() override;
 
 public: //methods
