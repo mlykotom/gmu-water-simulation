@@ -17,8 +17,6 @@ void CGPUBruteParticleSimulator::setupKernels()
 
     m_global = cl::NDRange(m_particlesCount);
 
-//    m_particlesBufferOut = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
-
     // density kernel
     m_update_density_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
 
@@ -36,7 +34,6 @@ void CGPUBruteParticleSimulator::updateDensityPressure()
 {
     cl_uint arg = 0;
     m_update_density_kernel->setArg(arg++, m_particlesBuffer);
-//    m_update_density_kernel->setArg(arg++, m_particlesBufferOut);
     m_update_density_kernel->setArg(arg++, m_particlesCount);
     m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
 
@@ -46,7 +43,6 @@ void CGPUBruteParticleSimulator::updateDensityPressure()
 void CGPUBruteParticleSimulator::updateForces()
 {
     cl_uint arg = 0;
-//    m_update_forces_kernel->setArg(arg++, m_particlesBufferOut);
     m_update_forces_kernel->setArg(arg++, m_particlesBuffer);
     m_update_forces_kernel->setArg(arg++, m_particlesCount);
     m_update_forces_kernel->setArg(arg++, m_gravityCL);
@@ -54,4 +50,5 @@ void CGPUBruteParticleSimulator::updateForces()
     m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     m_cl_wrapper->enqueueKernel(*m_update_forces_kernel, m_global);
+    m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
 }

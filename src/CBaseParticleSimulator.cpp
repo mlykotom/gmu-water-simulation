@@ -10,9 +10,9 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, Sim
       m_boxSize(QVector3D(boxSize, boxSize, boxSize)),
       m_scenario(scenario)
 {
-    m_systemParams.poly6_constant = (cl_float) (315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
-    m_systemParams.spiky_constant = (cl_float) (-45.0f / (M_PI * pow(CParticle::h, 6)));
-    m_systemParams.viscosity_constant = (cl_float) (45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.poly6_constant = (315.0 / (64.0 * M_PI * pow(CParticle::h, 9)));
+    m_systemParams.spiky_constant = (-45.0 / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.viscosity_constant = (45.0 / (M_PI * pow(CParticle::h, 6)));
 
     QVector3D gridResolution(
         (int) ceil(m_boxSize.x() / CParticle::h),
@@ -116,6 +116,10 @@ void CBaseParticleSimulator::doWork()
 void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 {
     switch (key) {
+        case Qt::Key_S:
+            doWork();
+            break;
+
         case Qt::Key_Space:
             toggleSimulation();
             break;

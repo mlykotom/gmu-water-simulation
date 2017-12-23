@@ -23,7 +23,6 @@ protected:
     cl_float3 m_gravityCL;
 
     cl::Buffer m_particlesBuffer;
-    cl::Buffer m_particlesBufferOut;
     size_t m_particlesSize;
 
     // walls for collisions

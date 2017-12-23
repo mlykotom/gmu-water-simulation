@@ -18,7 +18,6 @@ QVector3D CCPUParticleSimulator::WspikyGradient(QVector3D &diffPosition, double 
 {
     static double coefficient = -45.0 / (M_PI * pow(CParticle::h, 6));
     double radius = sqrt(radiusSquared);
-
     return coefficient * pow(CParticle::h - radius, 2) * diffPosition / radius;
 }
 
@@ -163,13 +162,13 @@ void CCPUParticleSimulator::updateForces()
                                     QVector3D distance = (particle->position() - neighbor->position());
                                     double radiusSquared = distance.lengthSquared();
 
-                                    if (radiusSquared <= CParticle::h * CParticle::h) {
+                                    if (radiusSquared <= CParticle::h * CParticle::h && particle->getId() != neighbor->getId()) {
                                         QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
+                                        double viscosityLaplacian = WviscosityLaplacian(radiusSquared);
+//                                        qDebug() << viscosityLaplacian;
 
-                                        if (particle->getId() != neighbor->getId()) {
-                                            f_pressure += (particle->pressure() / pow(particle->density(), 2) + neighbor->pressure() / pow(neighbor->density(), 2)) * spikyGradient;
-                                            f_viscosity += (neighbor->velocity() - particle->velocity()) * WviscosityLaplacian(radiusSquared) / neighbor->density();
-                                        }
+                                        f_pressure += (particle->pressure() / pow(particle->density(), 2) + (neighbor->pressure() / pow(neighbor->density(), 2))) * spikyGradient;
+                                        f_viscosity += (neighbor->velocity() - particle->velocity()) * viscosityLaplacian / neighbor->density();
                                     }
                                 }
                             }
@@ -181,6 +180,7 @@ void CCPUParticleSimulator::updateForces()
 
                     // ADD IN SPH FORCES
                     particle->acceleration() = (f_pressure + f_viscosity + f_gravity) / particle->density();
+
                     // collision force
                     particle->acceleration() += m_grid->getCollisionGeometry()->inverseBoundingBoxBounce(particle->position(), particle->velocity());
                 }
