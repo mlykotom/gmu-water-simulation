@@ -120,13 +120,18 @@ void MainWindow::setup3DWidget()
     // Scene Camera
     Qt3DRender::QCamera *basicCamera = m_mainView->camera();
     basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
-    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
-    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 4.0f));
+    resetCamera(basicCamera);
 
     // FrameGraph
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
+}
+
+void MainWindow::resetCamera(Qt3DRender::QCamera *pCamera)
+{
+    pCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    pCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
+    pCamera->setPosition(QVector3D(0.0f, 0.0f, 4.0f));
 }
 
 void MainWindow::setupScene()
@@ -189,6 +194,7 @@ void MainWindow::createSimulator()
 
     connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
     connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_mainView, &CQt3DWindow::keyPressed, this, &MainWindow::onKeyPressed);
     connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
     connect(m_simulator, &CBaseParticleSimulator::errorOccured, this, &MainWindow::onError);
 }
@@ -322,5 +328,14 @@ void MainWindow::exportLogs()
         output << ui->simulationTypeComboBox->currentText() << ';';
         output << fps;
         output << '\n';
+    }
+}
+
+void MainWindow::onKeyPressed(Qt::Key key)
+{
+    switch (key) {
+        case Qt::Key_R:
+            resetCamera(m_mainView->camera());
+            break;
     }
 }

@@ -32,7 +32,7 @@ void CGPUParticleSimulator::setupKernels()
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
 
     m_sortedIndices.clear();
-    m_sortedIndices.resize(m_clParticles.size());
+    m_sortedIndices.resize(m_maxParticlesCount);
 
     m_gridVectorSize = (cl_int) m_gridVector.size() * sizeof(cl_int);
     m_gridBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_gridVectorSize);
@@ -55,25 +55,25 @@ void CGPUParticleSimulator::setupKernels()
     m_scanSumsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_sumsSize);
 
     //write buffers on GPU
-    m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
 
     m_halfBoxSize = {m_boxSize.x() / 2.0f, m_boxSize.y() / 2.0f, m_boxSize.z() / 2.0f};
-    //setup kernels arguments
-    cl_uint arg = 0;
+}
 
+void CGPUParticleSimulator::updateGrid()
+{
+    m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
+
+    m_gridVector.clear();
+    m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
+
+    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_localWokrgroupSize));
+
+    cl_uint arg = 0;
     m_updateParticlePositionsKernel->setArg(arg++, m_particlesBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridBuffer);
     m_updateParticlePositionsKernel->setArg(arg++, m_particlesCount);
     m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
     m_updateParticlePositionsKernel->setArg(arg++, m_halfBoxSize);
-}
-
-void CGPUParticleSimulator::updateGrid()
-{
-    m_gridVector.clear();
-    m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
-
-    auto global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
 
     m_cl_wrapper->enqueueWrite(m_gridBuffer, m_gridVectorSize, m_gridVector.data(), CL_TRUE);
     m_cl_wrapper->enqueueKernel(*m_updateParticlePositionsKernel, global);
@@ -139,7 +139,7 @@ void CGPUParticleSimulator::updateDensityPressure()
     m_densityPresureStepKernel->setArg(arg++, m_gridSize);
     m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
 
-    auto global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
+    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_localWokrgroupSize));
 
     m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, global);
 }
@@ -156,7 +156,7 @@ void CGPUParticleSimulator::updateForces()
     m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
     m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 
-    auto global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
+    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_localWokrgroupSize));
 
     m_cl_wrapper->enqueueKernel(*m_forceStepKernel, global);
 }

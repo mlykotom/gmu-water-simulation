@@ -119,6 +119,8 @@ private slots:
     void onSetupSimulationClicked();
 
     void exportLogs();
+    void onKeyPressed(Qt::Key key);
+    void resetCamera(Qt3DRender::QCamera *pCamera);
 };
 
 #endif // MAINWINDOW_H
