@@ -11,7 +11,7 @@
 class CGPUBaseParticleSimulator: public CBaseParticleSimulator
 {
 public:
-    explicit CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
+    explicit CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
     ~CGPUBaseParticleSimulator() override = default;
     void setGravityVector(QVector3D newGravity) override;
     QString getSelectedDevice() override;
@@ -21,7 +21,6 @@ public:
 protected:
     CLWrapper *m_cl_wrapper;
     cl_float3 m_gravityCL;
-    std::vector<CParticle::Physics> m_clParticles;
 
     cl::Buffer m_particlesBuffer;
     size_t m_particlesSize;
@@ -30,12 +29,14 @@ protected:
     QVector<sWall> m_wallsVector;
     cl::Buffer m_wallsBuffer;
     size_t m_wallsBufferSize;
-    std::shared_ptr<cl::Kernel> m_walls_collision_kernel;
 
+    std::shared_ptr<cl::Kernel> m_walls_collision_kernel;
     std::shared_ptr<cl::Kernel> m_integrationStepKernel;
+
 
     virtual void setupKernels();
     void integrate() override;
+    void updateCollisions() override;
 };
 
 #endif //WATERSURFACESIMULATION_CGPUBASEPARTICLESIMULATOR_H

@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QPlaneMesh>
 #include <QtMath>
+#include <cassert>
 
 #include <iostream>
 #include <QElapsedTimer>
@@ -15,6 +16,12 @@
 
 #define GRAVITY_ACCELERATION (-9.80665f)
 
+enum SimulationScenario
+{
+    DAM_BREAK = 0,
+    FOUNTAIN,
+};
+
 class CScene;
 
 class CBaseParticleSimulator: public QObject
@@ -22,8 +29,8 @@ class CBaseParticleSimulator: public QObject
 Q_OBJECT
 
 public:
-    explicit CBaseParticleSimulator(CScene *scene, float boxSize, QObject *parent);
-    ~CBaseParticleSimulator()
+    explicit CBaseParticleSimulator(CScene *scene, float boxSize, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
+    ~CBaseParticleSimulator() override
     {
         delete m_grid;
     }
@@ -41,14 +48,11 @@ public:
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
-    int getGridSizeX() { return m_grid->xRes(); }
-    int getGridSizeY() { return m_grid->yRes(); }
-    int getGridSizeZ() { return m_grid->zRes(); }
-
+    unsigned long getMaxParticlesCount() { return m_maxParticlesCount; }
     QList<QPair<unsigned long, double>> events;
 
     int eventLoggerStride = 10;
-
+    SimulationScenario m_scenario;
 signals:
     void iterationChanged(unsigned long iteration);
     void errorOccured(const char *error);
@@ -74,17 +78,20 @@ protected:
 
     cl_float dt;
     CGrid *m_grid;
-    std::vector<CParticle *> m_particles;
     QVector3D m_boxSize;
     cl_float m_surfaceThreshold;
+    cl_uint m_maxParticlesCount = 0;
     cl_uint m_particlesCount = 0;
     SystemParams m_systemParams;
+    std::vector<CParticle::Physics> m_clParticles;
 
     virtual void updateGrid() = 0;
     virtual void updateDensityPressure() = 0;
     virtual void updateForces() = 0;
+    virtual void updateCollisions() = 0;
     virtual void integrate() = 0;
 
+    bool isRunning() { return m_timer.isActive(); }
 private slots:
     void doWork();
 
@@ -93,6 +100,9 @@ private: //attributes
     QElapsedTimer m_elapsed_timer;
     unsigned long iterationSincePaused;
     unsigned long totalIteration;
+
+    void addParticle(float x, float y, float z, cl_float3 initialVelocity = {0, 0, 0});
+    void generateParticles();
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

@@ -1,7 +1,7 @@
 #include "CGPUBaseParticleSimulator.h"
 
-CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent)
-    : CBaseParticleSimulator(scene, boxSize, parent),
+CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario, QObject *parent)
+    : CBaseParticleSimulator(scene, boxSize, scenario, parent),
       m_gravityCL({gravity.x(), gravity.y(), gravity.z()})
 {
     m_cl_wrapper = new CLWrapper(std::move(device));
@@ -20,30 +20,7 @@ QString CGPUBaseParticleSimulator::getSelectedDevice()
 
 void CGPUBaseParticleSimulator::setupScene()
 {
-    auto &firstGridCell = m_grid->at(0, 0, 0);
-    double halfParticle = CParticle::h / 2.0f;
-
-    unsigned int calculatedCount = (unsigned) (ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
-    m_clParticles.reserve(calculatedCount);
-
-    QVector3D offset = -m_boxSize / 2.0f;
-
-    for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
-        for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
-            for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
-
-                m_clParticles.emplace_back(x + offset.x(), y + offset.y(), z + offset.z(), m_particlesCount);
-                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x + offset.x(), y + offset.y(), z + offset.z()));
-                particle->m_physics = &m_clParticles.back();
-
-                firstGridCell.push_back(particle);
-                m_particlesCount++;
-            }
-        }
-    }
-
-    assert(calculatedCount == m_particlesCount);
-
+    CBaseParticleSimulator::setupScene();
     setupKernels();
 }
 
@@ -61,15 +38,11 @@ void CGPUBaseParticleSimulator::step()
 void CGPUBaseParticleSimulator::setupKernels()
 {
     // particles
-    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    m_particlesSize = m_maxParticlesCount * sizeof(CParticle::Physics);
     m_particlesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
 
     // integration
     m_integrationStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("integration_step"));
-    cl_uint arg = 0;
-    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
-    m_integrationStepKernel->setArg(arg++, m_particlesCount);
-    m_integrationStepKernel->setArg(arg++, dt);
 
     // collisions
     m_wallsVector = m_grid->getCollisionGeometry()->getBoundingBox().m_walls;
@@ -78,20 +51,32 @@ void CGPUBaseParticleSimulator::setupKernels()
     m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, m_wallsBufferSize);
 
     m_walls_collision_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("walls_collision"));
+    m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
+}
 
+void CGPUBaseParticleSimulator::updateCollisions()
+{
     cl_uint argCollision = 0;
     m_walls_collision_kernel->setArg(argCollision++, m_particlesBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_particlesCount);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsVector.size());
+    m_walls_collision_kernel->setArg(argCollision++, cl::Local(sizeof(sWall) * m_wallsVector.size()));
 
-    m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
+    auto local = cl::NDRange(m_wallsVector.size());
+    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_wallsVector.size()));
+
+    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
 }
+
 void CGPUBaseParticleSimulator::integrate()
 {
-    cl::NDRange global(m_particlesCount);
+    cl_uint arg = 0;
+    m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
+    m_integrationStepKernel->setArg(arg++, m_particlesCount);
+    m_integrationStepKernel->setArg(arg++, dt);
 
-    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, global);
+    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_maxParticlesCount));
     m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");

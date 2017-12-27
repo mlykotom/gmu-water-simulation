@@ -55,24 +55,31 @@ float WviscosityLaplacian(float radiusSquared, float viscosity_constant)
 }
 
 
-__kernel void walls_collision(__global ParticleCL *output, __global WallCL *walls, int size, int wallsSize)
+__kernel void walls_collision(__global ParticleCL *particles, __global WallCL *walls, int size, int wallsSize, __local WallCL *tmpWalls)
 {
     int global_x = (int) get_global_id(0);
 
     if (global_x < size) {
+        for (int i = 0; i < wallsSize; i++) {
+            tmpWalls[i] = walls[i];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+
         float3 acceleration = (float3)(1.0f, 1.0f, 0.0f);
+        ParticleCL thisParticle = particles[global_x];
 
         for (int i = 0; i < wallsSize; i++) {
-            float3 inverseNormal = walls[i].normal * (-1.0f);
+            float3 inverseNormal = tmpWalls[i].normal * (-1.0f);
 
-            float d = dot(walls[i].position - output[global_x].position, inverseNormal) + 0.01f;
+            float d = dot(tmpWalls[i].position - thisParticle.position, inverseNormal) + 0.01f;
             if (d > 0.0f) {
                 acceleration += wall_k * inverseNormal * d;
-                acceleration += wall_damping * dot(output[global_x].velocity, inverseNormal) * inverseNormal;
+                acceleration += wall_damping * dot(thisParticle.velocity, inverseNormal) * inverseNormal;
             }
         }
 
-        output[global_x].acceleration += acceleration;
+        thisParticle.acceleration += acceleration;
+        particles[global_x] = thisParticle;
     }
 }
 
@@ -84,14 +91,16 @@ __kernel void walls_collision(__global ParticleCL *output, __global WallCL *wall
 * @param size
 * @param dt
 */
-__kernel void integration_step(__global ParticleCL *output, int size, float dt)
+__kernel void integration_step(__global ParticleCL *particles, int size, float dt)
 {
     int global_x = (int) get_global_id(0);
     if (global_x < size) {
-        __private ParticleCL tmpParticle = output[global_x];
-        __private float3 newPosition = tmpParticle.position + (tmpParticle.velocity * dt) + (tmpParticle.acceleration * dt * dt);
+        ParticleCL thisParticle = particles[global_x];
+        __private float3 newPosition = thisParticle.position + (thisParticle.velocity * dt) + (thisParticle.acceleration * dt * dt);
 
-        output[global_x].velocity = (newPosition - tmpParticle.position) / dt;
-        output[global_x].position = newPosition;
+        thisParticle.velocity = (newPosition - thisParticle.position) / dt;
+        thisParticle.position = newPosition;
+
+        particles[global_x] = thisParticle;
     }
 }

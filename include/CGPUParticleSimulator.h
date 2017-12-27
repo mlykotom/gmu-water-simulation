@@ -10,8 +10,8 @@
 class CGPUParticleSimulator: public CGPUBaseParticleSimulator
 {
 public:
-    explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
-    ~CGPUParticleSimulator() override {}
+    explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
+    ~CGPUParticleSimulator() override = default;
 
     void updateGrid() override;
     void updateDensityPressure() override;
@@ -23,8 +23,6 @@ private: //methods
 protected:
     void setupKernels() override;
 
-    size_t m_localWokrgroupSize;
-
     std::shared_ptr<cl::Kernel> m_updateParticlePositionsKernel;
     std::shared_ptr<cl::Kernel> m_scanLocalKernel;
     std::shared_ptr<cl::Kernel> m_incrementKernel;
@@ -35,18 +33,16 @@ protected:
     std::vector<cl_int> m_sortedIndices;
     std::vector<cl_int> m_sums;
 
-    cl_int m_gridCountToPowerOfTwo;
+    size_t m_gridCountToPowerOfTwo;
     cl_int3 m_gridSize;
-    cl_int m_localScanWokrgroupSize;
-    cl_int m_sumsCount;
-    cl_int m_elementsProcessedInOneGroup;
+    size_t m_localScanWokrgroupSize;
+    size_t m_sumsCount;
+    size_t m_elementsProcessedInOneGroup;
     cl_float3 m_halfBoxSize;
 
     cl::NDRange m_scanLocal;
     cl::NDRange m_scanGlobal;
     cl::NDRange m_sumsGlobal;
-    cl::NDRange m_local;
-    cl::NDRange m_global;
 
     size_t m_indicesSize;
     size_t m_gridVectorSize;

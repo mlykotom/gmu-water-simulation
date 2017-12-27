@@ -1,19 +1,6 @@
-// Qt 3D
-#include <Qt3DExtras/QFirstPersonCameraController>
-#include <CQt3DWindow.h>
-#include <QClearBuffers>
-#include <QMessageBox>
-#include <QCullFace>
-#include <QTextEdit>
-#include <QStandardItemModel>
-
-
 //local includes
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <CGPUBruteParticleSimulator.h>
-#include <CGPUParticleSimulator.h>
-#include <CCPUParticleSimulator.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -38,7 +25,6 @@ void MainWindow::setupUI()
     this->setWindowTitle("GMU Water surface simulation");
     this->setCentralWidget(this->ui->mainWidget);
 
-
     setup3DWidget();
     setupScene();
     setupDevicesComboBox();
@@ -53,7 +39,6 @@ void MainWindow::setupUI()
     connect(ui->stopPushButton, SIGNAL(clicked()), this, SLOT(onStopSimulationClicked()));
 
     togglePushButtons(false);
-
 }
 
 void MainWindow::setupDevicesComboBox()
@@ -113,6 +98,12 @@ void MainWindow::setupSimulationTypesComboBox()
     connect(ui->simulationTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(onSimulationTypeComboBoxIndexChanged(int)));
     onSimulationTypeComboBoxIndexChanged(0);
 
+    QStandardItemModel *scenarioComboBox = qobject_cast<QStandardItemModel *>(ui->scenarioComboBox->model());
+    ui->scenarioComboBox->insertItem((int) SimulationScenario::DAM_BREAK, "Dam break");
+    ui->scenarioComboBox->setItemData((int) SimulationScenario::DAM_BREAK, (int) SimulationScenario::DAM_BREAK);
+
+    ui->scenarioComboBox->insertItem((int) SimulationScenario::FOUNTAIN, "Fountain");
+    ui->scenarioComboBox->setItemData((int) SimulationScenario::FOUNTAIN, (int) SimulationScenario::FOUNTAIN);
 }
 
 void MainWindow::setup3DWidget()
@@ -129,14 +120,18 @@ void MainWindow::setup3DWidget()
     // Scene Camera
     Qt3DRender::QCamera *basicCamera = m_mainView->camera();
     basicCamera->setProjectionType(Qt3DRender::QCameraLens::PerspectiveProjection);
-
-    basicCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
-    basicCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
-    basicCamera->setPosition(QVector3D(0.0f, 0.0f, 5.0f));
+    resetCamera(basicCamera);
 
     // FrameGraph
     m_mainView->defaultFrameGraph()->setClearColor(QColor(QRgb(0x4d4d4f)));
     m_mainView->defaultFrameGraph()->setCamera(basicCamera);
+}
+
+void MainWindow::resetCamera(Qt3DRender::QCamera *pCamera)
+{
+    pCamera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    pCamera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
+    pCamera->setPosition(QVector3D(0.0f, 0.0f, 4.0f));
 }
 
 void MainWindow::setupScene()
@@ -150,10 +145,9 @@ void MainWindow::setupScene()
     Qt3DRender::QCamera *basicCamera = m_mainView->camera();
 
     // For camera controls
-    Qt3DExtras::QFirstPersonCameraController *camController = new Qt3DExtras::QFirstPersonCameraController(rootEntity);
+    Qt3DExtras::QOrbitCameraController * camController = new Qt3DExtras::QOrbitCameraController(rootEntity);
     camController->setCamera(basicCamera);
-    camController->setLookSpeed(6.0);
-    camController->setLinearSpeed(6.0);
+    camController->setLinearSpeed(4.0);
 }
 
 void MainWindow::resetScene()
@@ -182,15 +176,17 @@ void MainWindow::createSimulator()
 
     cl::Device device = CLPlatforms::getDevices(CLPlatforms::getAllPlatforms()[m_simulationOptions.platformIndex], CL_DEVICE_TYPE_ALL)[m_simulationOptions.deviceIndex];
 
+    auto scenario = (SimulationScenario) ui->scenarioComboBox->currentData().toInt();
+
     switch (m_simulationOptions.type) {
         case eSimulationType::CPU:
-            m_simulator = new CCPUParticleSimulator(m_scene, m_simulationOptions.boxSize);
+            m_simulator = new CCPUParticleSimulator(m_scene, m_simulationOptions.boxSize, scenario);
             break;
         case eSimulationType::GPUBrute:
-            m_simulator = new CGPUBruteParticleSimulator(m_scene, m_simulationOptions.boxSize, device);
+            m_simulator = new CGPUBruteParticleSimulator(m_scene, m_simulationOptions.boxSize, device, scenario);
             break;
         case eSimulationType::GPUGrid:
-            m_simulator = new CGPUParticleSimulator(m_scene, m_simulationOptions.boxSize, device);
+            m_simulator = new CGPUParticleSimulator(m_scene, m_simulationOptions.boxSize, device, scenario);
             break;
         default:
             break;
@@ -198,6 +194,7 @@ void MainWindow::createSimulator()
 
     connect(this, &MainWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
     connect(m_mainView, &CQt3DWindow::keyPressed, m_simulator, &CBaseParticleSimulator::onKeyPressed);
+    connect(m_mainView, &CQt3DWindow::keyPressed, this, &MainWindow::onKeyPressed);
     connect(m_simulator, &CBaseParticleSimulator::iterationChanged, this, &MainWindow::onSimulationIterationChanged);
     connect(m_simulator, &CBaseParticleSimulator::errorOccured, this, &MainWindow::onError);
 }
@@ -284,13 +281,20 @@ void MainWindow::onSetupSimulationClicked()
         }
         catch (CLException &exc) {
             onError(exc.what());
-            exit(1);
         }
     }
 }
 
 void MainWindow::onSimulationIterationChanged(unsigned long iteration)
 {
+    if (m_simulator->getMaxParticlesCount() != m_simulator->getParticlesCount()) {
+        ui->particlesNumberLabel->setText(QString::number(m_simulator->getParticlesCount()) + " | " + QString::number(m_simulator->getMaxParticlesCount()));
+    }
+    else {
+        // for static number of particles
+        ui->particlesNumberLabel->setText(QString::number(m_simulator->getParticlesCount()));
+    }
+
     ui->FPSLabel->setText(QString::number(m_simulator->getFps(), 'f', 2));
     ui->iterationWidget->setText(QString::number(iteration));
 }
@@ -324,5 +328,14 @@ void MainWindow::exportLogs()
         output << ui->simulationTypeComboBox->currentText() << ';';
         output << fps;
         output << '\n';
+    }
+}
+
+void MainWindow::onKeyPressed(Qt::Key key)
+{
+    switch (key) {
+        case Qt::Key_R:
+            resetCamera(m_mainView->camera());
+            break;
     }
 }

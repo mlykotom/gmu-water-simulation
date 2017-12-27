@@ -209,8 +209,8 @@ __kernel void forces_step(__global ParticleCL *particles, __global int *scan_arr
                             float3 spikyGradient = WspikyGradient(distance, radiusSquared, spiky_constant);
                             float viscosityLaplacian = WviscosityLaplacian(radiusSquared, viscosity_constant);
 
-                            f_pressure += thisParticle.pressure / pow(thisParticle.density, 2) + thisParticle.pressure / pow(thisParticle.density, 2) * spikyGradient;
-                            f_viscosity += (neighborParticle.velocity - thisParticle.velocity) * viscosityLaplacian / thisParticle.density;
+                            f_pressure += ((thisParticle.pressure / pow(thisParticle.density, 2)) + (neighborParticle.pressure / pow(neighborParticle.density, 2))) * spikyGradient;
+                            f_viscosity += (neighborParticle.velocity - thisParticle.velocity) * viscosityLaplacian / neighborParticle.density;
                         }
                     }
                 }

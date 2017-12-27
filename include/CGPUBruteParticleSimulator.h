@@ -12,7 +12,7 @@ class CGPUBruteParticleSimulator: public CGPUBaseParticleSimulator
 {
 public:
 
-    explicit CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, QObject *parent = nullptr);
+    explicit CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
 
     void updateGrid() override;
     void updateDensityPressure() override;
@@ -21,8 +21,6 @@ public:
 protected:
     std::shared_ptr<cl::Kernel> m_update_density_kernel;
     std::shared_ptr<cl::Kernel> m_update_forces_kernel;
-
-    cl::NDRange m_global;
 
     void setupKernels() override;
 };
