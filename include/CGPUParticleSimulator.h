@@ -35,11 +35,11 @@ protected:
     std::vector<cl_int> m_sortedIndices;
     std::vector<cl_int> m_sums;
 
-    cl_int m_gridCountToPowerOfTwo;
+    size_t m_gridCountToPowerOfTwo;
     cl_int3 m_gridSize;
-    cl_int m_localScanWokrgroupSize;
-    cl_int m_sumsCount;
-    cl_int m_elementsProcessedInOneGroup;
+    size_t m_localScanWokrgroupSize;
+    size_t m_sumsCount;
+    size_t m_elementsProcessedInOneGroup;
     cl_float3 m_halfBoxSize;
 
     cl::NDRange m_scanLocal;
