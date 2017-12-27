@@ -13,10 +13,9 @@
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QApplication>
-
-#include "CBaseParticleSimulator.h"
-#include "CLWrapper.h"
-
+#include <QStandardItemModel>
+#include <Qt3DWindow>
+#include <QMessageBox>
 
 #include <Qt3DRender/QRenderSettings>
 #include <Qt3DRender/QViewport>
@@ -26,6 +25,15 @@
 #include <Qt3DRender/QCameraSelector>
 #include <Qt3DRender/QLayerFilter>
 #include <Qt3DRender/QRenderSurfaceSelector>
+
+// local
+#include "CLWrapper.h"
+#include "CLPlatforms.h"
+#include "CQt3DWindow.h"
+#include "CBaseParticleSimulator.h"
+#include "CGPUParticleSimulator.h"
+#include "CGPUBruteParticleSimulator.h"
+#include "CCPUParticleSimulator.h"
 
 
 namespace Ui

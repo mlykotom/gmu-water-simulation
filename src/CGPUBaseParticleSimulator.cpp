@@ -38,7 +38,7 @@ void CGPUBaseParticleSimulator::step()
 void CGPUBaseParticleSimulator::setupKernels()
 {
     // particles
-    m_particlesSize = m_particlesCount * sizeof(CParticle::Physics);
+    m_particlesSize = m_maxParticlesCount * sizeof(CParticle::Physics);
     m_particlesBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_particlesSize);
 
     // integration
@@ -61,8 +61,12 @@ void CGPUBaseParticleSimulator::updateCollisions()
     m_walls_collision_kernel->setArg(argCollision++, m_wallsBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_particlesCount);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsVector.size());
+    m_walls_collision_kernel->setArg(argCollision++, cl::Local(sizeof(sWall) * m_wallsVector.size()));
 
-    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, cl::NDRange(m_particlesCount));
+    auto local = cl::NDRange(m_wallsVector.size());
+    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_wallsVector.size()));
+
+    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
 }
 
 void CGPUBaseParticleSimulator::integrate()
@@ -72,7 +76,7 @@ void CGPUBaseParticleSimulator::integrate()
     m_integrationStepKernel->setArg(arg++, m_particlesCount);
     m_integrationStepKernel->setArg(arg++, dt);
 
-    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_particlesCount));
+    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_maxParticlesCount));
     m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
 
     CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");

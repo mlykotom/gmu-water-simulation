@@ -25,9 +25,6 @@ void CGPUParticleSimulator::setupKernels()
     m_densityPresureStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("density_pressure_step"));
     m_forceStepKernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
 
-    m_local = cl::NDRange(m_localWokrgroupSize);
-    m_global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
-
     //prepare buffers
     m_gridVector.clear();
     //grid vector and grid scan needs to be power of two so that the blelloch scan can work
@@ -76,10 +73,10 @@ void CGPUParticleSimulator::updateGrid()
     m_gridVector.clear();
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
 
-    cl::NDRange local = cl::NullRange;
+    auto global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
 
     m_cl_wrapper->enqueueWrite(m_gridBuffer, m_gridVectorSize, m_gridVector.data(), CL_TRUE);
-    m_cl_wrapper->enqueueKernel(*m_updateParticlePositionsKernel, m_global, local);
+    m_cl_wrapper->enqueueKernel(*m_updateParticlePositionsKernel, global);
 
     //scan grid
     scanGrid();
@@ -123,7 +120,7 @@ void CGPUParticleSimulator::sortIndices()
     m_sortedIndices.resize(m_clParticles.size());
     std::iota(m_sortedIndices.begin(), m_sortedIndices.end(), 0);
 
-    // sort indexes, smallest cell index first
+    // sort indexes, smallest cell index firstOp
     sort(m_sortedIndices.begin(), m_sortedIndices.end(),
          [this](cl_int i1, cl_int i2)
          { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; }
@@ -142,7 +139,9 @@ void CGPUParticleSimulator::updateDensityPressure()
     m_densityPresureStepKernel->setArg(arg++, m_gridSize);
     m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
 
-    m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, m_global);
+    auto global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
+
+    m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, global);
 }
 
 void CGPUParticleSimulator::updateForces()
@@ -157,5 +156,7 @@ void CGPUParticleSimulator::updateForces()
     m_forceStepKernel->setArg(arg++, m_systemParams.spiky_constant);
     m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 
-    m_cl_wrapper->enqueueKernel(*m_forceStepKernel, m_global);
+    auto global = cl::NDRange(CLCommon::alignTo(m_particlesCount, m_localWokrgroupSize));
+
+    m_cl_wrapper->enqueueKernel(*m_forceStepKernel, global);
 }

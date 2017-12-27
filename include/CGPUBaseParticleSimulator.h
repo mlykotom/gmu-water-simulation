@@ -30,8 +30,6 @@ protected:
     cl::Buffer m_wallsBuffer;
     size_t m_wallsBufferSize;
 
-    cl::NDRange m_global;
-
     std::shared_ptr<cl::Kernel> m_walls_collision_kernel;
     std::shared_ptr<cl::Kernel> m_integrationStepKernel;
 

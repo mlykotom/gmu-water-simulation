@@ -3,8 +3,8 @@
 CParticle::CParticle(Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z)
     : RenderableEntity(rootEntity),
       m_physics(physics),
-      m_position(QVector3D(x, y, z)),
-      m_velocity(0.0f, 0.0f, 0.0f),
+      m_position(x, y, z),
+      m_velocity(physics->velocity.x, physics->velocity.y, physics->velocity.z),
       m_acceleration(0.0f, 0.0f, 0.0f)
 {
     // Sphere shape data

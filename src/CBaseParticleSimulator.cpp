@@ -31,23 +31,33 @@ void CBaseParticleSimulator::setupScene()
     unsigned int calculatedCount = (unsigned) (ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
     m_clParticles.reserve(calculatedCount);
 
-    QVector3D offset = -m_boxSize / 2.0f;
+    switch (m_scenario) {
+        case DAM_BREAK: {
 
-    for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
-        for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
-            for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
-                addParticle(x + offset.x(), y + offset.y(), z + offset.z());
+            QVector3D offset = -m_boxSize / 2.0f;
+
+            for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
+                for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
+                    for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
+                        addParticle(x + offset.x(), y + offset.y(), z + offset.z());
+                    }
+                }
             }
+            assert(calculatedCount == m_particlesCount);
+            m_maxParticlesCount = m_particlesCount;
+            break;
         }
-    }
 
-    assert(calculatedCount == m_particlesCount);
+        case FOUNTAIN:
+            m_maxParticlesCount = calculatedCount;
+            break;
+    }
 }
 
-void CBaseParticleSimulator::addParticle(float x, float y, float z)
+void CBaseParticleSimulator::addParticle(float x, float y, float z, cl_float3 initialVelocity)
 {
     auto &firstGridCell = m_grid->at(0, 0, 0);
-    m_clParticles.emplace_back(x, y, z, m_particlesCount);
+    m_clParticles.emplace_back(x, y, z, m_particlesCount, initialVelocity);
     auto particle = new CParticle(&m_clParticles.back(), m_particlesCount, m_scene->getRootEntity(), x, y, z);
     firstGridCell.push_back(particle);
     m_particlesCount++;
@@ -95,6 +105,7 @@ void CBaseParticleSimulator::setGravityVector(QVector3D newGravity)
 
 void CBaseParticleSimulator::step()
 {
+    generateParticles();
     updateGrid();
     updateDensityPressure();
     updateForces();
@@ -146,4 +157,28 @@ double CBaseParticleSimulator::getFps()
     return iterationSincePaused / elapsed;
 }
 
+void CBaseParticleSimulator::generateParticles()
+{
+    switch (m_scenario) {
+        case FOUNTAIN: {
+            auto particlesPerIteration = 7;
+            if (m_particlesCount >= (m_maxParticlesCount - particlesPerIteration))return;
+
+            float halfParticle = CParticle::h / 2.0f;
+            QVector3D offset = -m_boxSize / 2.0f;
+            cl_float3 initialVelocity = {0.0f, m_boxSize.y() * 3, 0.0f};
+
+            addParticle(0, offset.y(), 0, initialVelocity);
+            addParticle(-halfParticle, offset.y(), 0, initialVelocity);
+            addParticle(halfParticle, offset.y(), 0, initialVelocity);
+
+            addParticle(-CParticle::h / 4, offset.y(), -halfParticle, initialVelocity);
+            addParticle(CParticle::h / 4, offset.y(), -halfParticle, initialVelocity);
+
+            addParticle(-CParticle::h / 4, offset.y(), halfParticle, initialVelocity);
+            addParticle(CParticle::h / 4, offset.y(), halfParticle, initialVelocity);
+            break;
+        }
+    }
+}
 

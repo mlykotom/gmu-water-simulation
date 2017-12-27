@@ -18,7 +18,7 @@
 
 enum SimulationScenario
 {
-    DAM_BREAK,
+    DAM_BREAK = 0,
     FOUNTAIN,
 };
 
@@ -48,7 +48,7 @@ public:
     qint64 getElapsedTime() { return m_elapsed_timer.elapsed(); }
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
-
+    unsigned long getMaxParticlesCount() { return m_maxParticlesCount; }
     QList<QPair<unsigned long, double>> events;
 
     int eventLoggerStride = 10;
@@ -80,6 +80,7 @@ protected:
     CGrid *m_grid;
     QVector3D m_boxSize;
     cl_float m_surfaceThreshold;
+    cl_uint m_maxParticlesCount = 0;
     cl_uint m_particlesCount = 0;
     SystemParams m_systemParams;
     std::vector<CParticle::Physics> m_clParticles;
@@ -90,7 +91,7 @@ protected:
     virtual void updateCollisions() = 0;
     virtual void integrate() = 0;
 
-
+    bool isRunning() { return m_timer.isActive(); }
 private slots:
     void doWork();
 
@@ -100,7 +101,8 @@ private: //attributes
     unsigned long iterationSincePaused;
     unsigned long totalIteration;
 
-    void addParticle(float x, float y, float z);
+    void addParticle(float x, float y, float z, cl_float3 initialVelocity = {0, 0, 0});
+    void generateParticles();
 };
 
 #endif //WATERSURFACESIMULATION_PARTICLESIMULATOR_H

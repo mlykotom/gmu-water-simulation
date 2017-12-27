@@ -165,7 +165,6 @@ void CCPUParticleSimulator::updateForces()
                                     if (radiusSquared <= CParticle::h * CParticle::h && particle->getId() != neighbor->getId()) {
                                         QVector3D spikyGradient = WspikyGradient(distance, radiusSquared);
                                         double viscosityLaplacian = WviscosityLaplacian(radiusSquared);
-//                                        qDebug() << viscosityLaplacian;
 
                                         f_pressure += (particle->pressure() / pow(particle->density(), 2) + (neighbor->pressure() / pow(neighbor->density(), 2))) * spikyGradient;
                                         f_viscosity += (neighbor->velocity() - particle->velocity()) * viscosityLaplacian / neighbor->density();
