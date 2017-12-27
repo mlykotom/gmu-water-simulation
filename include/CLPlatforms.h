@@ -13,6 +13,7 @@ public:
     static void printInfoAll();
     static QString getPlatformInfo(const cl::Platform &platform);
     static QString getDeviceInfo(const cl::Device &device);
+    static QPair<int, int> getBestGPUIndices();
     static cl::Device getBestGPU();
 };
 

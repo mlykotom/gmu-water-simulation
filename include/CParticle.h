@@ -30,19 +30,29 @@ public:
         cl_float pressure;
         cl_uint id;
         cl_uint cell_id;
+
+        sPhysics(float x, float y, float z, cl_uint id, cl_float3 initialVelocity = {0, 0, 0}) :
+            position({x, y, z}),
+            id(id),
+            acceleration({0, 0, 0}),
+            density(0.0f),
+            pressure(0.0f),
+            velocity(initialVelocity),
+            grid_position({0, 0, 0}),
+            cell_id(0) {}
     } Physics;
 
-    explicit CParticle(unsigned int id, Qt3DCore::QEntity *rootEntity, QVector3D initialPosition = QVector3D(0, 0, 0));
+    explicit CParticle(Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z);
     ~CParticle() override;
 
 public: //methods
 
-    unsigned int getId() const { return m_id; }
+    cl_uint getId() const { return m_physics->id; }
     QVector3D &position() { return m_position; }
     QVector3D &acceleration() { return m_acceleration; };
     QVector3D &velocity() { return m_velocity; };
-    double &density() { return m_density; };
-    double &pressure() { return m_pressure; };
+    cl_float &density() { return m_physics->density; };
+    cl_float &pressure() { return m_physics->pressure; };
 
     void translate(QVector3D to)
     {
@@ -66,28 +76,7 @@ public: //methods
         m_velocity.setZ(m_physics->velocity.z);
     }
 
-    inline QVector3D diffPosition(CParticle *otherParticle)
-    {
-        return position() - otherParticle->position();
-    }
 
-    static inline QVector3D clFloatToVector(cl_float3 vec)
-    {
-        return {vec.x, vec.y, vec.z};
-    }
-
-    static inline cl_float3 QVectorToClFloat(QVector3D vec)
-    {
-        return {vec.x(), vec.y(), vec.z()};
-    }
-
-    static inline QVector3D diffPosition(cl_float3 a, cl_float3 b)
-    {
-        return clFloatToVector(a) - clFloatToVector(b);
-    }
-
-
-//TODOL urobit getre a settre
 public: //attributes
     static constexpr float h = 0.0457f;    //0.25    //0.02 //0.045
     static constexpr float viscosity = 3.5f; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
@@ -95,20 +84,14 @@ public: //attributes
     static constexpr float gas_stiffness = 3.0f; //20.0 // 461.5  // Nm/kg is gas constant of water vapor
     static constexpr float rest_density = 998.29f; // kg/m^3 is rest density of water particle
 
-    const Physics *m_physics;
 private:
-
+    Physics *m_physics;
     QVector3D m_position;
     QVector3D m_velocity;
     QVector3D m_acceleration;
-    double m_density;
-    double m_pressure;
 
     Qt3DExtras::QSphereMesh *m_mesh;
     Qt3DExtras::QPhongMaterial *m_material;
-
-    unsigned int m_id;
-
 };
 
 

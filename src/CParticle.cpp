@@ -1,12 +1,11 @@
 #include "CParticle.h"
 
-CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D initialPosition)
+CParticle::CParticle(Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z)
     : RenderableEntity(rootEntity),
-    m_id(id),
-    m_position(initialPosition), 
-    m_velocity(0.0f, 0.0f, 0.0f),
-    m_acceleration(0.0f, 0.0f, 0.0f), 
-    m_density(0.0), m_pressure(0.0)
+      m_physics(physics),
+      m_position(x, y, z),
+      m_velocity(physics->velocity.x, physics->velocity.y, physics->velocity.z),
+      m_acceleration(0.0f, 0.0f, 0.0f)
 {
     // Sphere shape data
     m_mesh = new Qt3DExtras::QSphereMesh();
@@ -16,8 +15,7 @@ CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D 
 
     // Sphere mesh transform
     m_transform = new Qt3DCore::QTransform();
-    m_transform->setTranslation(initialPosition);
-    //        m_transform->setScale(0.1);
+    m_transform->setTranslation(m_position);
 
     // material
     m_material = new Qt3DExtras::QPhongMaterial();
@@ -29,11 +27,7 @@ CParticle::CParticle(unsigned int id, Qt3DCore::QEntity * rootEntity, QVector3D 
     sphereEntity->addComponent(m_material);
     sphereEntity->addComponent(m_transform);
     sphereEntity->setEnabled(true);
+
 }
 
-CParticle::~CParticle()
-{
-    //delete m_material;
-    //delete m_mesh;
-    //delete m_transform;
-}
+CParticle::~CParticle() = default;

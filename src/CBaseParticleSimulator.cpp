@@ -1,22 +1,18 @@
 #include "CBaseParticleSimulator.h"
 
-CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
+CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, SimulationScenario scenario, QObject *parent)
     : QObject(parent),
       gravity(QVector3D(0, GRAVITY_ACCELERATION, 0)),
       m_scene(scene),
       dt(0.01f),
       totalIteration(0),
       m_surfaceThreshold(0.01f),
-      //m_boxSize(QVector3D(0.3f, 0.3f, 0.3f))
-      //m_boxSize(QVector3D(0.4, 0.4, 0.4))
-      //m_boxSize(QVector3D(0.5, 0.5, 0.5))
-      m_boxSize(QVector3D(0.6f, 0.6f, 0.6f))
-//      m_boxSize(QVector3D(0.9f, 0.9f, 0.9f))
+      m_boxSize(QVector3D(boxSize, boxSize, boxSize)),
+      m_scenario(scenario)
 {
-
-    m_systemParams.poly6_constant = (cl_float)(315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
-    m_systemParams.spiky_constant = (cl_float)(-45.0f / (M_PI * pow(CParticle::h, 6)));
-    m_systemParams.viscosity_constant = (cl_float)(45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.poly6_constant = (cl_float) (315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
+    m_systemParams.spiky_constant = (cl_float) (-45.0f / (M_PI * pow(CParticle::h, 6)));
+    m_systemParams.viscosity_constant = (cl_float) (45.0f / (M_PI * pow(CParticle::h, 6)));
 
     QVector3D gridResolution(
         (int) ceil(m_boxSize.x() / CParticle::h),
@@ -24,7 +20,6 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
         (int) ceil(m_boxSize.z() / CParticle::h)
     );
 
-    m_cellSize = QVector3D(m_boxSize.x() / gridResolution.x(), m_boxSize.y() / gridResolution.y(), m_boxSize.z() / gridResolution.z());
     m_grid = new CGrid(m_boxSize, gridResolution, m_scene->getRootEntity());
 
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(doWork()));
@@ -32,34 +27,52 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, QObject *parent)
 
 void CBaseParticleSimulator::setupScene()
 {
-    auto &firstGridCell = m_grid->at(0, 0, 0);
-
     double halfParticle = CParticle::h / 2.0f;
-    // add particles
-    for (float y = -m_boxSize.y() / 2.0f; y < m_boxSize.y() / 2.0f; y += halfParticle) {
-        for (float x = -m_boxSize.x() / 2.0f; x < -m_boxSize.x() / 4.0; x += halfParticle) {
-            for (float z = -m_boxSize.z() / 2.0f; z < m_boxSize.z() / 2.0f; z += halfParticle) {
+    unsigned int calculatedCount = (unsigned) (ceil(m_boxSize.z() / halfParticle) * ceil(m_boxSize.y() / halfParticle) * ceil(m_boxSize.x() / 4 / halfParticle));
+    m_clParticles.reserve(calculatedCount);
 
-//    for (double y = -boxSize.y() / 4.0; y < boxSize.y() / 4.0; y += halfParticle) {
-//        for (double x = -boxSize.x() / 4.0; x < boxSize.x() / 4.0; x += halfParticle) {
-//            for (double z = -boxSize.z() / 4.0; z < boxSize.z() / 4.0; z += halfParticle) {
-                auto particle = new CParticle(m_particlesCount, m_scene->getRootEntity(), QVector3D(x, y, z));
-                m_particles.push_back(particle);
-                firstGridCell.push_back(particle);
-                m_particlesCount++;
+    switch (m_scenario) {
+        case DAM_BREAK: {
 
+            QVector3D offset = -m_boxSize / 2.0f;
+
+            for (float y = 0; y < m_boxSize.y(); y += halfParticle) {
+                for (float x = 0; x < m_boxSize.x() / 4.0; x += halfParticle) {
+                    for (float z = 0; z < m_boxSize.z(); z += halfParticle) {
+                        addParticle(x + offset.x(), y + offset.y(), z + offset.z());
+                    }
+                }
             }
+            assert(calculatedCount == m_particlesCount);
+            m_maxParticlesCount = m_particlesCount;
+            break;
         }
-    }
 
-    qDebug() << "Grid size is " << m_grid->xRes() << "x" << m_grid->yRes() << "x" << m_grid->zRes() << endl;
-    qDebug() << "simulating" << m_particlesCount << "particles";
+        case FOUNTAIN:
+            m_maxParticlesCount = calculatedCount;
+            break;
+    }
+}
+
+void CBaseParticleSimulator::addParticle(float x, float y, float z, cl_float3 initialVelocity)
+{
+    auto &firstGridCell = m_grid->at(0, 0, 0);
+    m_clParticles.emplace_back(x, y, z, m_particlesCount, initialVelocity);
+    auto particle = new CParticle(&m_clParticles.back(), m_particlesCount, m_scene->getRootEntity(), x, y, z);
+    firstGridCell.push_back(particle);
+    m_particlesCount++;
 }
 
 void CBaseParticleSimulator::start()
 {
+    iterationSincePaused = 0;
     m_timer.start();
     m_elapsed_timer.start();
+}
+
+void CBaseParticleSimulator::stop()
+{
+    m_timer.stop();
 }
 
 void CBaseParticleSimulator::toggleSimulation()
@@ -70,7 +83,6 @@ void CBaseParticleSimulator::toggleSimulation()
     }
     else {
         qDebug() << "resuming simulation ...";
-        iterationSincePaused = 0;
         m_elapsed_timer.restart();
         start();
     }
@@ -93,9 +105,11 @@ void CBaseParticleSimulator::setGravityVector(QVector3D newGravity)
 
 void CBaseParticleSimulator::step()
 {
+    generateParticles();
     updateGrid();
     updateDensityPressure();
     updateForces();
+    updateCollisions();
     integrate();
 }
 
@@ -105,11 +119,18 @@ void CBaseParticleSimulator::doWork()
     ++totalIteration;
     ++iterationSincePaused;
     emit iterationChanged(totalIteration);
+    if (totalIteration % eventLoggerStride == 0) {
+        events << QPair<unsigned long, double>(totalIteration, getFps());
+    }
 };
 
 void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
 {
     switch (key) {
+        case Qt::Key_S:
+            doWork();
+            break;
+
         case Qt::Key_Space:
             toggleSimulation();
             break;
@@ -135,3 +156,29 @@ double CBaseParticleSimulator::getFps()
     double elapsed = getElapsedTime() / 1000.0;
     return iterationSincePaused / elapsed;
 }
+
+void CBaseParticleSimulator::generateParticles()
+{
+    switch (m_scenario) {
+        case FOUNTAIN: {
+            auto particlesPerIteration = 7;
+            if (m_particlesCount >= (m_maxParticlesCount - particlesPerIteration))return;
+
+            float halfParticle = CParticle::h / 2.0f;
+            QVector3D offset = -m_boxSize / 2.0f;
+            cl_float3 initialVelocity = {0.0f, m_boxSize.y() * 3, 0.0f};
+
+            addParticle(0, offset.y(), 0, initialVelocity);
+            addParticle(-halfParticle, offset.y(), 0, initialVelocity);
+            addParticle(halfParticle, offset.y(), 0, initialVelocity);
+
+            addParticle(-CParticle::h / 4, offset.y(), -halfParticle, initialVelocity);
+            addParticle(CParticle::h / 4, offset.y(), -halfParticle, initialVelocity);
+
+            addParticle(-CParticle::h / 4, offset.y(), halfParticle, initialVelocity);
+            addParticle(CParticle::h / 4, offset.y(), halfParticle, initialVelocity);
+            break;
+        }
+    }
+}
+

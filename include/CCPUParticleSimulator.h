@@ -13,12 +13,13 @@ private:
     double WviscosityLaplacian(double radiusSquared);
 
 public:
-    explicit CCPUParticleSimulator(CScene *scene, QObject *parent = nullptr);
+    explicit CCPUParticleSimulator(CScene *scene, float boxSize, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
 
     QString getSelectedDevice() override { return "CPU (without OpenCL)"; };
     void updateGrid() override;
     void updateDensityPressure() override;
     void updateForces() override;
+    void updateCollisions() override;
     void integrate() override;
 };
 

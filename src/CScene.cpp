@@ -20,7 +20,6 @@
 
 
 #include "CGrid.h"
-#include <CToplessBox.h>
 
 CScene::CScene()
 {
@@ -36,9 +35,6 @@ CScene::CScene()
     lightTransform->setTranslation(QVector3D(0, 0, 100.0f));
     lightEntity->addComponent(lightTransform);
 
-    //m_grid = new CGrid(m_rootEntity);
-
-    //CToplessBox *box = new CToplessBox(1, 1, 1, m_rootEntity);
 }
 
 CScene::~CScene()
@@ -46,55 +42,3 @@ CScene::~CScene()
     delete m_rootEntity;
 }
 
-void CScene::createSphere()
-{
-    // Sphere shape data
-    Qt3DExtras::QSphereMesh *sphereMesh = new Qt3DExtras::QSphereMesh();
-    sphereMesh->setRings(20);
-    sphereMesh->setSlices(20);
-    sphereMesh->setRadius(2);
-
-    // Sphere mesh transform
-    Qt3DCore::QTransform *sphereTransform = new Qt3DCore::QTransform();
-
-    sphereTransform->setScale(1.3f);
-    sphereTransform->setTranslation(QVector3D(-5.0f, -4.0f, 0.0f));
-
-    Qt3DExtras::QPhongMaterial *sphereMaterial = new Qt3DExtras::QPhongMaterial();
-    sphereMaterial->setDiffuse(QColor(QRgb(0xa69929)));
-
-    // Sphere
-    Qt3DCore::QEntity *sphereEntity = new Qt3DCore::QEntity(m_rootEntity);
-    sphereEntity->addComponent(sphereMesh);
-    sphereEntity->addComponent(sphereMaterial);
-    sphereEntity->addComponent(sphereTransform);
-    sphereEntity->setEnabled(true);
-}
-
-void CScene::createScene()
-{
-    // Plane shape data
-    Qt3DExtras::QPlaneMesh *planeMesh = new Qt3DExtras::QPlaneMesh();
-    planeMesh->setWidth(2);
-    planeMesh->setHeight(2);
-
-//     Plane mesh transform
-    Qt3DCore::QTransform *planeTransform = new Qt3DCore::QTransform();
-    planeTransform->setScale(5.0f);
-    planeTransform->setRotation(QQuaternion::fromAxisAndAngle(1, 0, 0, 90.0));
-//    planeTransform->setRotation(QQuaternion::fromAxisAndAngle(QVector3D(1.0f, 0.0f, 0.0f), 45.0f));
-    planeTransform->setTranslation(QVector3D(0.0f, 0.0f, 0.0f));
-
-    Qt3DExtras::QPhongMaterial *planeMaterial = new Qt3DExtras::QPhongMaterial();
-    planeMaterial->setDiffuse(QColor(QRgb(0xa69929)));
-
-    // Plane
-    Qt3DCore::QEntity *planeEntity = new Qt3DCore::QEntity(m_rootEntity);
-    planeEntity->addComponent(planeMesh);
-    planeEntity->addComponent(planeMaterial);
-    planeEntity->addComponent(planeTransform);
-}
-
-void CScene::addGrid()
-{
-}

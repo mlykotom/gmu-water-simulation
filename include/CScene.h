@@ -18,17 +18,10 @@ public:
 
     Qt3DCore::QEntity *getRootEntity() { return m_rootEntity; }
     void setRootEntity(Qt3DCore::QEntity *e) { m_rootEntity = e; }
-   
-    void createScene();
-
-    //TODO: Test method - delete later
-    void createSphere();
-
-    void addGrid();
 
 private:
     Qt3DCore::QEntity *m_rootEntity;
-    CGrid *m_grid;
+
 };
 
 #endif

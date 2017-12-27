@@ -38,7 +38,9 @@ QString CLPlatforms::getDeviceInfo(const cl::Device &device)
     cl_int err;
     auto deviceInfo = device.getInfo<CL_DEVICE_NAME>(&err);
     CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_NAME>");
-    return QString(deviceInfo.c_str());
+    auto maxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>(&err);
+    CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>");
+    return QString("%1 (%2)").arg(QString(deviceInfo.c_str()), QString::number(maxWorkGroupSize));
 }
 
 void CLPlatforms::printInfoAll()
@@ -63,18 +65,17 @@ void CLPlatforms::printInfoAll()
 }
 
 /**
- * TODO find based on vendor / name or something
+  * TODO find based on vendor / name or something
  * @return
  */
-cl::Device CLPlatforms::getBestGPU()
+QPair<int, int> CLPlatforms::getBestGPUIndices()
 {
-    int platform_index, device_index, device_type;
+    int platform_index, device_index;
 #ifdef __APPLE__
     platform_index = 0;
 //    device_index = 0; // cpu
 //    device_index = 1 ; //intel gpu
     device_index = 2; //amd gpu
-    device_type = CL_DEVICE_TYPE_ALL;
 #else
     ////nvidia GPU
     platform_index = 1;
@@ -83,10 +84,20 @@ cl::Device CLPlatforms::getBestGPU()
     //intel CPU
     //platform_index = 0;
     //device_index = 1;
-    device_type = CL_DEVICE_TYPE_ALL;
 #endif
 
-    cl::Platform platform = getAllPlatforms()[platform_index];
+    return QPair<int, int>(platform_index, device_index);
+};
 
+cl::Device CLPlatforms::getBestGPU()
+{
+    cl_device_type device_type = CL_DEVICE_TYPE_ALL;
+
+    const QPair<int, int> &indices = getBestGPUIndices();
+
+    int platform_index = indices.first;
+    int device_index = indices.second;
+
+    cl::Platform platform = getAllPlatforms()[platform_index];
     return getDevices(platform, device_type)[device_index];
 }
