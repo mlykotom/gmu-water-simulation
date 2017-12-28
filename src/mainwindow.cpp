@@ -308,6 +308,7 @@ void MainWindow::onError(const char *error)
 }
 void MainWindow::exportLogs()
 {
+#if PROFILING
     QString fileName = QString("%1_%2").arg(
         QString::number(ui->cubeSizeSlider->value() / 10.0),
         ui->devicesComboBox->currentText()
@@ -321,14 +322,15 @@ void MainWindow::exportLogs()
         QString fps = "";
         QTextStream fpsStream(&fps);
 
-        for (auto pair : m_simulator->fpsEvents) {
-            fpsStream << pair.second << ';';
+        for (auto pair : m_simulator->events) {
+            fpsStream << pair.together() << ';';
         }
 
         output << ui->simulationTypeComboBox->currentText() << ';';
         output << fps;
         output << '\n';
     }
+#endif
 }
 
 void MainWindow::onKeyPressed(Qt::Key key)

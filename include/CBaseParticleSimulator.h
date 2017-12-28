@@ -3,10 +3,9 @@
 
 #include <QVector3D>
 #include <QTimer>
-#include <QPlaneMesh>
 #include <QtMath>
 #include <cassert>
-#include <Qt3DExtras/QSphereMesh>
+#include <QSphereMesh>
 
 #include <iostream>
 #include <QElapsedTimer>
@@ -15,6 +14,7 @@
 #include "CParticle.h"
 #include "CGrid.h"
 #include "SProfilingEvent.h"
+#include "config.h"
 
 #define GRAVITY_ACCELERATION (-9.80665f)
 
@@ -51,7 +51,6 @@ public:
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
     unsigned long getMaxParticlesCount() { return m_maxParticlesCount; }
-    QList<QPair<unsigned long, double>> fpsEvents;
     QList<sProfilingEvent> events;
     int eventLoggerStride = 10;
     SimulationScenario m_scenario;

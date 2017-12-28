@@ -1,5 +1,17 @@
 #include "CLWrapper.h"
 
+CLWrapper::CLWrapper(cl::Device device) : m_device(std::move(device))
+{
+    // init context
+    cl_int err;
+    m_context = cl::Context(m_device, nullptr, nullptr, nullptr, &err);
+    checkError(err);
+
+    // init queue
+    m_queue = cl::CommandQueue(m_context, m_device, CL_PROFILING_FLAG, &err);
+    checkError(err);
+}
+
 const std::string CLWrapper::getErrorMessage(cl_int err_id)
 {
     switch (err_id) {
@@ -115,6 +127,8 @@ size_t CLWrapper::alignTo(size_t data, size_t align_size)
 
 double CLWrapper::getEventDuration(const cl::Event &event, bool waitForEvent)
 {
+#if PROFILING
+
     if (waitForEvent) {
         event.wait();
     }
@@ -126,10 +140,14 @@ double CLWrapper::getEventDuration(const cl::Event &event, bool waitForEvent)
     cl_ulong timeEnd = event.getProfilingInfo<CL_PROFILING_COMMAND_END>(&err);
     CLWrapper::checkError(err, "CL_PROFILING_COMMAND_END");
     return double(timeEnd - timeStart) * 1e-6;
+#else
+    return 0.0;
+#endif
 }
 
 double CLWrapper::getEventDuration(std::initializer_list<cl::Event> events)
 {
+#if PROFILING
     cl::Event::waitForEvents(events);
     double duration = 0;
 
@@ -138,18 +156,9 @@ double CLWrapper::getEventDuration(std::initializer_list<cl::Event> events)
     }
 
     return duration;
-}
-
-CLWrapper::CLWrapper(cl::Device device) : m_device(std::move(device))
-{
-    // init context
-    cl_int err;
-    m_context = cl::Context(m_device, nullptr, nullptr, nullptr, &err);
-    checkError(err);
-
-    // init queue
-    m_queue = cl::CommandQueue(m_context, m_device, CL_QUEUE_PROFILING_ENABLE, &err);
-    checkError(err);
+#else
+    return 0.0;
+#endif
 }
 
 std::string CLWrapper::readFile(std::string fileName)

@@ -135,12 +135,12 @@ void CBaseParticleSimulator::step()
     // ---- integrate
     durations.integrate = integrate();
 
-    if (totalIteration > 0 && totalIteration % eventLoggerStride == 0) {
+#if PROFILING
+    if (totalIteration % eventLoggerStride == 0) {
         durations.fps = getFps();
         events << durations;
-
-        qDebug() << durations;
     }
+#endif
 }
 
 void CBaseParticleSimulator::doWork()

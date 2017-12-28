@@ -1,11 +1,19 @@
 #ifndef WATERSURFACESIMULATION_CLWRAPPER_H
 #define WATERSURFACESIMULATION_CLWRAPPER_H
 
+#include "config.h"
 #include <CL/cl.hpp>
 #include <fstream>
 #include <istream>
 #include <QDebug>
 #include <utility>
+
+
+#if PROFILING
+#define CL_PROFILING_FLAG CL_QUEUE_PROFILING_ENABLE
+#else
+#define CL_PROFILING_FLAG 0
+#endif
 
 class CLException: public std::runtime_error
 {
@@ -32,7 +40,7 @@ public:
      * @param align_size
      * @return
      */
-    static  size_t alignTo(size_t data, size_t align_size);
+    static size_t alignTo(size_t data, size_t align_size);
     /**
      * Gets time of event in milliseconds
      * @param event
