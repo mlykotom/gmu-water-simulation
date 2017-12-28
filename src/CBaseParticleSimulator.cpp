@@ -116,31 +116,24 @@ void CBaseParticleSimulator::setGravityVector(QVector3D newGravity)
 void CBaseParticleSimulator::step()
 {
     sProfilingEvent durations(totalIteration);
-    QElapsedTimer timer;
 
     // ---- generate particles
     generateParticles();
 
     // ---- update grid
-    timer.start();
-    updateGrid();
-    durations.updateGrid = timer.restart();
+    durations.updateGrid = updateGrid();
 
     // ---- update density pressure
-    updateDensityPressure();
-    durations.updateDensityPressure = timer.restart();
+    durations.updateDensityPressure = updateDensityPressure();
 
     // ---- update forces
-    updateForces();
-    durations.updateForces = timer.restart();
+    durations.updateForces = updateForces();
 
     // ---- update collisions
-    updateCollisions();
-    durations.updateCollisions = timer.restart();
+    durations.updateCollisions = updateCollisions();
 
     // ---- integrate
-    integrate();
-    durations.integrate = timer.restart();
+    durations.integrate = integrate();
 
     if (totalIteration > 0 && totalIteration % eventLoggerStride == 0) {
         durations.fps = getFps();

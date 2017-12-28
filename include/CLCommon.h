@@ -1,4 +1,3 @@
-
 #ifndef WATERSURFACESIMULATION_CLCOMMON_H
 #define WATERSURFACESIMULATION_CLCOMMON_H
 
@@ -6,7 +5,7 @@
 #include <exception>
 #include <stdexcept>
 #include <CL/cl.hpp>
-#include <omp.h>
+
 
 class CLException: public std::runtime_error
 {
@@ -137,36 +136,35 @@ public:
     }
 
     /**
-     * get time in seconds
-     * @return
-     */
-    static double getTime(void)
-    {
-        return omp_get_wtime();
-    }
-
-    /**
      * Gets time of event in milliseconds
      * @param event
+     * @param waitForEvent
      * @return
      */
-    static double getEventDuration(const cl::Event &event)
+    static double getEventDuration(const cl::Event &event, bool waitForEvent = true)
     {
+        if (waitForEvent) {
+            event.wait();
+        }
+
         cl_int err;
         cl_ulong timeStart = event.getProfilingInfo<CL_PROFILING_COMMAND_START>(&err);
         CLCommon::checkError(err, "CL_PROFILING_COMMAND_START");
 
         cl_ulong timeEnd = event.getProfilingInfo<CL_PROFILING_COMMAND_END>(&err);
         CLCommon::checkError(err, "CL_PROFILING_COMMAND_END");
-        return (timeEnd - timeStart) * 1e-6;
+        return double(timeEnd - timeStart) * 1e-6;
     }
 
-    static double getEventVectorDuration(const std::vector<cl::Event> &events)
+    static double getEventDuration(std::initializer_list<cl::Event> events)
     {
+        cl::Event::waitForEvents(events);
         double duration = 0;
+
         for (const auto &event : events) {
-            duration += getEventDuration(event);
+            duration += getEventDuration(event, false);
         }
+
         return duration;
     }
 };

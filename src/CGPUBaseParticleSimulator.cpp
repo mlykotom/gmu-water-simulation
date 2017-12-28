@@ -55,7 +55,7 @@ void CGPUBaseParticleSimulator::setupKernels()
     m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
 }
 
-void CGPUBaseParticleSimulator::updateCollisions()
+double CGPUBaseParticleSimulator::updateCollisions()
 {
     cl_uint argCollision = 0;
     m_walls_collision_kernel->setArg(argCollision++, m_particlesBuffer);
@@ -67,10 +67,12 @@ void CGPUBaseParticleSimulator::updateCollisions()
     auto local = cl::NDRange(m_wallsCount);
     auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_wallsCount));
 
-    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
+    auto event = m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
+
+    return CLCommon::getEventDuration(event);
 }
 
-void CGPUBaseParticleSimulator::integrate()
+double CGPUBaseParticleSimulator::integrate()
 {
     cl_uint arg = 0;
     m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
@@ -80,15 +82,15 @@ void CGPUBaseParticleSimulator::integrate()
     auto processingEvent = m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_maxParticlesCount));
     auto readEvent = m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
 
-//    double copyDuration = CLCommon::getEventDuration(readEvent);
-//    double processingDuration = CLCommon::getEventDuration(processingEvent);
-
+    QElapsedTimer timer;
+    timer.start();
     for (auto &particle : m_grid->getData()[0]) {
         particle->updatePosition();
         particle->updateVelocity();
     }
 
-//    double gpuDuration = copyDuration + processingDuration;
-//    double elapsed = cpuTimer.elapsed();
-//    qDebug() << "gpu(copy" << copyDuration << "gpu(process)" << processingDuration << "cpu(with gpu)" << elapsed << "cpu(without gpu)" << elapsed - gpuDuration;
+    auto gpuDuration = CLCommon::getEventDuration({processingEvent, readEvent});
+    auto cpuDuration = timer.elapsed();
+
+    return gpuDuration + cpuDuration;
 }

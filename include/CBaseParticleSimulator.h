@@ -90,11 +90,11 @@ protected:
     SystemParams m_systemParams;
     std::vector<CParticle::Physics> m_clParticles;
 
-    virtual void updateGrid() = 0;
-    virtual void updateDensityPressure() = 0;
-    virtual void updateForces() = 0;
-    virtual void updateCollisions() = 0;
-    virtual void integrate() = 0;
+    virtual double updateGrid() = 0;
+    virtual double updateDensityPressure() = 0;
+    virtual double updateForces() = 0;
+    virtual double updateCollisions() = 0;
+    virtual double integrate() = 0;
 
     bool isRunning() { return m_timer.isActive(); }
 private slots:

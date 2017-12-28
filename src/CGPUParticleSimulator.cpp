@@ -54,9 +54,11 @@ void CGPUParticleSimulator::setupKernels()
     m_scanSumsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_sumsSize);
 }
 
-void CGPUParticleSimulator::updateGrid()
+double CGPUParticleSimulator::updateGrid()
 {
-    m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
+    double totalDuration = 0;
+
+    auto eventWrite = m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
 
     m_gridVector.clear();
     m_gridVector.resize(m_gridCountToPowerOfTwo, 0);
@@ -68,19 +70,22 @@ void CGPUParticleSimulator::updateGrid()
     m_updateParticlePositionsKernel->setArg(arg++, m_gridSize);
     m_updateParticlePositionsKernel->setArg(arg++, m_halfBoxSize);
 
-    m_cl_wrapper->enqueueWrite(m_gridBuffer, m_gridVectorSize, m_gridVector.data(), CL_TRUE);
+    auto eventWrite2 = m_cl_wrapper->enqueueWrite(m_gridBuffer, m_gridVectorSize, m_gridVector.data(), CL_TRUE);
 
     auto global = cl::NDRange(m_maxParticlesCount);
-    m_cl_wrapper->enqueueKernel(*m_updateParticlePositionsKernel, global);
+    auto eventProcess = m_cl_wrapper->enqueueKernel(*m_updateParticlePositionsKernel, global);
 
     //scan grid
-    scanGrid();
+    totalDuration += scanGrid();
 
     //sort indices
-    sortIndices();
+    totalDuration += sortIndices();
+
+    totalDuration += CLCommon::getEventDuration({eventWrite, eventWrite2, eventProcess});
+    return totalDuration;
 }
 
-void CGPUParticleSimulator::scanGrid()
+double CGPUParticleSimulator::scanGrid()
 {
     //scan input array
     m_scanLocalKernel->setArg(0, m_gridBuffer);
@@ -88,7 +93,7 @@ void CGPUParticleSimulator::scanGrid()
     m_scanLocalKernel->setArg(2, m_gridCountToPowerOfTwo);
     m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * m_elementsProcessedInOneGroup));
 
-    m_cl_wrapper->enqueueKernel(*m_scanLocalKernel, m_scanGlobal, m_scanLocal);
+    auto eventScan1 = m_cl_wrapper->enqueueKernel(*m_scanLocalKernel, m_scanGlobal, m_scanLocal);
 
     //scan sums
     m_scanLocalKernel->setArg(0, m_scanSumsBuffer);
@@ -96,19 +101,24 @@ void CGPUParticleSimulator::scanGrid()
     m_scanLocalKernel->setArg(2, m_sumsCount);
     m_scanLocalKernel->setArg(3, cl::Local(sizeof(cl_int) * m_elementsProcessedInOneGroup));
 
-    m_cl_wrapper->enqueueKernel(*m_scanLocalKernel, m_sumsGlobal, m_scanLocal);
+    auto eventScan2 = m_cl_wrapper->enqueueKernel(*m_scanLocalKernel, m_sumsGlobal, m_scanLocal);
 
     //increment input scan
     m_incrementKernel->setArg(0, m_gridBuffer);
     m_incrementKernel->setArg(1, m_scanSumsBuffer);
     m_incrementKernel->setArg(2, m_gridCountToPowerOfTwo);
 
-    m_cl_wrapper->enqueueKernel(*m_incrementKernel, m_scanGlobal, m_scanLocal);
+    auto eventIncrement = m_cl_wrapper->enqueueKernel(*m_incrementKernel, m_scanGlobal, m_scanLocal);
+
+    return CLCommon::getEventDuration({eventScan1, eventScan2, eventIncrement});
 }
 
-void CGPUParticleSimulator::sortIndices()
+double CGPUParticleSimulator::sortIndices()
 {
-    m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
+    auto readEvent = m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
+
+    QElapsedTimer cpuTimer;
+    cpuTimer.start();
 
     // initialize original index locations
     m_sortedIndices.clear();
@@ -121,10 +131,14 @@ void CGPUParticleSimulator::sortIndices()
          { return this->m_clParticles[i1].cell_id < this->m_clParticles[i2].cell_id; }
     );
 
-    m_cl_wrapper->enqueueWrite(m_indicesBuffer, m_indicesSize, m_sortedIndices.data(), CL_FALSE);
+    double cpuTime = cpuTimer.elapsed();
+
+    auto writeEvent = m_cl_wrapper->enqueueWrite(m_indicesBuffer, m_indicesSize, m_sortedIndices.data(), CL_FALSE);
+
+    return cpuTime + CLCommon::getEventDuration({readEvent, writeEvent});
 }
 
-void CGPUParticleSimulator::updateDensityPressure()
+double CGPUParticleSimulator::updateDensityPressure()
 {
     cl_uint arg = 0;
     m_densityPresureStepKernel->setArg(arg++, m_particlesBuffer);
@@ -135,10 +149,12 @@ void CGPUParticleSimulator::updateDensityPressure()
     m_densityPresureStepKernel->setArg(arg++, m_systemParams.poly6_constant);
 
     auto global = cl::NDRange(m_maxParticlesCount);
-    m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, global);
+    auto event = m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, global);
+
+    return CLCommon::getEventDuration(event);
 }
 
-void CGPUParticleSimulator::updateForces()
+double CGPUParticleSimulator::updateForces()
 {
     cl_uint arg = 0;
     m_forceStepKernel->setArg(arg++, m_particlesBuffer);
@@ -151,5 +167,7 @@ void CGPUParticleSimulator::updateForces()
     m_forceStepKernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     auto global = cl::NDRange(m_maxParticlesCount);
-    m_cl_wrapper->enqueueKernel(*m_forceStepKernel, global);
+    auto event = m_cl_wrapper->enqueueKernel(*m_forceStepKernel, global);
+
+    return CLCommon::getEventDuration(event);
 }

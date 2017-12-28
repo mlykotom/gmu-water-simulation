@@ -36,8 +36,8 @@ protected:
 
 
     virtual void setupKernels();
-    void integrate() override;
-    void updateCollisions() override;
+    double integrate() override;
+    double updateCollisions() override;
 };
 
 #endif //WATERSURFACESIMULATION_CGPUBASEPARTICLESIMULATOR_H

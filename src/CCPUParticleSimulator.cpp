@@ -29,8 +29,11 @@ double CCPUParticleSimulator::WviscosityLaplacian(double radiusSquared)
     return coefficient * (CParticle::h - radius);
 }
 
-void CCPUParticleSimulator::updateGrid()
+double CCPUParticleSimulator::updateGrid()
 {
+    QElapsedTimer timer;
+    timer.start();
+
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
             for (int z = 0; z < m_grid->zRes(); z++) {
@@ -83,10 +86,15 @@ void CCPUParticleSimulator::updateGrid()
             }
         }
     }
+
+    return timer.elapsed();
 }
 
-void CCPUParticleSimulator::updateDensityPressure()
+double CCPUParticleSimulator::updateDensityPressure()
 {
+    QElapsedTimer timer;
+    timer.start();
+
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
             for (int z = 0; z < m_grid->zRes(); z++) {
@@ -129,10 +137,14 @@ void CCPUParticleSimulator::updateDensityPressure()
         }
     }
 
+    return timer.elapsed();
 }
 
-void CCPUParticleSimulator::updateForces()
+double CCPUParticleSimulator::updateForces()
 {
+    QElapsedTimer timer;
+    timer.start();
+
     for (int x = 0; x < m_grid->xRes(); x++) {
         for (int y = 0; y < m_grid->yRes(); y++) {
             for (int z = 0; z < m_grid->zRes(); z++) {
@@ -186,15 +198,21 @@ void CCPUParticleSimulator::updateForces()
             }
         }
     }
+
+    return timer.elapsed();
 }
 
-void CCPUParticleSimulator::updateCollisions()
+double CCPUParticleSimulator::updateCollisions()
 {
     // is part of updateForces
+    return 0;
 }
 
-void CCPUParticleSimulator::integrate()
+double CCPUParticleSimulator::integrate()
 {
+    QElapsedTimer timer;
+    timer.start();
+
     for (unsigned int gridCellIndex = 0; gridCellIndex < m_grid->getCellCount(); gridCellIndex++) {
         auto &particles = m_grid->getData()[gridCellIndex];
 
@@ -206,4 +224,6 @@ void CCPUParticleSimulator::integrate()
             particle->velocity() = newVelocity;
         }
     }
+
+    return timer.elapsed();
 }

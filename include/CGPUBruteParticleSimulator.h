@@ -14,9 +14,9 @@ public:
 
     explicit CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
 
-    void updateGrid() override;
-    void updateDensityPressure() override;
-    void updateForces() override;
+    double updateGrid() override;
+    double updateDensityPressure() override;
+    double updateForces() override;
 
 protected:
     std::shared_ptr<cl::Kernel> m_update_density_kernel;

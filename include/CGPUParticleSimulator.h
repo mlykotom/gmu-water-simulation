@@ -13,12 +13,12 @@ public:
     explicit CGPUParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario = DAM_BREAK, QObject *parent = nullptr);
     ~CGPUParticleSimulator() override = default;
 
-    void updateGrid() override;
-    void updateDensityPressure() override;
-    void updateForces() override;
+    double updateGrid() override;
+    double updateDensityPressure() override;
+    double updateForces() override;
 private: //methods
-    void scanGrid();
-    void sortIndices();
+    double scanGrid();
+    double sortIndices();
 
 protected:
     void setupKernels() override;
