@@ -6,6 +6,7 @@
 #include <QPlaneMesh>
 #include <QtMath>
 #include <cassert>
+#include <Qt3DExtras/QSphereMesh>
 
 #include <iostream>
 #include <QElapsedTimer>
@@ -13,6 +14,7 @@
 #include "CScene.h"
 #include "CParticle.h"
 #include "CGrid.h"
+#include "SProfilingEvent.h"
 
 #define GRAVITY_ACCELERATION (-9.80665f)
 
@@ -49,10 +51,13 @@ public:
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
     unsigned long getMaxParticlesCount() { return m_maxParticlesCount; }
-    QList<QPair<unsigned long, double>> events;
-
+    QList<QPair<unsigned long, double>> fpsEvents;
+    QList<sProfilingEvent> events;
     int eventLoggerStride = 10;
     SimulationScenario m_scenario;
+
+    Qt3DExtras::QSphereMesh *particle_mesh;
+    Qt3DExtras::QPhongMaterial *particle_material;
 signals:
     void iterationChanged(unsigned long iteration);
     void errorOccured(const char *error);

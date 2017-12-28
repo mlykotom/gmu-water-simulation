@@ -146,26 +146,28 @@ public:
     }
 
     /**
-     * TODO not sure if needed
-     * @param i_event
-     * @return
-     */
-    static double getEventTime(cl_event i_event)
-    {
-        cl_ulong time_from, time_to;
-        clGetEventProfilingInfo(i_event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_from, NULL);
-        clGetEventProfilingInfo(i_event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_to, NULL);
-        return double(time_to - time_from) / 1000000000;
-    }
-
-    /**
-     * TODO not sure if needed
+     * Gets time of event in milliseconds
      * @param event
      * @return
      */
-    static double getEventTime(cl::Event &event)
+    static double getEventDuration(const cl::Event &event)
     {
-        return (event.getProfilingInfo<CL_PROFILING_COMMAND_END>() - event.getProfilingInfo<CL_PROFILING_COMMAND_START>()) / 1000000000.0;
+        cl_int err;
+        cl_ulong timeStart = event.getProfilingInfo<CL_PROFILING_COMMAND_START>(&err);
+        CLCommon::checkError(err, "CL_PROFILING_COMMAND_START");
+
+        cl_ulong timeEnd = event.getProfilingInfo<CL_PROFILING_COMMAND_END>(&err);
+        CLCommon::checkError(err, "CL_PROFILING_COMMAND_END");
+        return (timeEnd - timeStart) * 1e-6;
+    }
+
+    static double getEventVectorDuration(const std::vector<cl::Event> &events)
+    {
+        double duration = 0;
+        for (const auto &event : events) {
+            duration += getEventDuration(event);
+        }
+        return duration;
     }
 };
 

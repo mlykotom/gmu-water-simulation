@@ -113,8 +113,8 @@ void doCalculation()
     printf(" OpenCL processing time: %fs\n", gpu_end - gpu_start);
     printf(" CPU    processing time: %fs\n", cpu_end - cpu_start);
     printf("\nDevice timers:\n");
-    printf(" OpenCL copy time: %fs\n", CLCommon::getEventTime(a_event) + CLCommon::getEventTime(b_event) + CLCommon::getEventTime(c_event));
-    printf(" OpenCL processing time: %fs\n", CLCommon::getEventTime(kernel_event));
+    printf(" OpenCL copy time: %fs\n", CLCommon::getEventDuration(a_event) + CLCommon::getEventDuration(b_event) + CLCommon::getEventDuration(c_event));
+    printf(" OpenCL processing time: %fs\n", CLCommon::getEventDuration(kernel_event));
 
     // deallocate host data
     m_cl_wrapper->getQueue().flush();

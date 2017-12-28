@@ -321,7 +321,7 @@ void MainWindow::exportLogs()
         QString fps = "";
         QTextStream fpsStream(&fps);
 
-        for (auto pair : m_simulator->events) {
+        for (auto pair : m_simulator->fpsEvents) {
             fpsStream << pair.second << ';';
         }
 

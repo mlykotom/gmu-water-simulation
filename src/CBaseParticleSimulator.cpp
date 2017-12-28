@@ -10,6 +10,16 @@ CBaseParticleSimulator::CBaseParticleSimulator(CScene *scene, float boxSize, Sim
       m_boxSize(QVector3D(boxSize, boxSize, boxSize)),
       m_scenario(scenario)
 {
+    // Sphere shape data
+    particle_mesh = new Qt3DExtras::QSphereMesh();
+    particle_mesh->setRings(10);
+    particle_mesh->setSlices(10);
+    particle_mesh->setRadius(0.01f);
+
+    // material
+    particle_material = new Qt3DExtras::QPhongMaterial();
+    particle_material->setDiffuse(QColor(QRgb(0x14aaff)));
+
     m_systemParams.poly6_constant = (cl_float) (315.0f / (64.0f * M_PI * pow(CParticle::h, 9)));
     m_systemParams.spiky_constant = (cl_float) (-45.0f / (M_PI * pow(CParticle::h, 6)));
     m_systemParams.viscosity_constant = (cl_float) (45.0f / (M_PI * pow(CParticle::h, 6)));
@@ -58,7 +68,7 @@ void CBaseParticleSimulator::addParticle(float x, float y, float z, cl_float3 in
 {
     auto &firstGridCell = m_grid->at(0, 0, 0);
     m_clParticles.emplace_back(x, y, z, m_particlesCount, initialVelocity);
-    auto particle = new CParticle(&m_clParticles.back(), m_particlesCount, m_scene->getRootEntity(), x, y, z);
+    auto particle = new CParticle(particle_mesh, particle_material, &m_clParticles.back(), m_particlesCount, m_scene->getRootEntity(), x, y, z);
     firstGridCell.push_back(particle);
     m_particlesCount++;
 }
@@ -105,12 +115,39 @@ void CBaseParticleSimulator::setGravityVector(QVector3D newGravity)
 
 void CBaseParticleSimulator::step()
 {
+    sProfilingEvent durations(totalIteration);
+    QElapsedTimer timer;
+
+    // ---- generate particles
     generateParticles();
+
+    // ---- update grid
+    timer.start();
     updateGrid();
+    durations.updateGrid = timer.restart();
+
+    // ---- update density pressure
     updateDensityPressure();
+    durations.updateDensityPressure = timer.restart();
+
+    // ---- update forces
     updateForces();
+    durations.updateForces = timer.restart();
+
+    // ---- update collisions
     updateCollisions();
+    durations.updateCollisions = timer.restart();
+
+    // ---- integrate
     integrate();
+    durations.integrate = timer.restart();
+
+    if (totalIteration > 0 && totalIteration % eventLoggerStride == 0) {
+        durations.fps = getFps();
+        events << durations;
+
+        qDebug() << durations;
+    }
 }
 
 void CBaseParticleSimulator::doWork()
@@ -119,9 +156,6 @@ void CBaseParticleSimulator::doWork()
     ++totalIteration;
     ++iterationSincePaused;
     emit iterationChanged(totalIteration);
-    if (totalIteration % eventLoggerStride == 0) {
-        events << QPair<unsigned long, double>(totalIteration, getFps());
-    }
 };
 
 void CBaseParticleSimulator::onKeyPressed(Qt::Key key)
@@ -161,12 +195,12 @@ void CBaseParticleSimulator::generateParticles()
 {
     switch (m_scenario) {
         case FOUNTAIN: {
-            auto particlesPerIteration = 7;
+            static auto particlesPerIteration = 7;
             if (m_particlesCount >= (m_maxParticlesCount - particlesPerIteration))return;
 
-            float halfParticle = CParticle::h / 2.0f;
+            static float halfParticle = CParticle::h / 2.0f;
             QVector3D offset = -m_boxSize / 2.0f;
-            cl_float3 initialVelocity = {0.0f, m_boxSize.y() * 3, 0.0f};
+            cl_float3 initialVelocity = {0.0f, m_boxSize.y() * 3.2f, 0.0f};
 
             addParticle(0, offset.y(), 0, initialVelocity);
             addParticle(-halfParticle, offset.y(), 0, initialVelocity);
@@ -181,4 +215,3 @@ void CBaseParticleSimulator::generateParticles()
         }
     }
 }
-

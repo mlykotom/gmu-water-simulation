@@ -31,10 +31,7 @@ public:
         CLCommon::checkError(err);
     }
 
-    virtual ~CLWrapper()
-    {
-//        cl::finish();
-    }
+    virtual ~CLWrapper() = default;
 
     const cl::Device &getDevice() const { return m_device; }
     const cl::Context &getContext() const { return m_context; }

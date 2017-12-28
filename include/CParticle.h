@@ -42,7 +42,7 @@ public:
             cell_id(0) {}
     } Physics;
 
-    explicit CParticle(Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z);
+    explicit CParticle(Qt3DExtras::QSphereMesh *mesh, Qt3DExtras::QPhongMaterial *material, Physics *physics, unsigned int id, Qt3DCore::QEntity *rootEntity, float x, float y, float z);
     ~CParticle() override;
 
 public: //methods
@@ -76,7 +76,6 @@ public: //methods
         m_velocity.setZ(m_physics->velocity.z);
     }
 
-
 public: //attributes
     static constexpr float h = 0.0457f;    //0.25    //0.02 //0.045
     static constexpr float viscosity = 3.5f; // 5.0 // 0.00089 // Ns/m^2 or Pa*s viscosity of water
@@ -89,9 +88,6 @@ private:
     QVector3D m_position;
     QVector3D m_velocity;
     QVector3D m_acceleration;
-
-    Qt3DExtras::QSphereMesh *m_mesh;
-    Qt3DExtras::QPhongMaterial *m_material;
 };
 
 
