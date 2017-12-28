@@ -27,7 +27,7 @@ double CGPUBruteParticleSimulator::updateGrid()
 {
     // don't need to update the grid, since everything is in one cell
     auto event = m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
-    return CLCommon::getEventDuration(event);
+    return CLWrapper::getEventDuration(event);
 }
 
 double CGPUBruteParticleSimulator::updateDensityPressure()
@@ -38,7 +38,7 @@ double CGPUBruteParticleSimulator::updateDensityPressure()
     m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
 
     auto event = m_cl_wrapper->enqueueKernel(*m_update_density_kernel, cl::NDRange(m_particlesCount));
-    return CLCommon::getEventDuration(event);
+    return CLWrapper::getEventDuration(event);
 }
 
 double CGPUBruteParticleSimulator::updateForces()
@@ -51,5 +51,5 @@ double CGPUBruteParticleSimulator::updateForces()
     m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 
     auto processEvent = m_cl_wrapper->enqueueKernel(*m_update_forces_kernel, cl::NDRange(m_particlesCount));
-    return CLCommon::getEventDuration(processEvent);
+    return CLWrapper::getEventDuration(processEvent);
 }

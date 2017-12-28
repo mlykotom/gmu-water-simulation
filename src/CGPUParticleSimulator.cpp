@@ -44,12 +44,12 @@ void CGPUParticleSimulator::setupKernels()
     m_localScanWokrgroupSize = m_elementsProcessedInOneGroup / 2;
     m_scanLocal = cl::NDRange(m_localScanWokrgroupSize);
     //we need only half the threads of the input count
-    m_scanGlobal = cl::NDRange(CLCommon::alignTo(m_gridCountToPowerOfTwo / 2, m_localScanWokrgroupSize));
+    m_scanGlobal = cl::NDRange(CLWrapper::alignTo(m_gridCountToPowerOfTwo / 2, m_localScanWokrgroupSize));
 
     m_sumsCount = m_scanGlobal[0] / m_scanLocal[0];
     size_t m_sumsSize = m_sumsCount * sizeof(cl_int);
     m_sums.resize(m_sumsCount, 0);
-    m_sumsGlobal = cl::NDRange(CLCommon::alignTo(m_sumsCount, m_localScanWokrgroupSize));
+    m_sumsGlobal = cl::NDRange(CLWrapper::alignTo(m_sumsCount, m_localScanWokrgroupSize));
 
     m_scanSumsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_WRITE, m_sumsSize);
 }
@@ -81,7 +81,7 @@ double CGPUParticleSimulator::updateGrid()
     //sort indices
     totalDuration += sortIndices();
 
-    totalDuration += CLCommon::getEventDuration({eventWrite, eventWrite2, eventProcess});
+    totalDuration += CLWrapper::getEventDuration({eventWrite, eventWrite2, eventProcess});
     return totalDuration;
 }
 
@@ -110,7 +110,7 @@ double CGPUParticleSimulator::scanGrid()
 
     auto eventIncrement = m_cl_wrapper->enqueueKernel(*m_incrementKernel, m_scanGlobal, m_scanLocal);
 
-    return CLCommon::getEventDuration({eventScan1, eventScan2, eventIncrement});
+    return CLWrapper::getEventDuration({eventScan1, eventScan2, eventIncrement});
 }
 
 double CGPUParticleSimulator::sortIndices()
@@ -135,7 +135,7 @@ double CGPUParticleSimulator::sortIndices()
 
     auto writeEvent = m_cl_wrapper->enqueueWrite(m_indicesBuffer, m_indicesSize, m_sortedIndices.data(), CL_FALSE);
 
-    return cpuTime + CLCommon::getEventDuration({readEvent, writeEvent});
+    return cpuTime + CLWrapper::getEventDuration({readEvent, writeEvent});
 }
 
 double CGPUParticleSimulator::updateDensityPressure()
@@ -151,7 +151,7 @@ double CGPUParticleSimulator::updateDensityPressure()
     auto global = cl::NDRange(m_maxParticlesCount);
     auto event = m_cl_wrapper->enqueueKernel(*m_densityPresureStepKernel, global);
 
-    return CLCommon::getEventDuration(event);
+    return CLWrapper::getEventDuration(event);
 }
 
 double CGPUParticleSimulator::updateForces()
@@ -169,5 +169,5 @@ double CGPUParticleSimulator::updateForces()
     auto global = cl::NDRange(m_maxParticlesCount);
     auto event = m_cl_wrapper->enqueueKernel(*m_forceStepKernel, global);
 
-    return CLCommon::getEventDuration(event);
+    return CLWrapper::getEventDuration(event);
 }

@@ -1,4 +1,5 @@
 #include "CGPUBaseParticleSimulator.h"
+#include "CLWrapper.h"
 
 CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario, QObject *parent)
     : CBaseParticleSimulator(scene, boxSize, scenario, parent),
@@ -65,11 +66,11 @@ double CGPUBaseParticleSimulator::updateCollisions()
     m_walls_collision_kernel->setArg(argCollision++, cl::Local(sizeof(sWall) * m_wallsCount));
 
     auto local = cl::NDRange(m_wallsCount);
-    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_wallsCount));
+    auto global = cl::NDRange(CLWrapper::alignTo(m_maxParticlesCount, m_wallsCount));
 
     auto event = m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
 
-    return CLCommon::getEventDuration(event);
+    return CLWrapper::getEventDuration(event);
 }
 
 double CGPUBaseParticleSimulator::integrate()
@@ -89,7 +90,7 @@ double CGPUBaseParticleSimulator::integrate()
         particle->updateVelocity();
     }
 
-    auto gpuDuration = CLCommon::getEventDuration({processingEvent, readEvent});
+    auto gpuDuration = CLWrapper::getEventDuration({processingEvent, readEvent});
     auto cpuDuration = timer.elapsed();
 
     return gpuDuration + cpuDuration;
