@@ -1,4 +1,5 @@
 #include "CGPUBaseParticleSimulator.h"
+#include "CLWrapper.h"
 
 CGPUBaseParticleSimulator::CGPUBaseParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario, QObject *parent)
     : CBaseParticleSimulator(scene, boxSize, scenario, parent),
@@ -46,44 +47,51 @@ void CGPUBaseParticleSimulator::setupKernels()
 
     // collisions
     m_wallsVector = m_grid->getCollisionGeometry()->getBoundingBox().m_walls;
+    m_wallsCount = (size_t) m_wallsVector.size();
     m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, static_cast<size_t>(m_wallsVector.size()));
-    m_wallsBufferSize = m_wallsVector.size() * sizeof(sWall);
+    m_wallsBufferSize = m_wallsCount * sizeof(sWall);
     m_wallsBuffer = m_cl_wrapper->createBuffer(CL_MEM_READ_ONLY, m_wallsBufferSize);
 
     m_walls_collision_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("walls_collision"));
     m_cl_wrapper->enqueueWrite(m_wallsBuffer, m_wallsBufferSize, m_wallsVector.data(), CL_TRUE);
 }
 
-void CGPUBaseParticleSimulator::updateCollisions()
+double CGPUBaseParticleSimulator::updateCollisions()
 {
     cl_uint argCollision = 0;
     m_walls_collision_kernel->setArg(argCollision++, m_particlesBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_wallsBuffer);
     m_walls_collision_kernel->setArg(argCollision++, m_particlesCount);
-    m_walls_collision_kernel->setArg(argCollision++, m_wallsVector.size());
-    m_walls_collision_kernel->setArg(argCollision++, cl::Local(sizeof(sWall) * m_wallsVector.size()));
+    m_walls_collision_kernel->setArg(argCollision++, m_wallsCount);
+    m_walls_collision_kernel->setArg(argCollision++, cl::Local(sizeof(sWall) * m_wallsCount));
 
-    auto local = cl::NDRange(m_wallsVector.size());
-    auto global = cl::NDRange(CLCommon::alignTo(m_maxParticlesCount, m_wallsVector.size()));
+    auto local = cl::NDRange(m_wallsCount);
+    auto global = cl::NDRange(CLWrapper::alignTo(m_maxParticlesCount, m_wallsCount));
 
-    m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
+    auto event = m_cl_wrapper->enqueueKernel(*m_walls_collision_kernel, global, local);
+
+    return CLWrapper::getEventDuration(event);
 }
 
-void CGPUBaseParticleSimulator::integrate()
+double CGPUBaseParticleSimulator::integrate()
 {
     cl_uint arg = 0;
     m_integrationStepKernel->setArg(arg++, m_particlesBuffer);
     m_integrationStepKernel->setArg(arg++, m_particlesCount);
     m_integrationStepKernel->setArg(arg++, dt);
 
-    m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_maxParticlesCount));
-    m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
+    auto processingEvent = m_cl_wrapper->enqueueKernel(*m_integrationStepKernel, cl::NDRange(m_maxParticlesCount));
+    auto readEvent = m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
 
-    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
-
-    std::vector<CParticle *> &particles = m_grid->getData()[0];
-    for (auto &particle : particles) {
+    QElapsedTimer timer;
+    timer.start();
+    for (auto &particle : m_grid->getData()[0]) {
         particle->updatePosition();
         particle->updateVelocity();
     }
+
+    auto gpuDuration = CLWrapper::getEventDuration({processingEvent, readEvent});
+    auto cpuDuration = timer.elapsed();
+
+    return gpuDuration + cpuDuration;
 }

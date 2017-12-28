@@ -1,7 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-
 // Qt 3D
 #include <QCamera>
 #include <QInputAspect>
@@ -34,7 +33,7 @@
 #include "CGPUParticleSimulator.h"
 #include "CGPUBruteParticleSimulator.h"
 #include "CCPUParticleSimulator.h"
-
+#include "config.h"
 
 namespace Ui
 {

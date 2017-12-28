@@ -1,10 +1,11 @@
 #include "CLPlatforms.h"
+#include "CLWrapper.h"
 
 std::vector<cl::Platform> CLPlatforms::getAllPlatforms()
 {
     std::vector<cl::Platform> platforms;
     int error = cl::Platform::get(&platforms);
-    CLCommon::checkError(error);
+    CLWrapper::checkError(error);
     return platforms;
 }
 
@@ -12,7 +13,7 @@ std::vector<cl::Device> CLPlatforms::getDevices(cl::Platform platform, cl_device
 {
     std::vector<cl::Device> devices;
     int error = platform.getDevices(deviceType, &devices);
-    CLCommon::checkError(error);
+    CLWrapper::checkError(error);
 
     return devices;
 }
@@ -25,7 +26,7 @@ QString CLPlatforms::getPlatformInfo(const cl::Platform &platform)
 {
     cl_int err;
     auto platformInfo = platform.getInfo<CL_PLATFORM_NAME>(&err);
-    CLCommon::checkError(err, "cl::Platform::getInfo<CL_PLATFORM_NAME>");
+    CLWrapper::checkError(err, "cl::Platform::getInfo<CL_PLATFORM_NAME>");
     return QString(platformInfo.c_str());
 }
 
@@ -37,9 +38,9 @@ QString CLPlatforms::getDeviceInfo(const cl::Device &device)
 {
     cl_int err;
     auto deviceInfo = device.getInfo<CL_DEVICE_NAME>(&err);
-    CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_NAME>");
+    CLWrapper::checkError(err, "cl::Device::getInfo<CL_DEVICE_NAME>");
     auto maxWorkGroupSize = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>(&err);
-    CLCommon::checkError(err, "cl::Device::getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>");
+    CLWrapper::checkError(err, "cl::Device::getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>");
     return QString("%1 (%2)").arg(QString(deviceInfo.c_str()), QString::number(maxWorkGroupSize));
 }
 

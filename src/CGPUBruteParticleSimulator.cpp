@@ -1,7 +1,8 @@
 #include "CGPUBruteParticleSimulator.h"
 
+
 CGPUBruteParticleSimulator::CGPUBruteParticleSimulator(CScene *scene, float boxSize, cl::Device device, SimulationScenario scenario, QObject *parent)
-    : CGPUBaseParticleSimulator(scene, boxSize, device, scenario, parent)
+    : CGPUBaseParticleSimulator(scene, boxSize, std::move(device), scenario, parent)
 {
     m_cl_wrapper->loadProgram(
         {
@@ -22,23 +23,25 @@ void CGPUBruteParticleSimulator::setupKernels()
     m_update_forces_kernel = std::make_shared<cl::Kernel>(m_cl_wrapper->getKernel("forces_step"));
 }
 
-void CGPUBruteParticleSimulator::updateGrid()
+double CGPUBruteParticleSimulator::updateGrid()
 {
     // don't need to update the grid, since everything is in one cell
-    m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
+    auto event = m_cl_wrapper->enqueueWrite(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_FALSE);
+    return CLWrapper::getEventDuration(event);
 }
 
-void CGPUBruteParticleSimulator::updateDensityPressure()
+double CGPUBruteParticleSimulator::updateDensityPressure()
 {
     cl_uint arg = 0;
     m_update_density_kernel->setArg(arg++, m_particlesBuffer);
     m_update_density_kernel->setArg(arg++, m_particlesCount);
     m_update_density_kernel->setArg(arg++, m_systemParams.poly6_constant);
 
-    m_cl_wrapper->enqueueKernel(*m_update_density_kernel, cl::NDRange(m_particlesCount));
+    auto event = m_cl_wrapper->enqueueKernel(*m_update_density_kernel, cl::NDRange(m_particlesCount));
+    return CLWrapper::getEventDuration(event);
 }
 
-void CGPUBruteParticleSimulator::updateForces()
+double CGPUBruteParticleSimulator::updateForces()
 {
     cl_uint arg = 0;
     m_update_forces_kernel->setArg(arg++, m_particlesBuffer);
@@ -47,6 +50,6 @@ void CGPUBruteParticleSimulator::updateForces()
     m_update_forces_kernel->setArg(arg++, m_systemParams.spiky_constant);
     m_update_forces_kernel->setArg(arg++, m_systemParams.viscosity_constant);
 
-    m_cl_wrapper->enqueueKernel(*m_update_forces_kernel, cl::NDRange(m_particlesCount));
-    m_cl_wrapper->enqueueRead(m_particlesBuffer, m_particlesSize, m_clParticles.data(), CL_TRUE);
+    auto processEvent = m_cl_wrapper->enqueueKernel(*m_update_forces_kernel, cl::NDRange(m_particlesCount));
+    return CLWrapper::getEventDuration(processEvent);
 }

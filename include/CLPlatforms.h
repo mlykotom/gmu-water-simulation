@@ -1,7 +1,7 @@
 #ifndef WATERSURFACESIMULATION_CLPLATFORM_H
 #define WATERSURFACESIMULATION_CLPLATFORM_H
 
-#include "CLCommon.h"
+#include "CLWrapper.h"
 #include <QDebug>
 
 class CLPlatforms

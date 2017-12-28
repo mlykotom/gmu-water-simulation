@@ -43,7 +43,6 @@ void MainWindow::setupUI()
 
 void MainWindow::setupDevicesComboBox()
 {
-
     QStringList comboBoxList;
 
     //platforms
@@ -308,27 +307,54 @@ void MainWindow::onError(const char *error)
 }
 void MainWindow::exportLogs()
 {
+#if PROFILING
     QString fileName = QString("%1_%2").arg(
-        QString::number(ui->cubeSizeSlider->value() / 10.0),
-        ui->devicesComboBox->currentText()
+        ui->scenarioComboBox->currentText(),
+        QString::number(ui->cubeSizeSlider->value() / 10.0)
     );
 
     QFile data("../logs/" + fileName + ".csv");
+    QFile details("../logs/" + fileName + "_detail.csv");
 
-    if (data.open(QFile::WriteOnly | QFile::Append)) {
-        QTextStream output(&data);
+    if (data.open(QFile::WriteOnly | QFile::Append) && details.open(QFile::WriteOnly | QFile::Append)) {
+        QString duration = "";
+        QString detailText[5];
 
-        QString fps = "";
-        QTextStream fpsStream(&fps);
+        for (auto event : m_simulator->events) {
+            duration.append(QString::number(event.together())).append(';');
 
-        for (auto pair : m_simulator->events) {
-            fpsStream << pair.second << ';';
+            detailText[0].append(QString::number(event.updateGrid)).append(';');
+            detailText[1].append(QString::number(event.updateDensityPressure)).append(';');
+            detailText[2].append(QString::number(event.updateForces)).append(';');
+            detailText[3].append(QString::number(event.updateCollisions)).append(';');
+            detailText[4].append(QString::number(event.integrate)).append(';');
         }
 
+        // ---- summary file
+        QTextStream output(&data);
         output << ui->simulationTypeComboBox->currentText() << ';';
-        output << fps;
+        output << duration;
         output << '\n';
+
+        // ---- detail file
+        QTextStream detailOutput(&details);
+        detailOutput << ui->simulationTypeComboBox->currentText() << '\n';
+        QString labels[] = {
+            "Grid",
+            "Density + pressure",
+            "Forces",
+            "Collisions",
+            "Integrate"
+        };
+
+        int index = 0;
+        for (const auto &item : detailText) {
+            detailOutput << labels[index] << ';' << item << '\n';
+            index++;
+        }
+        detailOutput << "\n\n";
     }
+#endif
 }
 
 void MainWindow::onKeyPressed(Qt::Key key)

@@ -3,9 +3,9 @@
 
 #include <QVector3D>
 #include <QTimer>
-#include <QPlaneMesh>
 #include <QtMath>
 #include <cassert>
+#include <QSphereMesh>
 
 #include <iostream>
 #include <QElapsedTimer>
@@ -13,6 +13,8 @@
 #include "CScene.h"
 #include "CParticle.h"
 #include "CGrid.h"
+#include "SProfilingEvent.h"
+#include "config.h"
 
 #define GRAVITY_ACCELERATION (-9.80665f)
 
@@ -49,10 +51,12 @@ public:
     double getFps();
     unsigned long getParticlesCount() { return m_particlesCount; }
     unsigned long getMaxParticlesCount() { return m_maxParticlesCount; }
-    QList<QPair<unsigned long, double>> events;
-
+    QList<sProfilingEvent> events;
     int eventLoggerStride = 10;
     SimulationScenario m_scenario;
+
+    Qt3DExtras::QSphereMesh *particle_mesh;
+    Qt3DExtras::QPhongMaterial *particle_material;
 signals:
     void iterationChanged(unsigned long iteration);
     void errorOccured(const char *error);
@@ -85,11 +89,11 @@ protected:
     SystemParams m_systemParams;
     std::vector<CParticle::Physics> m_clParticles;
 
-    virtual void updateGrid() = 0;
-    virtual void updateDensityPressure() = 0;
-    virtual void updateForces() = 0;
-    virtual void updateCollisions() = 0;
-    virtual void integrate() = 0;
+    virtual double updateGrid() = 0;
+    virtual double updateDensityPressure() = 0;
+    virtual double updateForces() = 0;
+    virtual double updateCollisions() = 0;
+    virtual double integrate() = 0;
 
     bool isRunning() { return m_timer.isActive(); }
 private slots:

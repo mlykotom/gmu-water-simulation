@@ -1,13 +1,21 @@
 //#include <OpenCL/cl.hpp>
 #include <CL/cl.hpp>
 #include <qplatformdefs.h>
-#include <include/CLCommon.h>
 #include <include/CLWrapper.h>
 #include <include/mainwindow.h>
 #include "CLPlatforms.h"
 
 #define MATRIX_W 1024
 #define MATRIX_H 1024
+
+/**
+     * get time in seconds
+     * @return
+     */
+static double getTime(void)
+{
+    return omp_get_wtime();
+}
 
 void matrix_add(cl_int *a, cl_int *b, cl_int *c, int width, int height)
 {
@@ -20,7 +28,7 @@ void matrix_add(cl_int *a, cl_int *b, cl_int *c, int width, int height)
 
 cl_int *genRandomBuffer(size_t element_count)
 {
-    qsrand(CLCommon::getTime() * 1000000000);
+    qsrand(getTime() * 1000000000);
 
     cl_int *data = new cl_int[element_count];
     for (int i = 0; i < element_count; i++) {
@@ -58,18 +66,18 @@ void doCalculation()
     kernel.setArg(4, matrix_height);
 
     cl::UserEvent a_event(m_cl_wrapper->getContext(), &err_msg);
-    CLCommon::checkError(err_msg, "clCreateUserEvent a_event");
+    CLWrapper::checkError(err_msg, "clCreateUserEvent a_event");
     cl::UserEvent b_event(m_cl_wrapper->getContext(), &err_msg);
-    CLCommon::checkError(err_msg, "clCreateUserEvent b_event");
+    CLWrapper::checkError(err_msg, "clCreateUserEvent b_event");
     cl::UserEvent kernel_event(m_cl_wrapper->getContext(), &err_msg);
-    CLCommon::checkError(err_msg, "clCreateUserEvent kernel_event");
+    CLWrapper::checkError(err_msg, "clCreateUserEvent kernel_event");
     cl::UserEvent c_event(m_cl_wrapper->getContext(), &err_msg);
-    CLCommon::checkError(err_msg, "clCreateUserEvent c_event");
+    CLWrapper::checkError(err_msg, "clCreateUserEvent c_event");
 
-    double gpu_start = CLCommon::getTime();
+    double gpu_start = getTime();
 
     cl::NDRange local(16, 16);
-    cl::NDRange global(CLCommon::alignTo(MATRIX_W, 16), CLCommon::alignTo(MATRIX_H, 16));
+    cl::NDRange global(CLWrapper::alignTo(MATRIX_W, 16), CLWrapper::alignTo(MATRIX_H, 16));
 
     // Create host buffers
     cl_int *a_data = genRandomBuffer(MATRIX_W * MATRIX_H);
@@ -82,15 +90,17 @@ void doCalculation()
     m_cl_wrapper->getQueue().enqueueNDRangeKernel(kernel, 0, global, local, nullptr, &kernel_event);
     m_cl_wrapper->getQueue().enqueueReadBuffer(c_buffer, false, 0, sizeof(cl_int) * MATRIX_W * MATRIX_H, device_data, nullptr, &c_event);
 
-    // synchronize queue
-    CLCommon::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+    CLWrapper::getEventDuration(a_event);
 
-    double gpu_end = CLCommon::getTime();
+    // synchronize queue
+    CLWrapper::checkError(m_cl_wrapper->getQueue().finish(), "clFinish");
+
+    double gpu_end = getTime();
 
     // compute results on host
-    double cpu_start = CLCommon::getTime();
+    double cpu_start = getTime();
     matrix_add(a_data, b_data, host_data, MATRIX_W, MATRIX_H);
-    double cpu_end = CLCommon::getTime();
+    double cpu_end = getTime();
 
     // check data
     if (memcmp(device_data, host_data, MATRIX_W * MATRIX_H * sizeof(cl_int)) == 0) {
@@ -113,15 +123,15 @@ void doCalculation()
     printf(" OpenCL processing time: %fs\n", gpu_end - gpu_start);
     printf(" CPU    processing time: %fs\n", cpu_end - cpu_start);
     printf("\nDevice timers:\n");
-    printf(" OpenCL copy time: %fs\n", CLCommon::getEventTime(a_event) + CLCommon::getEventTime(b_event) + CLCommon::getEventTime(c_event));
-    printf(" OpenCL processing time: %fs\n", CLCommon::getEventTime(kernel_event));
+    printf(" OpenCL copy time: %fs\n", CLWrapper::getEventDuration(a_event) + CLWrapper::getEventDuration(b_event) + CLWrapper::getEventDuration(c_event));
+    printf(" OpenCL processing time: %fs\n", CLWrapper::getEventDuration(kernel_event));
 
     // deallocate host data
     m_cl_wrapper->getQueue().flush();
     m_cl_wrapper->getQueue().finish();
 
-    CLCommon::checkError(cl::flush(), "error");
-    CLCommon::checkError(cl::finish(), "error");
+    CLWrapper::checkError(cl::flush(), "error");
+    CLWrapper::checkError(cl::finish(), "error");
 
     delete[] a_data;
     delete[] b_data;

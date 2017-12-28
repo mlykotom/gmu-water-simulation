@@ -1,11 +1,25 @@
 #ifndef WATERSURFACESIMULATION_CLWRAPPER_H
 #define WATERSURFACESIMULATION_CLWRAPPER_H
 
-#include "CLCommon.h"
+#include "config.h"
+#include <CL/cl.hpp>
 #include <fstream>
 #include <istream>
 #include <QDebug>
 #include <utility>
+
+
+#if PROFILING
+#define CL_PROFILING_FLAG CL_QUEUE_PROFILING_ENABLE
+#else
+#define CL_PROFILING_FLAG 0
+#endif
+
+class CLException: public std::runtime_error
+{
+public:
+    explicit CLException(const std::__cxx11::string &__arg) : runtime_error("OpenCL::" + __arg) {}
+};
 
 class CLWrapper
 {
@@ -18,23 +32,26 @@ private:
     std::string readFile(std::string fileName);
 
 public:
-    explicit CLWrapper(cl::Device device)
-        : m_device(std::move(device))
-    {
-        // init context
-        cl_int err;
-        m_context = cl::Context(m_device, nullptr, nullptr, nullptr, &err);
-        CLCommon::checkError(err);
+    static const std::string getErrorMessage(cl_int err_id);
+    static void checkError(cl_int code, const std::__cxx11::string &codeDescription = "");
+    /**
+     * Aligns data_size size to align_size
+     * @param data
+     * @param align_size
+     * @return
+     */
+    static size_t alignTo(size_t data, size_t align_size);
+    /**
+     * Gets time of event in milliseconds
+     * @param event
+     * @param waitForEvent
+     * @return
+     */
+    static double getEventDuration(const cl::Event &event, bool waitForEvent = true);
+    static double getEventDuration(std::initializer_list<cl::Event> events);
 
-        // init queue
-        m_queue = cl::CommandQueue(m_context, m_device, CL_QUEUE_PROFILING_ENABLE, &err);
-        CLCommon::checkError(err);
-    }
-
-    virtual ~CLWrapper()
-    {
-//        cl::finish();
-    }
+    explicit CLWrapper(cl::Device device);
+    virtual ~CLWrapper() = default;
 
     const cl::Device &getDevice() const { return m_device; }
     const cl::Context &getContext() const { return m_context; }

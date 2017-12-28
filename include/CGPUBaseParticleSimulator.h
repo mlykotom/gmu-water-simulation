@@ -27,6 +27,7 @@ protected:
 
     // walls for collisions
     QVector<sWall> m_wallsVector;
+    size_t m_wallsCount;
     cl::Buffer m_wallsBuffer;
     size_t m_wallsBufferSize;
 
@@ -35,8 +36,8 @@ protected:
 
 
     virtual void setupKernels();
-    void integrate() override;
-    void updateCollisions() override;
+    double integrate() override;
+    double updateCollisions() override;
 };
 
 #endif //WATERSURFACESIMULATION_CGPUBASEPARTICLESIMULATOR_H
