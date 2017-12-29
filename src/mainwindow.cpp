@@ -354,6 +354,9 @@ void MainWindow::exportLogs()
         }
         detailOutput << "\n\n";
     }
+    else {
+        throw std::runtime_error("No logs directory");
+    }
 #endif
 }
 
