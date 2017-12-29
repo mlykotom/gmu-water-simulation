@@ -33,7 +33,7 @@ protected:
     std::vector<cl_int> m_sortedIndices;
     std::vector<cl_int> m_sums;
 
-    size_t m_gridCountToPowerOfTwo;
+    cl_int m_gridCountToPowerOfTwo;
     cl_int3 m_gridSize;
     size_t m_localScanWokrgroupSize;
     size_t m_sumsCount;

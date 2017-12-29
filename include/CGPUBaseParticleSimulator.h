@@ -27,7 +27,7 @@ protected:
 
     // walls for collisions
     QVector<sWall> m_wallsVector;
-    size_t m_wallsCount;
+    cl_int m_wallsCount;
     cl::Buffer m_wallsBuffer;
     size_t m_wallsBufferSize;
 

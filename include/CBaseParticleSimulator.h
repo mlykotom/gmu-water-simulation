@@ -85,7 +85,7 @@ protected:
     QVector3D m_boxSize;
     cl_float m_surfaceThreshold;
     cl_uint m_maxParticlesCount = 0;
-    cl_uint m_particlesCount = 0;
+    cl_int m_particlesCount = 0;
     SystemParams m_systemParams;
     std::vector<CParticle::Physics> m_clParticles;
 

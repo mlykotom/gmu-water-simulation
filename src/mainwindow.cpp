@@ -2,6 +2,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QDir>
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -313,6 +315,11 @@ void MainWindow::exportLogs()
         QString::number(ui->cubeSizeSlider->value() / 10.0)
     );
 
+    //create dir if it does not exist
+    QDir logsDir("../logs/");
+    if (!logsDir.exists())
+        logsDir.mkdir("../logs/");
+
     QFile data("../logs/" + fileName + ".csv");
     QFile details("../logs/" + fileName + "_detail.csv");
 
@@ -354,9 +361,9 @@ void MainWindow::exportLogs()
         }
         detailOutput << "\n\n";
     }
-    else {
-        throw std::runtime_error("No logs directory");
-    }
+    //else {
+    //    throw std::runtime_error("No logs directory");
+    //}
 #endif
 }
 

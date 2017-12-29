@@ -18,7 +18,7 @@
 class CLException: public std::runtime_error
 {
 public:
-    explicit CLException(const std::__cxx11::string &__arg) : runtime_error("OpenCL::" + __arg) {}
+    explicit CLException(const std::string &__arg) : runtime_error("OpenCL::" + __arg) {}
 };
 
 class CLWrapper
@@ -33,7 +33,7 @@ private:
 
 public:
     static const std::string getErrorMessage(cl_int err_id);
-    static void checkError(cl_int code, const std::__cxx11::string &codeDescription = "");
+    static void checkError(cl_int code, const std::string &codeDescription = "");
     /**
      * Aligns data_size size to align_size
      * @param data
